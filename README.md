@@ -1,0 +1,4 @@
+- `cd` vao thu muc project.
+- chay `npm i`
+- de khoi chay project, chay `npm run dev`.
+- mo browser vao dia chi `http://localhost:3000`
