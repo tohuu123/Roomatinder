@@ -6,6 +6,7 @@ import { auth } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { UserProfile } from '@/types/profile';
 import { getProfileBySlug } from '@/lib/profileService';
+import { getUserAvatar } from '@/lib/avatarHelper';
 import Link from 'next/link';
 
 export default function ProfileViewPage({ params }: { params: { slug: string } }) {
@@ -71,7 +72,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
             <div className="flex items-center gap-4">
               <div className="avatar">
                 <div className="w-20 h-20 rounded-full">
-                  <img src={profile.photoURL || '/avatarDefault.png'} alt={profile.displayName || 'Profile'} />
+                  <img src={getUserAvatar(profile.photoURL, profile.email || profile.userId)} alt={profile.displayName || 'Profile'} />
                 </div>
               </div>
               <div>

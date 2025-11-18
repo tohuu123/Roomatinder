@@ -98,9 +98,9 @@ export default function ProfilePage() {
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image size must be less than 5MB!');
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image size must be less than 10MB!');
       return;
     }
 
@@ -235,7 +235,7 @@ export default function ProfilePage() {
                 </>
               )}
             </button>
-            <p className="text-xs text-gray-500 mt-2">Max size: 5MB</p>
+            <p className="text-xs text-gray-500 mt-2">Max size: 10MB</p>
             
             {/* Display Name and Email */}
             <div className="text-center mt-4">
