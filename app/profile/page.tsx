@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/firebase';
+import { auth, storage } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getUserAvatar } from '@/lib/avatarHelper';
 import {
   UserProfile,
   SLEEP_SCHEDULE_OPTIONS,
@@ -36,6 +38,9 @@ export default function ProfilePage() {
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [customInterest, setCustomInterest] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -80,6 +85,49 @@ export default function ProfilePage() {
     if (customInterest.trim() && !selectedInterests.includes(customInterest.trim())) {
       setSelectedInterests((prev) => [...prev, customInterest.trim()]);
       setCustomInterest('');
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file!');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB!');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Create a reference to the storage location
+      const storageRef = ref(storage, `profile-images/${user.uid}/${Date.now()}_${file.name}`);
+      
+      // Upload the file
+      await uploadBytes(storageRef, file);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Update profile with new photo URL
+      setProfile((prev) => ({
+        ...prev,
+        photoURL: downloadURL,
+      }));
+      
+      setImagePreview(downloadURL);
+      alert('Image uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -150,6 +198,53 @@ export default function ProfilePage() {
           <p className="text-gray-700 mb-4">
             Complete your profile to find the most compatible roommate
           </p>
+          
+          {/* Profile Photo Upload */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="avatar mb-4">
+              <div className="w-32 h-32 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                <img 
+                  src={imagePreview || getUserAvatar(profile.photoURL || user?.photoURL, user?.email || user?.uid)} 
+                  alt="Profile" 
+                />
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="btn btn-primary btn-sm gap-2"
+            >
+              {uploading ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Upload Photo
+                </>
+              )}
+            </button>
+            <p className="text-xs text-gray-500 mt-2">Max size: 5MB</p>
+            
+            {/* Display Name and Email */}
+            <div className="text-center mt-4">
+              <h2 className="text-xl font-bold text-gray-900">
+                {profile.displayName || user?.displayName || 'No name set'}
+              </h2>
+              <p className="text-sm text-gray-600">{user?.email}</p>
+            </div>
+          </div>
           
           {/* Progress Bar */}
           <div className="mb-4">

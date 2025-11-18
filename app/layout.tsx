@@ -4,20 +4,25 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import "./globals.css";
 import { auth } from "@/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { getProfile } from "@/lib/profileService";
+import { useRouter } from "next/navigation";
 
 function NavBar() {
+  const router = useRouter();
   const [profileSlug, setProfileSlug] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get user's profile slug for navigation
   useEffect(() => {
     // Set light theme
     document.documentElement.setAttribute("data-theme", "light");
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const profile = await getProfile(user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const profile = await getProfile(currentUser.uid);
         if (profile?.slug) {
           setProfileSlug(profile.slug);
         } else {
@@ -26,10 +31,21 @@ function NavBar() {
       } else {
         setProfileSlug(null);
       }
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      await fetch("/api/logout");
+      router.push("/login");
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
 
   return (
     <div className="navbar sticky top-0 z-50 bg-base-100 drop-shadow-lg w-full">
@@ -68,6 +84,30 @@ function NavBar() {
                 Profile
               </Link>
             </li>
+            {!isLoading && (
+              <>
+                {user ? (
+                  <li>
+                    <button onClick={handleLogout} className="text-base text-gray-900 font-semibold">
+                      Logout
+                    </button>
+                  </li>
+                ) : (
+                  <>
+                    <li>
+                      <Link href="/login" className="text-base text-gray-900 font-semibold">
+                        Login
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/register" className="text-base text-gray-900 font-semibold">
+                        Register
+                      </Link>
+                    </li>
+                  </>
+                )}
+              </>
+            )}
           </ul>
         </div>
         <Link href="/" className="btn btn-ghost text-gray-900 text-lg">
@@ -90,6 +130,32 @@ function NavBar() {
             </Link>
           </li>
         </ul>
+      </div>
+      <div className="navbar-end">
+        {!isLoading && (
+          <>
+            {user ? (
+              <button
+                onClick={handleLogout}
+                className="btn btn-ghost btn-sm gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <Link href="/login" className="btn btn-ghost btn-sm">
+                  Login
+                </Link>
+                <Link href="/register" className="btn btn-primary btn-sm">
+                  Register
+                </Link>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

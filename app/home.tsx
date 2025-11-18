@@ -6,26 +6,9 @@ import { getAllProfiles } from "@/lib/profileService";
 import { UserProfile } from "@/types/profile";
 import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getUserAvatar } from "@/lib/avatarHelper";
 
-// Generic stock images for profile pictures
-const STOCK_IMAGES = [
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1494790108755-2616b612b167?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=600&fit=crop&crop=face",
-  "https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=400&h=600&fit=crop&crop=face",
-];
 
-// Helper function to get a consistent stock image for a user
-function getStockImage(userId: string): string {
-  const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return STOCK_IMAGES[hash % STOCK_IMAGES.length];
-}
 
 // Helper function to format budget in USD
 function formatBudget(min: number, max: number): string {
@@ -139,7 +122,7 @@ export default function HomePage({ email }: HomePageProps) {
     );
   }
 
-  const profileImage = currentProfile.photoURL || getStockImage(currentProfile.userId);
+  const profileImage = getUserAvatar(currentProfile.photoURL, currentProfile.email || currentProfile.userId);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-100 to-blue-100 p-4">
