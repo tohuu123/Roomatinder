@@ -9,8 +9,10 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  User,
 } from "firebase/auth";
 import { app, auth, googleProvider } from "../../firebase";
+import { getProfile, hasCompletedRequiredFields, createProfile } from "@/lib/profileService";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,6 +20,41 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const router = useRouter();
+
+  // Function to check profile completion and redirect accordingly
+  const checkProfileAndRedirect = async (user: User) => {
+    let profile = await getProfile(user.uid);
+    
+    // If profile doesn't exist (e.g., Google sign-in first time), create it
+    if (!profile) {
+      try {
+        await createProfile(user.uid, user.email || "", {
+          displayName: user.displayName || undefined,
+          photoURL: user.photoURL || undefined,
+          // Initialize with default/empty required fields
+          budgetMin: 0,
+          budgetMax: 0,
+          location: "",
+          moveInDate: new Date(),
+          sleepSchedule: "flexible",
+          cleanlinessLevel: "moderate",
+          smokingPolicy: "no-smoking",
+          petPolicy: "no-pets",
+        });
+        profile = await getProfile(user.uid);
+      } catch (error) {
+        console.error("Error creating profile:", error);
+      }
+    }
+    
+    if (!profile || !hasCompletedRequiredFields(profile)) {
+      // First time login or incomplete profile - redirect to profile setup
+      router.push("/profile");
+    } else {
+      // Profile complete - redirect to home
+      router.push("/");
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -28,7 +65,7 @@ export default function Login() {
           await fetch("/api/login", {
             headers: { Authorization: `Bearer ${idToken}` },
           });
-          router.push("/");
+          await checkProfileAndRedirect(result.user);
         }
       } catch (e: any) {
         console.error("Google redirect error:", e);
@@ -51,7 +88,8 @@ export default function Login() {
         },
       });
 
-      router.push("/");
+      // Check if user has completed profile
+      await checkProfileAndRedirect(credential.user);
     } catch (e) {
       console.error("Error logging in: ", e);
       setError("Email or password is invalid.");
@@ -67,7 +105,7 @@ export default function Login() {
       await fetch("/api/login", {
         headers: { Authorization: `Bearer ${idToken}` },
       });
-      router.push("/");
+      await checkProfileAndRedirect(cred.user);
     } catch (e: any) {
       if (e?.code === "auth/popup-blocked") {
         await signInWithRedirect(auth, googleProvider);
@@ -97,7 +135,7 @@ export default function Login() {
             type="button"
             onClick={handleGoogle}
             disabled={loadingGoogle}
-            className="w-full bg-white dark:bg-white border border-base-300 rounded-lg px-5 py-2.5 font-medium flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.99] transition !text-black"
+            className="w-full bg-white border border-base-300 rounded-lg px-5 py-2.5 font-medium flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.99] transition text-gray-900"
           >
             {/* logo gg */}
             <svg width="18" height="18" viewBox="0 0 48 48" className="-ml-1" aria-hidden="true">
