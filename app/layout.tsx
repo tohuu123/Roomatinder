@@ -23,6 +23,11 @@ function NavBar() {
                 Home
               </Link>
             </li>
+            <li>
+              <Link href="/Swipe" className="text-base text-base-content font-semibold">
+                Swipe
+              </Link>
+            </li>
           </ul>
         </div>
         <a className="btn btn-ghost text-base-content text-lg">Roomatinder</a>
@@ -32,6 +37,11 @@ function NavBar() {
           <li>
             <Link href="/" className="text-base text-base-content font-semibold">
               Home
+            </Link>
+          </li>
+          <li>
+            <Link href="/Swipe" className="text-base text-base-content font-semibold">
+              Swipe
             </Link>
           </li>
         </ul>
