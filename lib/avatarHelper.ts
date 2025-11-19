@@ -4,14 +4,16 @@
  * Get the default avatar image
  */
 export function getDefaultAvatar(): string {
-  return '/avatarDefault.png';
+  // Use SVG for better compatibility
+  return '/avatar-default.svg';
 }
 
 /**
  * Get user's avatar URL with fallback to default
  */
 export function getUserAvatar(photoURL?: string | null, identifier?: string): string {
-  if (photoURL) {
+  // If user has uploaded a photo, use it
+  if (photoURL && photoURL.trim() !== '') {
     return photoURL;
   }
   

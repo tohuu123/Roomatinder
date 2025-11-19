@@ -39,6 +39,7 @@ export default function ProfilePage() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [customInterest, setCustomInterest] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,15 +93,17 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
+    setUploadError('');
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file!');
+      setUploadError('Vui lòng chọn file hình ảnh!');
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('Image size must be less than 10MB!');
+      setUploadError('Kích thước ảnh phải nhỏ hơn 10MB!');
       return;
     }
 
@@ -109,11 +112,15 @@ export default function ProfilePage() {
       // Create a reference to the storage location
       const storageRef = ref(storage, `profile-images/${user.uid}/${Date.now()}_${file.name}`);
       
+      console.log('Uploading to:', storageRef.fullPath);
+      
       // Upload the file
-      await uploadBytes(storageRef, file);
+      const uploadResult = await uploadBytes(storageRef, file);
+      console.log('Upload result:', uploadResult);
       
       // Get the download URL
       const downloadURL = await getDownloadURL(storageRef);
+      console.log('Download URL:', downloadURL);
       
       // Update profile with new photo URL
       setProfile((prev) => ({
@@ -122,10 +129,13 @@ export default function ProfilePage() {
       }));
       
       setImagePreview(downloadURL);
-      alert('Image uploaded successfully!');
-    } catch (error) {
+      alert('Upload ảnh thành công!');
+    } catch (error: any) {
       console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
+      const errorMsg = error?.code === 'storage/unauthorized' 
+        ? 'Không có quyền upload. Vui lòng kiểm tra Firebase Storage rules.'
+        : error?.message || 'Upload thất bại. Vui lòng thử lại.';
+      setUploadError(errorMsg);
     } finally {
       setUploading(false);
     }
@@ -236,6 +246,14 @@ export default function ProfilePage() {
               )}
             </button>
             <p className="text-xs text-gray-500 mt-2">Max size: 10MB</p>
+            {uploadError && (
+              <div className="alert alert-error mt-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{uploadError}</span>
+              </div>
+            )}
             
             {/* Display Name and Email */}
             <div className="text-center mt-4">
@@ -288,24 +306,39 @@ export default function ProfilePage() {
           {/* Budget Range */}
           <div className="form-control mb-4">
             <label className="label">
-              <span className="label-text font-semibold text-gray-900">Budget (VND/month) *</span>
+              <span className="label-text font-semibold text-gray-900">Ngân sách (triệu VNĐ/tháng) *</span>
             </label>
             <div className="grid grid-cols-2 gap-4">
-              <input
-                type="number"
-                placeholder="Minimum"
-                className="input input-bordered text-gray-900"
-                value={profile.budgetMin || ''}
-                onChange={(e) => handleInputChange('budgetMin', parseInt(e.target.value) || 0)}
-              />
-              <input
-                type="number"
-                placeholder="Maximum"
-                className="input input-bordered text-gray-900"
-                value={profile.budgetMax || ''}
-                onChange={(e) => handleInputChange('budgetMax', parseInt(e.target.value) || 0)}
-              />
+              <div className="join">
+                <input
+                  type="number"
+                  placeholder="Tối thiểu"
+                  className="input input-bordered text-gray-900 join-item flex-1"
+                  value={profile.budgetMin ? profile.budgetMin / 1000000 : ''}
+                  onChange={(e) => handleInputChange('budgetMin', (parseFloat(e.target.value) || 0) * 1000000)}
+                  step="0.5"
+                  min="0"
+                />
+                <span className="btn btn-ghost join-item no-animation cursor-default">triệu</span>
+              </div>
+              <div className="join">
+                <input
+                  type="number"
+                  placeholder="Tối đa"
+                  className="input input-bordered text-gray-900 join-item flex-1"
+                  value={profile.budgetMax ? profile.budgetMax / 1000000 : ''}
+                  onChange={(e) => handleInputChange('budgetMax', (parseFloat(e.target.value) || 0) * 1000000)}
+                  step="0.5"
+                  min="0"
+                />
+                <span className="btn btn-ghost join-item no-animation cursor-default">triệu</span>
+              </div>
             </div>
+            <label className="label">
+              <span className="label-text-alt text-gray-600">
+                Ví dụ: 2.5 = 2.500.000 VNĐ, 5 = 5.000.000 VNĐ
+              </span>
+            </label>
           </div>
 
           {/* Location */}

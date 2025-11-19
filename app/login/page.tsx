@@ -127,7 +127,7 @@ export default function Login() {
       <div className="w-full bg-base-100 rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0">
         <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
           <h1 className="text-xl font-bold leading-tight tracking-tight text-black md:text-2xl">
-            Log in
+            Đăng nhập
           </h1>
 
           {/* google button */}
@@ -144,12 +144,12 @@ export default function Login() {
               <path fill="#4CAF50" d="M24 44c5.166 0 9.818-1.977 13.309-5.191l-6.154-5.208C29.108 35.174 26.671 36 24 36c-5.214 0-9.706-3.726-11.289-8.733l-6.53 5.03C9.479 39.556 16.181 44 24 44z"/>
               <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-1.018 3.291-3.536 5.988-6.849 7.098l6.154 5.208C36.355 41.038 43 36 43 25c0-1.341-.138-2.651-.389-3.917z"/>
             </svg>
-            {loadingGoogle ? "Signing in..." : "Continue with Google"}
+            {loadingGoogle ? "Đang đăng nhập..." : "Tiếp tục với Google"}
           </button>
 
 
           <div className="divider my-2 divider-neutral !text-black before:bg-base-300 after:bg-base-300">
-            or
+            hoặc
           </div>
 
 
@@ -157,7 +157,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6" action="#">
             <div>
               <label htmlFor="email" className="block mb-2 text-sm font-medium text-black">
-                Email address
+                Địa chỉ email
               </label>
               <input
                 type="email"
@@ -172,7 +172,7 @@ export default function Login() {
             </div>
             <div>
               <label htmlFor="password" className="block mb-2 text-sm font-medium text-black">
-                Password
+                Mật khẩu
               </label>
               <input
                 type="password"
@@ -189,7 +189,7 @@ export default function Login() {
               type="submit"
               className="w-full text-primary-content bg-primary transform hover:scale-105 transition duration-200 ease-in-out font-medium rounded-lg text-sm px-5 py-2.5 text-center"
             >
-              Log in
+              Đăng nhập
             </button>
 
             {error && (
@@ -199,9 +199,9 @@ export default function Login() {
             )}
 
             <p className="text-sm font-light text-black/70">
-              Don&apos;t have an account?{" "}
+              Chưa có tài khoản?{" "}
               <Link href="/register" className="font-medium text-black hover:underline">
-                Register here
+                Đăng ký tại đây
               </Link>
             </p>
           </form>

@@ -54,9 +54,9 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
       <div className="flex flex-col justify-center items-center min-h-screen bg-base-200">
         <div className="text-center">
           <h1 className="text-4xl font-bold mb-4 text-gray-900">404</h1>
-          <p className="text-xl mb-6 text-gray-700">User not found</p>
+          <p className="text-xl mb-6 text-gray-700">Không tìm thấy người dùng</p>
           <Link href="/" className="btn btn-primary">
-            Back to Home
+            Về trang chủ
           </Link>
         </div>
       </div>
@@ -94,7 +94,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
             
             {isOwnProfile && (
               <Link href="/profile" className="btn btn-primary">
-                Edit Profile
+                Chỉnh sửa hồ sơ
               </Link>
             )}
           </div>
@@ -102,7 +102,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
           {/* Profile Completion */}
           <div className="mt-4">
             <div className="flex justify-between mb-2">
-              <span className="text-sm font-semibold text-gray-900">Profile Completion</span>
+              <span className="text-sm font-semibold text-gray-900">Hồ sơ hoàn thành</span>
               <span className="text-sm font-semibold text-gray-900">{profile.profileCompletion}%</span>
             </div>
             <progress 
@@ -116,39 +116,39 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
         {/* Bio Section */}
         {profile.bio && (
           <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-3 text-gray-900">About</h2>
+            <h2 className="text-2xl font-bold mb-3 text-gray-900">Giới thiệu</h2>
             <p className="text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
           </div>
         )}
 
         {/* Basic Information */}
         <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">Basic Information</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Thông tin cơ bản</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Budget</span>
+              <span className="text-sm text-gray-600">Ngân sách</span>
               <p className="font-semibold text-gray-900">
-                {profile.budgetMin?.toLocaleString()} - {profile.budgetMax?.toLocaleString()} VND/month
+                {profile.budgetMin?.toLocaleString()} - {profile.budgetMax?.toLocaleString()} VNĐ/tháng
               </p>
             </div>
 
             <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Location</span>
+              <span className="text-sm text-gray-600">Khu vực</span>
               <p className="font-semibold text-gray-900">{profile.location}</p>
             </div>
 
             {profile.district && (
               <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">District</span>
+                <span className="text-sm text-gray-600">Quận</span>
                 <p className="font-semibold text-gray-900">{profile.district}</p>
               </div>
             )}
 
             <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Expected Move-in Date</span>
+              <span className="text-sm text-gray-600">Ngày dự kiến dọn vào</span>
               <p className="font-semibold text-gray-900">
-                {new Date(profile.moveInDate).toLocaleDateString('en-US')}
+                {new Date(profile.moveInDate).toLocaleDateString('vi-VN')}
               </p>
             </div>
           </div>
@@ -156,85 +156,85 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
 
         {/* Lifestyle Preferences */}
         <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">Lifestyle & Preferences</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Phong cách sống</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Sleep Schedule</span>
+              <span className="text-sm text-gray-600">Giấc ngủ</span>
               <p className="font-semibold text-gray-900">
-                {profile.sleepSchedule === 'early-bird' && 'Early Bird 🌅'}
-                {profile.sleepSchedule === 'night-owl' && 'Night Owl 🦉'}
-                {profile.sleepSchedule === 'flexible' && 'Flexible ⏰'}
+                {profile.sleepSchedule === 'early-bird' && 'Dậy sớm 🌅'}
+                {profile.sleepSchedule === 'night-owl' && 'Thức khuya 🦉'}
+                {profile.sleepSchedule === 'flexible' && 'Linh hoạt ⏰'}
               </p>
             </div>
 
             {profile.wakeUpTime && (
               <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">Wake-up Time</span>
+                <span className="text-sm text-gray-600">Giờ thức dậy</span>
                 <p className="font-semibold text-gray-900">{profile.wakeUpTime}</p>
               </div>
             )}
 
             <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Cleanliness Level</span>
+              <span className="text-sm text-gray-600">Độ sạch sẽ</span>
               <p className="font-semibold text-gray-900">
-                {profile.cleanlinessLevel === 'very-clean' && 'Very Tidy ✨'}
-                {profile.cleanlinessLevel === 'clean' && 'Tidy 🧹'}
-                {profile.cleanlinessLevel === 'moderate' && 'Moderate 👌'}
-                {profile.cleanlinessLevel === 'relaxed' && 'Relaxed 😌'}
+                {profile.cleanlinessLevel === 'very-clean' && 'Rất sạch sẽ ✨'}
+                {profile.cleanlinessLevel === 'clean' && 'Sạch sẽ 🧹'}
+                {profile.cleanlinessLevel === 'moderate' && 'Trung bình 👌'}
+                {profile.cleanlinessLevel === 'relaxed' && 'Thoải mái 😌'}
               </p>
             </div>
 
             <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Smoking Policy</span>
+              <span className="text-sm text-gray-600">Chính sách hút thuốc</span>
               <p className="font-semibold text-gray-900">
-                {profile.smokingPolicy === 'no-smoking' && 'No Smoking 🚭'}
-                {profile.smokingPolicy === 'outdoor-only' && 'Outdoor Only 🌬️'}
-                {profile.smokingPolicy === 'smoking-ok' && 'Smoking OK 🚬'}
+                {profile.smokingPolicy === 'no-smoking' && 'Không hút thuốc 🚭'}
+                {profile.smokingPolicy === 'outdoor-only' && 'Chỉ ngoài trời 🌬️'}
+                {profile.smokingPolicy === 'smoking-ok' && 'Chấp nhận hút thuốc 🚬'}
               </p>
             </div>
 
             <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Pet Policy</span>
+              <span className="text-sm text-gray-600">Chính sách thú cưng</span>
               <p className="font-semibold text-gray-900">
-                {profile.petPolicy === 'no-pets' && 'No Pets'}
-                {profile.petPolicy === 'pets-ok' && 'Pets Allowed 🐾'}
-                {profile.petPolicy === 'have-pets' && 'Have Pets 🐕🐈'}
+                {profile.petPolicy === 'no-pets' && 'Không nuôi thú'}
+                {profile.petPolicy === 'pets-ok' && 'Chấp nhận thú cưng 🐾'}
+                {profile.petPolicy === 'have-pets' && 'Đang nuôi thú 🐕🐈'}
               </p>
             </div>
 
             {profile.socialProfile && (
               <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">Social Profile</span>
+                <span className="text-sm text-gray-600">Tính cách</span>
                 <p className="font-semibold text-gray-900">
-                  {profile.socialProfile === 'introvert' && 'Introvert 📚'}
-                  {profile.socialProfile === 'ambivert' && 'Ambivert 🤝'}
-                  {profile.socialProfile === 'extrovert' && 'Extrovert 🎉'}
+                  {profile.socialProfile === 'introvert' && 'Hướng nội 📚'}
+                  {profile.socialProfile === 'ambivert' && 'Trung tính 🤝'}
+                  {profile.socialProfile === 'extrovert' && 'Hướng ngoại 🎉'}
                 </p>
               </div>
             )}
 
             {profile.cookingSkills && (
               <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">Cooking Skills</span>
+                <span className="text-sm text-gray-600">Kỹ năng nấu ăn</span>
                 <p className="font-semibold text-gray-900">
-                  {profile.cookingSkills === 'no' && "Can't Cook"}
-                  {profile.cookingSkills === 'basic' && 'Basic 🍳'}
-                  {profile.cookingSkills === 'intermediate' && 'Intermediate 👨‍🍳'}
-                  {profile.cookingSkills === 'advanced' && 'Advanced 👨‍🍳✨'}
+                  {profile.cookingSkills === 'no' && "Không biết nấu"}
+                  {profile.cookingSkills === 'basic' && 'Cơ bản 🍳'}
+                  {profile.cookingSkills === 'intermediate' && 'Trung bình 👨‍🍳'}
+                  {profile.cookingSkills === 'advanced' && 'Giỏi 👨‍🍳✨'}
                 </p>
               </div>
             )}
 
             {profile.studyHabits && (
               <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">Study Habits</span>
+                <span className="text-sm text-gray-600">Thói quen học tập</span>
                 <p className="font-semibold text-gray-900">
-                  {profile.studyHabits === 'library' && 'Study at Library 📚'}
-                  {profile.studyHabits === 'home-quiet' && 'Study at Home (Quiet) 🤫'}
-                  {profile.studyHabits === 'home-music' && 'Study at Home (With Music) 🎵'}
-                  {profile.studyHabits === 'group-study' && 'Group Study 👥'}
-                  {profile.studyHabits === 'flexible' && 'Flexible'}
+                  {profile.studyHabits === 'library' && 'Học ở thư viện 📚'}
+                  {profile.studyHabits === 'home-quiet' && 'Học ở nhà (yên tĩnh) 🤫'}
+                  {profile.studyHabits === 'home-music' && 'Học ở nhà (có nhạc) 🎵'}
+                  {profile.studyHabits === 'group-study' && 'Học nhóm 👥'}
+                  {profile.studyHabits === 'flexible' && 'Linh hoạt'}
                 </p>
               </div>
             )}
@@ -244,7 +244,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
         {/* Living Preferences */}
         {(profile.noiseLevelPreference || profile.guestPolicy || profile.partyFrequency || profile.sharedSpaceCleaning) && (
           <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Living Preferences</h2>
+            <h2 className="text-2xl font-bold mb-4 text-gray-900">Sở thích sinh hoạt</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {profile.noiseLevelPreference && (
