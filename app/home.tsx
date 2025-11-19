@@ -169,7 +169,6 @@ export default function HomePage({ email }: HomePageProps) {
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Roomatinder</h1>
-          <p className="text-gray-600">Tìm bạn cùng phòng hoàn hảo</p>
         </div>
 
         {/* Card Container */}

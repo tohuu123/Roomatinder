@@ -682,8 +682,7 @@ export default function ProfilePage() {
         {hasRequired && showOptionalFields && (
           <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
-              <span className="badge badge-success mr-2">AI</span>
-              About You
+              About you
             </h2>
 
             {/* Interests */}
@@ -754,7 +753,7 @@ export default function ProfilePage() {
               ></textarea>
               <label className="label">
                 <span className="label-text-alt text-gray-600">
-                  This information helps AI find more compatible roommates for you
+                  Thông tin này giúp tìm bạn cùng phòng phù hợp hơn
                 </span>
               </label>
             </div>
