@@ -126,6 +126,17 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
           <h2 className="text-2xl font-bold mb-4 text-gray-900">Thông tin cơ bản</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {profile.gender && (
+              <div className="p-3 bg-base-200 rounded-lg">
+                <span className="text-sm text-gray-600">Giới tính</span>
+                <p className="font-semibold text-gray-900">
+                  {profile.gender === 'male' && 'Nam 👨'}
+                  {profile.gender === 'female' && 'Nữ 👩'}
+                  {profile.gender === 'other' && 'Khác'}
+                </p>
+              </div>
+            )}
+
             <div className="p-3 bg-base-200 rounded-lg">
               <span className="text-sm text-gray-600">Ngân sách</span>
               <p className="font-semibold text-gray-900">

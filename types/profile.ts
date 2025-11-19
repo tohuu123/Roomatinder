@@ -12,6 +12,9 @@ export interface UserProfile {
 
   // === REQUIRED FIELDS (Minimum Viable Profile) ===
   
+  // Gender
+  gender?: 'male' | 'female' | 'other';
+  
   // Budget Range (VND per month)
   budgetMin: number;
   budgetMax: number;
@@ -156,6 +159,12 @@ export const COOKING_SKILLS_OPTIONS = [
   { value: 'basic', label: 'Basic' },
   { value: 'intermediate', label: 'Intermediate' },
   { value: 'advanced', label: 'Advanced' },
+];
+
+export const GENDER_OPTIONS = [
+  { value: 'male', label: 'Nam' },
+  { value: 'female', label: 'Nữ' },
+  { value: 'other', label: 'Khác' },
 ];
 
 // Popular interests/hobbies tags

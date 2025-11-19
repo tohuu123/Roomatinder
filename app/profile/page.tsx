@@ -20,6 +20,7 @@ import {
   SOCIAL_PROFILE_OPTIONS,
   COOKING_SKILLS_OPTIONS,
   COMMON_INTERESTS,
+  GENDER_OPTIONS,
 } from '@/types/profile';
 import {
   getProfile,
@@ -302,6 +303,25 @@ export default function ProfilePage() {
             <span className="badge badge-error mr-2">Required</span>
             Basic Information
           </h2>
+
+          {/* Gender */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Giới tính</span>
+            </label>
+            <select
+              className="select select-bordered text-gray-900"
+              value={profile.gender || ''}
+              onChange={(e) => handleInputChange('gender', e.target.value)}
+            >
+              <option value="">Chọn giới tính</option>
+              {GENDER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Budget Range */}
           <div className="form-control mb-4">

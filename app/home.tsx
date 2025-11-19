@@ -228,6 +228,16 @@ export default function HomePage({ email }: HomePageProps) {
               )}
 
               <div className="grid grid-cols-2 gap-4 text-sm">
+                {currentProfile.gender && (
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Giới tính</h4>
+                    <p className="text-gray-600">
+                      {currentProfile.gender === 'male' && '👨 Nam'}
+                      {currentProfile.gender === 'female' && '👩 Nữ'}
+                      {currentProfile.gender === 'other' && 'Khác'}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <h4 className="font-semibold text-gray-800">Ngân sách</h4>
                   <p className="text-gray-600">{formatBudget(currentProfile.budgetMin, currentProfile.budgetMax)}</p>
@@ -346,6 +356,19 @@ export default function HomePage({ email }: HomePageProps) {
 
               {/* Basic Details Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {currentProfile.gender && (
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+                    <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
+                      <Icon icon="mdi:account" className="mr-2 text-lg text-purple-600" />
+                      Giới tính
+                    </h4>
+                    <p className="text-gray-700 text-sm font-medium">
+                      {currentProfile.gender === 'male' && '👨 Nam'}
+                      {currentProfile.gender === 'female' && '👩 Nữ'}
+                      {currentProfile.gender === 'other' && 'Khác'}
+                    </p>
+                  </div>
+                )}
                 <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
                   <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
                     <Icon icon="mdi:cash-multiple" className="mr-2 text-lg text-green-600" />
