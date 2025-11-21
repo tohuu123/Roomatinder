@@ -84,11 +84,26 @@ function NavBar() {
                 Hồ sơ
               </Link>
             </li>
+            <li>
+              <Link href="/chatroom" className="text-base text-gray-900 font-semibold">
+                Tin nhắn
+              </Link>
+            </li>
+            <li>
+              <Link href="/aboutus" className="text-base text-gray-900 font-semibold">
+                Giới thiệu
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className="text-base text-gray-900 font-semibold">
+                Liên hệ
+              </Link>
+            </li>
             {!isLoading && (
               <>
                 {user ? (
                   <li>
-                    <button onClick={handleLogout} className="text-base text-gray-900 font-semibold">
+                    <button onClick={handleLogout} className="text-base text-gray-600 font-semibold">
                       Đăng xuất
                     </button>
                   </li>
@@ -129,6 +144,21 @@ function NavBar() {
               Hồ sơ
             </Link>
           </li>
+          <li>
+            <Link href="/chatroom" className="text-base text-gray-900 font-semibold">
+              Tin nhắn
+            </Link>
+          </li>
+          <li>
+            <Link href="/aboutus" className="text-base text-gray-900 font-semibold">
+              Giới thiệu
+            </Link>
+          </li>
+          <li>
+            <Link href="/contact" className="text-base text-gray-900 font-semibold">
+              Liên hệ
+            </Link>
+          </li>
         </ul>
       </div>
       <div className="navbar-end">
@@ -137,7 +167,7 @@ function NavBar() {
             {user ? (
               <button
                 onClick={handleLogout}
-                className="btn btn-ghost btn-sm gap-2"
+                className="btn btn-ghost btn-sm gap-2 text-gray-600 hover:text-gray-800"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
