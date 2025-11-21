@@ -253,7 +253,7 @@ export default function HomePage({ email }: HomePageProps) {
           {isDragging && (
             <>
               <div className={`absolute top-20 left-4 p-4 rounded-full ${currentX > 50 ? 'bg-green-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
-                <Icon icon="mdi:heart" className="text-white text-2xl" />
+                <Icon icon="mdi:like" className="text-white text-2xl" />
               </div>
               <div className={`absolute top-20 right-4 p-4 rounded-full ${currentX < -50 ? 'bg-red-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
                 <Icon icon="mdi:close" className="text-white text-2xl" />
@@ -279,7 +279,7 @@ export default function HomePage({ email }: HomePageProps) {
             disabled={isAnimating}
             className="w-20 h-20 bg-green-500 hover:bg-green-600 rounded-full border-none text-white disabled:opacity-50 flex flex-col justify-center items-center shadow-lg transition-all duration-200"
           >
-            <Icon icon="mdi:heart" className="text-4xl" />
+            <Icon icon="mdi:like" className="text-4xl" />
           </button>
         </div>
       </div>
@@ -527,7 +527,7 @@ export default function HomePage({ email }: HomePageProps) {
                   }}
                   className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
                 >
-                  <Icon icon="mdi:heart-circle" className="text-lg" />
+                  <Icon icon="mdi:thumb-up-outline" className="text-lg" />
                   Thích
                 </button>
               </div>
