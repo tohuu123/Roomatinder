@@ -7,12 +7,15 @@ import { auth } from "@/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { getProfile } from "@/lib/profileService";
 import { useRouter } from "next/navigation";
+import { Icon } from '@iconify/react';
 
 function NavBar() {
   const router = useRouter();
   const [profileSlug, setProfileSlug] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Get user's profile slug for navigation
   useEffect(() => {
@@ -36,6 +39,21 @@ function NavBar() {
 
     return () => unsubscribe();
   }, []);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showNotifications && !target.closest('.dropdown')) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
 
   const handleLogout = async () => {
     try {
@@ -89,6 +107,22 @@ function NavBar() {
                 Tin nhắn
               </Link>
             </li>
+            {user && (
+              <li>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="text-base text-gray-900 font-semibold flex items-center gap-2"
+                >
+                  <Icon icon="mdi:bell" className="h-5 w-5" />
+                  Thông báo
+                  {notificationCount > 0 && (
+                    <span className="badge badge-xs badge-primary">
+                      {notificationCount > 99 ? '99+' : notificationCount}
+                    </span>
+                  )}
+                </button>
+              </li>
+            )}
             <li>
               <Link href="/aboutus" className="text-base text-gray-900 font-semibold">
                 Giới thiệu
@@ -162,6 +196,41 @@ function NavBar() {
         </ul>
       </div>
       <div className="navbar-end">
+        {!isLoading && user && (
+          <div className="dropdown dropdown-end mr-4">
+            <div
+              tabIndex={0}
+              role="button"
+              className="btn btn-ghost btn-circle"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <div className="indicator">
+                <Icon 
+                  icon="mdi:bell" 
+                  className="h-6 w-6 text-gray-700 hover:text-gray-900"
+                />
+                {notificationCount > 0 && (
+                  <span className="badge badge-sm badge-primary indicator-item">
+                    {notificationCount > 99 ? '99+' : notificationCount}
+                  </span>
+                )}
+              </div>
+            </div>
+            {showNotifications && (
+              <div
+                tabIndex={0}
+                className="dropdown-content z-50 menu p-2 shadow bg-white rounded-box w-80 border border-gray-200"
+              >
+                <div className="p-3 border-b border-gray-200">
+                  <h3 className="font-semibold text-gray-900">Thông báo</h3>
+                  {notificationCount > 0 && (
+                    <p className="text-sm text-gray-600">Bạn có {notificationCount} thông báo mới</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {!isLoading && (
           <>
             {user ? (
