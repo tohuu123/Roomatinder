@@ -211,5 +211,5 @@ export const COMMON_INTERESTS = [
   'Reading', 'Movies', 'Music', 'Gaming', 'Sports',
   'Cooking', 'Travel', 'Photography', 'Drawing', 'Writing',
   'Yoga', 'Gym', 'Swimming', 'Running', 'Cycling',
-  'Coffee', 'Tea', 'Gardening', 'Pets', 'Music',
+  'Coffee', 'Tea', 'Gardening', 'Pets',
 ];
