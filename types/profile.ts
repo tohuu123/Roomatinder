@@ -24,9 +24,6 @@ export interface UserProfile {
   university?: string;
   district?: string;
 
-  // Move-in Date
-  moveInDate: Date;
-
   // Sleep Schedule
   sleepSchedule: 'early-bird' | 'night-owl' | 'flexible';
 
@@ -62,23 +59,8 @@ export interface UserProfile {
   // Noise Level Preference
   noiseLevelPreference?: 'very-quiet' | 'quiet' | 'moderate' | 'lively';
 
-  // Overnight Guest Policy
-  overnightGuestPolicy?: 'never' | 'rarely' | 'sometimes' | 'often' | 'very-flexible';
-
-  // Alcohol / Party Frequency
-  partyFrequency?: 'never' | 'rarely' | 'monthly' | 'weekly' | 'often';
-
-  // Study Habits
-  studyHabits?: 'library' | 'home-quiet' | 'home-music' | 'flexible' | 'group-study';
-
-  // Social Profile
-  socialProfile?: 'introvert' | 'ambivert' | 'extrovert';
-
   // Cooking Skills
   cookingSkills?: 'no' | 'basic' | 'intermediate' | 'advanced';
-
-  // Wake-up Time
-  wakeUpTime?: string; // Format: "HH:mm"
 
   // Guest Policy (general)
   guestPolicy?: 'rarely' | 'sometimes' | 'often' | 'very-open';

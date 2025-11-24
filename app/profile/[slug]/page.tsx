@@ -130,8 +130,8 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
               <div className="p-3 bg-base-200 rounded-lg">
                 <span className="text-sm text-gray-600">Gender</span>
                 <p className="font-semibold text-gray-900">
-                  {profile.gender === 'male' && 'Male 👨'}
-                  {profile.gender === 'female' && 'Female 👩'}
+                  {profile.gender === 'male' && 'Male'}
+                  {profile.gender === 'female' && 'Female'}
                   {profile.gender === 'other' && 'Other'}
                 </p>
               </div>
@@ -145,23 +145,17 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
             </div>
 
             <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Location</span>
+              <span className="text-sm text-gray-600">Rental Location</span>
               <p className="font-semibold text-gray-900">{profile.location}</p>
             </div>
 
             {profile.district && (
               <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">District</span>
+                <span className="text-sm text-gray-600">University District</span>
                 <p className="font-semibold text-gray-900">{profile.district}</p>
               </div>
             )}
 
-            <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Expected Move-in Date</span>
-              <p className="font-semibold text-gray-900">
-                {new Date(profile.moveInDate).toLocaleDateString('en-US')}
-              </p>
-            </div>
           </div>
         </div>
 
@@ -173,35 +167,19 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
             <div className="p-3 bg-base-200 rounded-lg">
               <span className="text-sm text-gray-600">Sleep Schedule</span>
               <p className="font-semibold text-gray-900">
-                {profile.sleepSchedule === 'early-bird' && 'Early Bird 🌅'}
-                {profile.sleepSchedule === 'night-owl' && 'Night Owl 🦉'}
-                {profile.sleepSchedule === 'flexible' && 'Flexible ⏰'}
+                {profile.sleepSchedule === 'early-bird' && 'Early Bird'}
+                {profile.sleepSchedule === 'night-owl' && 'Night Owl'}
+                {profile.sleepSchedule === 'flexible' && 'Flexible'}
               </p>
             </div>
-
-            {profile.wakeUpTime && (
-              <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">Wake-up Time</span>
-                <p className="font-semibold text-gray-900">{profile.wakeUpTime}</p>
-              </div>
-            )}
 
             <div className="p-3 bg-base-200 rounded-lg">
               <span className="text-sm text-gray-600">Cleanliness Level</span>
               <p className="font-semibold text-gray-900">
-                {profile.cleanlinessLevel === 'very-clean' && 'Very Clean ✨'}
-                {profile.cleanlinessLevel === 'clean' && 'Clean 🧹'}
-                {profile.cleanlinessLevel === 'moderate' && 'Moderate 👌'}
-                {profile.cleanlinessLevel === 'relaxed' && 'Relaxed 😌'}
-              </p>
-            </div>
-
-            <div className="p-3 bg-base-200 rounded-lg">
-              <span className="text-sm text-gray-600">Smoking Policy</span>
-              <p className="font-semibold text-gray-900">
-                {profile.smokingPolicy === 'no-smoking' && 'No Smoking 😭'}
-                {profile.smokingPolicy === 'outdoor-only' && 'Outdoor Only 🌬️'}
-                {profile.smokingPolicy === 'smoking-ok' && 'Smoking OK 😬'}
+                {profile.cleanlinessLevel === 'very-clean' && 'Very Clean'}
+                {profile.cleanlinessLevel === 'clean' && 'Clean'}
+                {profile.cleanlinessLevel === 'moderate' && 'Moderate'}
+                {profile.cleanlinessLevel === 'relaxed' && 'Relaxed'}
               </p>
             </div>
 
@@ -209,51 +187,28 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
               <span className="text-sm text-gray-600">Pet Policy</span>
               <p className="font-semibold text-gray-900">
                 {profile.petPolicy === 'no-pets' && 'No Pets'}
-                {profile.petPolicy === 'pets-ok' && 'Pets Allowed 🐾'}
-                {profile.petPolicy === 'have-pets' && 'Have Pets 🐕🐈'}
+                {profile.petPolicy === 'pets-ok' && 'Pets Allowed'}
+                {profile.petPolicy === 'have-pets' && 'Have Pets'}
               </p>
             </div>
-
-            {profile.socialProfile && (
-              <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">Personality</span>
-                <p className="font-semibold text-gray-900">
-                  {profile.socialProfile === 'introvert' && 'Introvert 📚'}
-                  {profile.socialProfile === 'ambivert' && 'Ambivert 🤝'}
-                  {profile.socialProfile === 'extrovert' && 'Extrovert 🎉'}
-                </p>
-              </div>
-            )}
 
             {profile.cookingSkills && (
               <div className="p-3 bg-base-200 rounded-lg">
                 <span className="text-sm text-gray-600">Cooking Skills</span>
                 <p className="font-semibold text-gray-900">
                   {profile.cookingSkills === 'no' && "Can't Cook"}
-                  {profile.cookingSkills === 'basic' && 'Basic 🍳'}
-                  {profile.cookingSkills === 'intermediate' && 'Intermediate 👨‍🍳'}
-                  {profile.cookingSkills === 'advanced' && 'Advanced 👨‍🍳✨'}
+                  {profile.cookingSkills === 'basic' && 'Basic'}
+                  {profile.cookingSkills === 'intermediate' && 'Intermediate'}
+                  {profile.cookingSkills === 'advanced' && 'Advanced'}
                 </p>
               </div>
             )}
 
-            {profile.studyHabits && (
-              <div className="p-3 bg-base-200 rounded-lg">
-                <span className="text-sm text-gray-600">Study Habits</span>
-                <p className="font-semibold text-gray-900">
-                  {profile.studyHabits === 'library' && 'Study at Library 📚'}
-                  {profile.studyHabits === 'home-quiet' && 'Study at Home (Quiet) 🤫'}
-                  {profile.studyHabits === 'home-music' && 'Study at Home (With Music) 🎵'}
-                  {profile.studyHabits === 'group-study' && 'Group Study 👥'}
-                  {profile.studyHabits === 'flexible' && 'Flexible'}
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Living Preferences */}
-        {(profile.noiseLevelPreference || profile.guestPolicy || profile.partyFrequency || profile.sharedSpaceCleaning) && (
+        {(profile.noiseLevelPreference || profile.guestPolicy || profile.sharedSpaceCleaning) && (
           <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-2xl font-bold mb-4 text-gray-900">Living Preferences</h2>
             
@@ -262,10 +217,10 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                 <div className="p-3 bg-base-200 rounded-lg">
                   <span className="text-sm text-gray-600">Acceptable Noise Level</span>
                   <p className="font-semibold text-gray-900">
-                    {profile.noiseLevelPreference === 'very-quiet' && 'Very Quiet 🤫'}
-                    {profile.noiseLevelPreference === 'quiet' && 'Quiet 🔇'}
-                    {profile.noiseLevelPreference === 'moderate' && 'Moderate 🔉'}
-                    {profile.noiseLevelPreference === 'lively' && 'Lively 🔊'}
+                    {profile.noiseLevelPreference === 'very-quiet' && 'Very Quiet'}
+                    {profile.noiseLevelPreference === 'quiet' && 'Quiet'}
+                    {profile.noiseLevelPreference === 'moderate' && 'Moderate'}
+                    {profile.noiseLevelPreference === 'lively' && 'Lively'}
                   </p>
                 </div>
               )}
@@ -278,32 +233,6 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                     {profile.guestPolicy === 'sometimes' && 'Sometimes'}
                     {profile.guestPolicy === 'often' && 'Often'}
                     {profile.guestPolicy === 'very-open' && 'Very Open'}
-                  </p>
-                </div>
-              )}
-
-              {profile.overnightGuestPolicy && (
-                <div className="p-3 bg-base-200 rounded-lg">
-                  <span className="text-sm text-gray-600">Overnight Guests</span>
-                  <p className="font-semibold text-gray-900">
-                    {profile.overnightGuestPolicy === 'never' && 'Never'}
-                    {profile.overnightGuestPolicy === 'rarely' && 'Rarely'}
-                    {profile.overnightGuestPolicy === 'sometimes' && 'Sometimes'}
-                    {profile.overnightGuestPolicy === 'often' && 'Often'}
-                    {profile.overnightGuestPolicy === 'very-flexible' && 'Very Flexible'}
-                  </p>
-                </div>
-              )}
-
-              {profile.partyFrequency && (
-                <div className="p-3 bg-base-200 rounded-lg">
-                  <span className="text-sm text-gray-600">Party Frequency</span>
-                  <p className="font-semibold text-gray-900">
-                    {profile.partyFrequency === 'never' && 'Never'}
-                    {profile.partyFrequency === 'rarely' && 'Rarely'}
-                    {profile.partyFrequency === 'monthly' && 'Monthly'}
-                    {profile.partyFrequency === 'weekly' && 'Weekly'}
-                    {profile.partyFrequency === 'often' && 'Often'}
                   </p>
                 </div>
               )}

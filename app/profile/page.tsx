@@ -393,7 +393,7 @@ export default function ProfilePage() {
             </div>
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-semibold text-gray-900">District</span>
+                <span className="label-text font-semibold text-gray-900">University District</span>
               </label>
               <input
                 type="text"
@@ -403,19 +403,6 @@ export default function ProfilePage() {
                 onChange={(e) => handleInputChange('district', e.target.value)}
               />
             </div>
-          </div>
-
-          {/* Move-in Date */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Expected Move-in Date *</span>
-            </label>
-            <input
-              type="date"
-              className="input input-bordered text-gray-900"
-              value={profile.moveInDate ? new Date(profile.moveInDate).toISOString().split('T')[0] : ''}
-              onChange={(e) => handleInputChange('moveInDate', new Date(e.target.value))}
-            />
           </div>
 
           {/* Sleep Schedule */}
@@ -721,82 +708,6 @@ export default function ProfilePage() {
               </select>
             </div>
 
-            {/* Overnight Guest Policy */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Overnight Guests</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.overnightGuestPolicy || ''}
-                onChange={(e) => handleInputChange('overnightGuestPolicy', e.target.value)}
-              >
-                <option value="">Select policy</option>
-                {GUEST_POLICY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Party Frequency */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Party / Drinking Frequency</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.partyFrequency || ''}
-                onChange={(e) => handleInputChange('partyFrequency', e.target.value)}
-              >
-                <option value="">Select frequency</option>
-                {PARTY_FREQUENCY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Study Habits */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Study Habits</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.studyHabits || ''}
-                onChange={(e) => handleInputChange('studyHabits', e.target.value)}
-              >
-                <option value="">Select habits</option>
-                {STUDY_HABITS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Social Profile */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Social Profile</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.socialProfile || ''}
-                onChange={(e) => handleInputChange('socialProfile', e.target.value)}
-              >
-                <option value="">Select profile</option>
-                {SOCIAL_PROFILE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Cooking Skills */}
             <div className="form-control mb-4">
               <label className="label">
@@ -814,19 +725,6 @@ export default function ProfilePage() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            {/* Wake-up Time */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Wake-up Time</span>
-              </label>
-              <input
-                type="time"
-                className="input input-bordered text-gray-900"
-                value={profile.wakeUpTime || ''}
-                onChange={(e) => handleInputChange('wakeUpTime', e.target.value)}
-              />
             </div>
 
             {/* Guest Policy */}
