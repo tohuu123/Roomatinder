@@ -78,6 +78,17 @@ export interface UserProfile {
 
   // Profile Completion Percentage
   profileCompletion: number;
+
+  // === MATCHING FIELDS ===
+  
+  // List of user IDs that this user has liked
+  likedUsers?: string[];
+  
+  // List of user IDs that have liked this user
+  likedBy?: string[];
+  
+  // List of matched user IDs (mutual likes)
+  matches?: string[];
 }
 
 // Helper type for form fields

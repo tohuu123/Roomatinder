@@ -179,6 +179,11 @@ export async function createProfile(
     interests: profileData.interests,
     bio: profileData.bio,
     
+    // Matching fields
+    likedUsers: [],
+    likedBy: [],
+    matches: [],
+    
     createdAt: new Date(),
     updatedAt: new Date(),
     profileCompletion: 0,
@@ -296,4 +301,181 @@ export async function getAllProfiles(excludeUserId?: string): Promise<UserProfil
   });
   
   return profiles;
+}
+
+/**
+ * Like a user profile
+ * If the other user has already liked this user, create a match
+ */
+export async function likeUser(
+  currentUserId: string,
+  likedUserId: string
+): Promise<{ success: boolean; isMatch: boolean }> {
+  try {
+    // Get both profiles
+    const currentProfile = await getProfile(currentUserId);
+    const likedProfile = await getProfile(likedUserId);
+    
+    if (!currentProfile || !likedProfile) {
+      return { success: false, isMatch: false };
+    }
+    
+    // Check if already liked
+    const alreadyLiked = currentProfile.likedUsers?.includes(likedUserId);
+    if (alreadyLiked) {
+      return { success: true, isMatch: false };
+    }
+    
+    // Add to current user's likedUsers
+    const updatedLikedUsers = [...(currentProfile.likedUsers || []), likedUserId];
+    
+    // Add current user to liked user's likedBy
+    const updatedLikedBy = [...(likedProfile.likedBy || []), currentUserId];
+    
+    // Check if it's a match (the other user has already liked this user)
+    const isMatch = likedProfile.likedUsers?.includes(currentUserId) || false;
+    
+    // Update current user's profile
+    const currentUserRef = doc(db, PROFILES_COLLECTION, currentUserId);
+    await updateDoc(currentUserRef, {
+      likedUsers: updatedLikedUsers,
+      ...(isMatch && {
+        matches: [...(currentProfile.matches || []), likedUserId]
+      }),
+      updatedAt: serverTimestamp(),
+    });
+    
+    // Update liked user's profile
+    const likedUserRef = doc(db, PROFILES_COLLECTION, likedUserId);
+    await updateDoc(likedUserRef, {
+      likedBy: updatedLikedBy,
+      ...(isMatch && {
+        matches: [...(likedProfile.matches || []), currentUserId]
+      }),
+      updatedAt: serverTimestamp(),
+    });
+    
+    return { success: true, isMatch };
+  } catch (error) {
+    console.error('Error liking user:', error);
+    return { success: false, isMatch: false };
+  }
+}
+
+/**
+ * Unlike a user profile
+ */
+export async function unlikeUser(
+  currentUserId: string,
+  unlikedUserId: string
+): Promise<boolean> {
+  try {
+    const currentProfile = await getProfile(currentUserId);
+    const unlikedProfile = await getProfile(unlikedUserId);
+    
+    if (!currentProfile || !unlikedProfile) {
+      return false;
+    }
+    
+    // Remove from current user's likedUsers
+    const updatedLikedUsers = (currentProfile.likedUsers || []).filter(
+      id => id !== unlikedUserId
+    );
+    
+    // Remove from unliked user's likedBy
+    const updatedLikedBy = (unlikedProfile.likedBy || []).filter(
+      id => id !== currentUserId
+    );
+    
+    // Remove from matches if they were matched
+    const wasMatch = currentProfile.matches?.includes(unlikedUserId);
+    
+    // Update current user's profile
+    const currentUserRef = doc(db, PROFILES_COLLECTION, currentUserId);
+    await updateDoc(currentUserRef, {
+      likedUsers: updatedLikedUsers,
+      ...(wasMatch && {
+        matches: (currentProfile.matches || []).filter(id => id !== unlikedUserId)
+      }),
+      updatedAt: serverTimestamp(),
+    });
+    
+    // Update unliked user's profile
+    const unlikedUserRef = doc(db, PROFILES_COLLECTION, unlikedUserId);
+    await updateDoc(unlikedUserRef, {
+      likedBy: updatedLikedBy,
+      ...(wasMatch && {
+        matches: (unlikedProfile.matches || []).filter(id => id !== currentUserId)
+      }),
+      updatedAt: serverTimestamp(),
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error unliking user:', error);
+    return false;
+  }
+}
+
+/**
+ * Get all matched profiles for a user
+ */
+export async function getMatches(userId: string): Promise<UserProfile[]> {
+  const profile = await getProfile(userId);
+  if (!profile || !profile.matches || profile.matches.length === 0) {
+    return [];
+  }
+  
+  const matches: UserProfile[] = [];
+  
+  for (const matchId of profile.matches) {
+    const matchProfile = await getProfile(matchId);
+    if (matchProfile) {
+      matches.push(matchProfile);
+    }
+  }
+  
+  return matches;
+}
+
+/**
+ * Get all profiles that the user has liked
+ */
+export async function getLikedProfiles(userId: string): Promise<UserProfile[]> {
+  const profile = await getProfile(userId);
+  if (!profile || !profile.likedUsers || profile.likedUsers.length === 0) {
+    return [];
+  }
+  
+  const likedProfiles: UserProfile[] = [];
+  
+  for (const likedId of profile.likedUsers) {
+    const likedProfile = await getProfile(likedId);
+    if (likedProfile) {
+      likedProfiles.push(likedProfile);
+    }
+  }
+  
+  return likedProfiles;
+}
+
+/**
+ * Get all profiles that have liked the user
+ */
+export async function getLikedByProfiles(userId: string): Promise<UserProfile[]> {
+  const profile = await getProfile(userId);
+  if (!profile || !profile.likedBy || profile.likedBy.length === 0) {
+    return [];
+  }
+  
+  const likedByProfiles: UserProfile[] = [];
+  
+  for (const likedById of profile.likedBy) {
+    const likedByProfile = await getProfile(likedById);
+    if (likedByProfile) {
+      likedByProfiles.push(likedByProfile);
+    }
+  }
+  
+  return likedByProfiles;
 }

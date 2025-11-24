@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { getAllProfiles } from "@/lib/profileService";
+import { getAllProfiles, likeUser } from "@/lib/profileService";
 import { UserProfile } from "@/types/profile";
 import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getUserAvatar } from "@/lib/avatarHelper";
+import { useRouter } from "next/navigation";
 
 
 
@@ -73,6 +74,7 @@ interface HomePageProps {
 }
 
 export default function HomePage({ email }: HomePageProps) {
+  const router = useRouter();
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
@@ -84,6 +86,8 @@ export default function HomePage({ email }: HomePageProps) {
   const [currentX, setCurrentX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matchedProfile, setMatchedProfile] = useState<UserProfile | null>(null);
 
   // Load profiles from Firebase
   useEffect(() => {
@@ -108,14 +112,26 @@ export default function HomePage({ email }: HomePageProps) {
 
   const currentProfile = profiles[currentIndex];
 
-  const handleSwipe = (direction: 'left' | 'right') => {
-    if (isAnimating || !currentProfile) return;
+  const handleSwipe = async (direction: 'left' | 'right') => {
+    if (isAnimating || !currentProfile || !currentUserId) return;
     
     setIsAnimating(true);
     setSwipeDirection(direction);
     
-    // Log swipe action (can be saved to Firebase later)
-    console.log(`${direction === 'left' ? 'Rejected' : 'Liked'}: ${currentProfile.displayName || currentProfile.email}`);
+    // If user liked, save to Firebase
+    if (direction === 'right') {
+      const result = await likeUser(currentUserId, currentProfile.userId);
+      
+      if (result.success && result.isMatch) {
+        // Show match modal
+        setMatchedProfile(currentProfile);
+        setShowMatchModal(true);
+      }
+      
+      console.log(`Liked: ${currentProfile.displayName || currentProfile.email}`, result.isMatch ? '- IT\'S A MATCH!' : '');
+    } else {
+      console.log(`Rejected: ${currentProfile.displayName || currentProfile.email}`);
+    }
     
     setTimeout(() => {
       setCurrentIndex((prev) => prev + 1);
@@ -167,8 +183,15 @@ export default function HomePage({ email }: HomePageProps) {
     <div className="min-h-screen bg-gradient-to-br from-pink-100 to-blue-100 p-4">
       <div className="max-w-md mx-auto">
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Roomatinder</h1>
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => router.push('/liked')}
+            className="btn btn-circle btn-ghost relative"
+          >
+            <Icon icon="mdi:heart-multiple" className="text-2xl text-pink-500" />
+          </button>
+          <h1 className="text-3xl font-bold text-gray-800">Roomatinder</h1>
+          <div className="w-12"></div>
         </div>
 
         {/* Card Container */}
@@ -531,6 +554,63 @@ export default function HomePage({ email }: HomePageProps) {
                   Thích
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Match Modal */}
+      {showMatchModal && matchedProfile && (
+        <div 
+          className="fixed inset-0 bg-gradient-to-br from-pink-500/90 to-purple-500/90 flex items-center justify-center z-50 p-6"
+          onClick={() => setShowMatchModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl text-center animate-bounce"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Match Icon */}
+            <div className="mb-6">
+              <Icon icon="mdi:heart-multiple" className="text-8xl text-pink-500 mx-auto animate-pulse" />
+            </div>
+
+            {/* Match Title */}
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">
+              It's a Match! 🎉
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Bạn và <span className="font-bold text-pink-600">{matchedProfile.displayName || matchedProfile.email}</span> đã thích nhau!
+            </p>
+
+            {/* Profile Preview */}
+            <div className="flex justify-center gap-4 mb-6">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-pink-500 shadow-lg">
+                <img
+                  src={getUserAvatar(matchedProfile.photoURL, matchedProfile.email || matchedProfile.userId)}
+                  alt={matchedProfile.displayName || 'User'}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowMatchModal(false);
+                  router.push('/liked');
+                }}
+                className="btn btn-primary btn-lg w-full"
+              >
+                <Icon icon="mdi:message" className="mr-2" />
+                Xem Matches
+              </button>
+              <button
+                onClick={() => setShowMatchModal(false)}
+                className="btn btn-ghost btn-lg w-full"
+              >
+                Tiếp tục Swipe
+              </button>
             </div>
           </div>
         </div>
