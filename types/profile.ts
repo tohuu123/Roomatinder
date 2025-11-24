@@ -39,6 +39,21 @@ export interface UserProfile {
   // Pet Policy
   petPolicy: 'no-pets' | 'pets-ok' | 'have-pets';
 
+  // Accommodation Status
+  hasAccommodation?: 'looking' | 'have-room';
+
+  // === ACCOMMODATION DETAILS (for users who have accommodation) ===
+  accommodationLocation?: string;
+  accommodationSize?: 'studio' | '1-bedroom' | '2-bedroom' | '3-bedroom' | '4-bedroom' | 'house';
+  accommodationHomeFees?: string; // Home fees, utility fees, electricity/water fees
+  accommodationHouseType?: string; // House type description
+  accommodationPetPolicy?: string; // Pet policy details
+  accommodationFurniture?: string; // Kitchen, Air-conditioner, etc.
+  accommodationLiveWithRental?: boolean; // Live with rental property owner
+  accommodationRestrictedHours?: string; // Any time restrictions
+  accommodationSecurity?: string; // Security features
+  accommodationDescription?: string; // General description
+
   // === OPTIONAL FIELDS (Highly Recommended) ===
   
   // Shared Space Cleaning
@@ -165,6 +180,19 @@ export const GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
   { value: 'other', label: 'Other' },
+];
+
+export const ACCOMMODATION_STATUS_OPTIONS = [
+  { value: 'looking', label: 'Looking for accommodation' },
+  { value: 'have-room', label: 'I have a room/place to share' },
+];
+
+export const ACCOMMODATION_SIZE_OPTIONS = [
+  { value: '1-bedroom', label: '1 Bedroom' },
+  { value: '2-bedroom', label: '2 Bedrooms' },
+  { value: '3-bedroom', label: '3 Bedrooms' },
+  { value: '4-bedroom', label: '4+ Bedrooms' },
+  { value: 'house', label: 'House' },
 ];
 
 // Popular interests/hobbies tags

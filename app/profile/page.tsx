@@ -21,6 +21,8 @@ import {
   COOKING_SKILLS_OPTIONS,
   COMMON_INTERESTS,
   GENDER_OPTIONS,
+  ACCOMMODATION_STATUS_OPTIONS,
+  ACCOMMODATION_SIZE_OPTIONS,
 } from '@/types/profile';
 import {
   getProfile,
@@ -491,7 +493,177 @@ export default function ProfilePage() {
               ))}
             </select>
           </div>
+
+          {/* Accommodation Status */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Accommodation Status *</span>
+            </label>
+            <select
+              className="select select-bordered text-gray-900"
+              value={profile.hasAccommodation || ''}
+              onChange={(e) => handleInputChange('hasAccommodation', e.target.value)}
+            >
+              <option value="">Select status</option>
+              {ACCOMMODATION_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        {/* Accommodation Details (for users who have accommodation) */}
+        {profile.hasAccommodation === 'have-room' && (
+          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+              <span className="badge badge-success mr-2">Accommodation Details</span>
+              Tell us about your place
+            </h2>
+
+            {/* Accommodation Location */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Accommodation Location *</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., District 1, HCMC - near university"
+                className="input input-bordered text-gray-900"
+                value={profile.accommodationLocation || ''}
+                onChange={(e) => handleInputChange('accommodationLocation', e.target.value)}
+              />
+            </div>
+
+            {/* Accommodation Size */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Size *</span>
+              </label>
+              <select
+                className="select select-bordered text-gray-900"
+                value={profile.accommodationSize || ''}
+                onChange={(e) => handleInputChange('accommodationSize', e.target.value)}
+              >
+                <option value="">Select size</option>
+                {ACCOMMODATION_SIZE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Home Fees */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Home Fees, Utilities, Electricity/Water *</span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered h-24"
+                placeholder="e.g., Monthly rent: 3,000,000 VND, Electricity: separate meter, Water: included, Internet: included"
+                value={profile.accommodationHomeFees || ''}
+                onChange={(e) => handleInputChange('accommodationHomeFees', e.target.value)}
+              ></textarea>
+            </div>
+
+            {/* House Type */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">House Type</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Apartment, House, Townhouse, Serviced apartment"
+                className="input input-bordered text-gray-900"
+                value={profile.accommodationHouseType || ''}
+                onChange={(e) => handleInputChange('accommodationHouseType', e.target.value)}
+              />
+            </div>
+
+            {/* Pet Policy Details */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Pet Policy Details</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Small pets allowed, No pets, Cats only"
+                className="input input-bordered text-gray-900"
+                value={profile.accommodationPetPolicy || ''}
+                onChange={(e) => handleInputChange('accommodationPetPolicy', e.target.value)}
+              />
+            </div>
+
+            {/* Furniture & Amenities */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Furniture & Amenities</span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered h-24"
+                placeholder="e.g., Fully furnished, Kitchen, Air-conditioner, Washing machine, Refrigerator, WiFi"
+                value={profile.accommodationFurniture || ''}
+                onChange={(e) => handleInputChange('accommodationFurniture', e.target.value)}
+              ></textarea>
+            </div>
+
+            {/* Live with Rental Owner */}
+            <div className="form-control mb-4">
+              <label className="label cursor-pointer">
+                <span className="label-text font-semibold text-gray-900">Live with rental property owner</span>
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  checked={profile.accommodationLiveWithRental || false}
+                  onChange={(e) => handleInputChange('accommodationLiveWithRental', e.target.checked)}
+                />
+              </label>
+            </div>
+
+            {/* Restricted Hours */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Restricted Hours</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., No visitors after 10 PM, Quiet hours 10 PM - 6 AM"
+                className="input input-bordered text-gray-900"
+                value={profile.accommodationRestrictedHours || ''}
+                onChange={(e) => handleInputChange('accommodationRestrictedHours', e.target.value)}
+              />
+            </div>
+
+            {/* Security */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Security</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., 24/7 security, CCTV, Key card access, Fingerprint lock"
+                className="input input-bordered text-gray-900"
+                value={profile.accommodationSecurity || ''}
+                onChange={(e) => handleInputChange('accommodationSecurity', e.target.value)}
+              />
+            </div>
+
+            {/* General Description */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">General Description</span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered h-32"
+                placeholder="Describe your place, neighborhood, nearby amenities, transportation, what makes it special..."
+                value={profile.accommodationDescription || ''}
+                onChange={(e) => handleInputChange('accommodationDescription', e.target.value)}
+              ></textarea>
+            </div>
+          </div>
+        )}
 
         {/* Optional Fields Toggle */}
         {hasRequired && (

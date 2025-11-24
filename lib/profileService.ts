@@ -103,7 +103,7 @@ function cleanForFirestore(obj: Record<string, any>) {
 export function calculateProfileCompletion(profile: Partial<UserProfile>): number {
   const requiredFields = [
     'budgetMin', 'budgetMax', 'location', 'moveInDate',
-    'sleepSchedule', 'cleanlinessLevel', 'smokingPolicy', 'petPolicy'
+    'sleepSchedule', 'cleanlinessLevel', 'smokingPolicy', 'petPolicy', 'hasAccommodation'
   ];
   
   const optionalFields = [
@@ -111,9 +111,19 @@ export function calculateProfileCompletion(profile: Partial<UserProfile>): numbe
     'partyFrequency', 'studyHabits', 'socialProfile', 'cookingSkills',
     'wakeUpTime', 'guestPolicy', 'interests', 'bio'
   ];
-  
+
+  // Add accommodation details as optional fields if user has accommodation
+  const accommodationFields = [
+    'accommodationLocation', 'accommodationSize', 'accommodationHomeFees',
+    'accommodationHouseType', 'accommodationFurniture', 'accommodationDescription'
+  ];
+
+  const allOptionalFields = profile.hasAccommodation === 'have-room' 
+    ? [...optionalFields, ...accommodationFields]
+    : optionalFields;
+
   let completed = 0;
-  let total = requiredFields.length + optionalFields.length;
+  let total = requiredFields.length + allOptionalFields.length;
   
   // Required fields count (more weight)
   requiredFields.forEach(field => {
@@ -121,7 +131,7 @@ export function calculateProfileCompletion(profile: Partial<UserProfile>): numbe
   });
   
   // Optional fields count
-  optionalFields.forEach(field => {
+  allOptionalFields.forEach(field => {
     const value = profile[field as keyof UserProfile];
     if (value && (Array.isArray(value) ? value.length > 0 : true)) {
       completed += 1;
@@ -129,7 +139,7 @@ export function calculateProfileCompletion(profile: Partial<UserProfile>): numbe
   });
   
   // Adjust total for weighted calculation
-  total = requiredFields.length * 1.5 + optionalFields.length;
+  total = requiredFields.length * 1.5 + allOptionalFields.length;
   
   return Math.round((completed / total) * 100);
 }
@@ -265,7 +275,17 @@ export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boole
     profile.cleanlinessLevel,
     profile.smokingPolicy,
     profile.petPolicy,
+    profile.hasAccommodation,
   ];
+  
+  // Additional required fields for users who have accommodation
+  if (profile.hasAccommodation === 'have-room') {
+    required.push(
+      profile.accommodationLocation && profile.accommodationLocation.trim() !== '',
+      profile.accommodationSize,
+      profile.accommodationHomeFees && profile.accommodationHomeFees.trim() !== ''
+    );
+  }
   
   return required.every(field => !!field);
 }
