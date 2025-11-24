@@ -98,13 +98,13 @@ export default function ProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setUploadError('Vui lòng chọn file hình ảnh!');
+      setUploadError('Please select an image file!');
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setUploadError('Kích thước ảnh phải nhỏ hơn 10MB!');
+      setUploadError('Image size must be less than 10MB!');
       return;
     }
 
@@ -130,12 +130,12 @@ export default function ProfilePage() {
       }));
       
       setImagePreview(downloadURL);
-      alert('Upload ảnh thành công!');
+      alert('Image uploaded successfully!');
     } catch (error: any) {
       console.error('Error uploading image:', error);
       const errorMsg = error?.code === 'storage/unauthorized' 
-        ? 'Không có quyền upload. Vui lòng kiểm tra Firebase Storage rules.'
-        : error?.message || 'Upload thất bại. Vui lòng thử lại.';
+        ? 'No upload permission. Please check Firebase Storage rules.'
+        : error?.message || 'Upload failed. Please try again.';
       setUploadError(errorMsg);
     } finally {
       setUploading(false);
@@ -307,14 +307,14 @@ export default function ProfilePage() {
           {/* Gender */}
           <div className="form-control mb-4">
             <label className="label">
-              <span className="label-text font-semibold text-gray-900">Giới tính</span>
+              <span className="label-text font-semibold text-gray-900">Gender</span>
             </label>
             <select
               className="select select-bordered text-gray-900"
               value={profile.gender || ''}
               onChange={(e) => handleInputChange('gender', e.target.value)}
             >
-              <option value="">Chọn giới tính</option>
+              <option value="">Select gender</option>
               {GENDER_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -326,37 +326,37 @@ export default function ProfilePage() {
           {/* Budget Range */}
           <div className="form-control mb-4">
             <label className="label">
-              <span className="label-text font-semibold text-gray-900">Ngân sách (triệu VNĐ/tháng) *</span>
+              <span className="label-text font-semibold text-gray-900">Budget (million VND/month) *</span>
             </label>
             <div className="grid grid-cols-2 gap-4">
               <div className="join">
                 <input
                   type="number"
-                  placeholder="Tối thiểu"
+                  placeholder="Minimum"
                   className="input input-bordered text-gray-900 join-item flex-1"
                   value={profile.budgetMin ? profile.budgetMin / 1000000 : ''}
                   onChange={(e) => handleInputChange('budgetMin', (parseFloat(e.target.value) || 0) * 1000000)}
                   step="0.5"
                   min="0"
                 />
-                <span className="btn btn-ghost join-item no-animation cursor-default">triệu</span>
+                <span className="btn btn-ghost join-item no-animation cursor-default">million</span>
               </div>
               <div className="join">
                 <input
                   type="number"
-                  placeholder="Tối đa"
+                  placeholder="Maximum"
                   className="input input-bordered text-gray-900 join-item flex-1"
                   value={profile.budgetMax ? profile.budgetMax / 1000000 : ''}
                   onChange={(e) => handleInputChange('budgetMax', (parseFloat(e.target.value) || 0) * 1000000)}
                   step="0.5"
                   min="0"
                 />
-                <span className="btn btn-ghost join-item no-animation cursor-default">triệu</span>
+                <span className="btn btn-ghost join-item no-animation cursor-default">million</span>
               </div>
             </div>
             <label className="label">
               <span className="label-text-alt text-gray-600">
-                Ví dụ: 2.5 = 2.500.000 VNĐ, 5 = 5.000.000 VNĐ
+                Example: 2.5 = 2,500,000 VND, 5 = 5,000,000 VND
               </span>
             </label>
           </div>
@@ -753,7 +753,7 @@ export default function ProfilePage() {
               ></textarea>
               <label className="label">
                 <span className="label-text-alt text-gray-600">
-                  Thông tin này giúp tìm bạn cùng phòng phù hợp hơn
+                  This information helps find more compatible roommates
                 </span>
               </label>
             </div>

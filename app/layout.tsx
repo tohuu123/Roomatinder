@@ -14,7 +14,7 @@ function NavBar() {
   const [profileSlug, setProfileSlug] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0); // Mock data
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Get user's profile slug for navigation
@@ -91,7 +91,7 @@ function NavBar() {
           >
             <li>
               <Link href="/" className="text-base text-gray-900 font-semibold">
-                Trang chủ
+                Home
               </Link>
             </li>
             <li>
@@ -99,12 +99,12 @@ function NavBar() {
                 href={profileSlug ? `/profile/${profileSlug}` : "/profile"}
                 className="text-base text-gray-900 font-semibold"
               >
-                Hồ sơ
+                Profile
               </Link>
             </li>
             <li>
               <Link href="/chatroom" className="text-base text-gray-900 font-semibold">
-                Tin nhắn
+                Messages
               </Link>
             </li>
             {user && (
@@ -114,7 +114,7 @@ function NavBar() {
                   className="text-base text-gray-900 font-semibold flex items-center gap-2"
                 >
                   <Icon icon="mdi:bell" className="h-5 w-5" />
-                  Thông báo
+                  Notifications
                   {notificationCount > 0 && (
                     <span className="badge badge-xs badge-primary">
                       {notificationCount > 99 ? '99+' : notificationCount}
@@ -125,12 +125,12 @@ function NavBar() {
             )}
             <li>
               <Link href="/aboutus" className="text-base text-gray-900 font-semibold">
-                Giới thiệu
+                About
               </Link>
             </li>
             <li>
               <Link href="/contact" className="text-base text-gray-900 font-semibold">
-                Liên hệ
+                Contact
               </Link>
             </li>
             {!isLoading && (
@@ -138,19 +138,19 @@ function NavBar() {
                 {user ? (
                   <li>
                     <button onClick={handleLogout} className="text-base text-gray-600 font-semibold">
-                      Đăng xuất
+                      Sign Out
                     </button>
                   </li>
                 ) : (
                   <>
                     <li>
                       <Link href="/login" className="text-base text-gray-900 font-semibold">
-                        Đăng nhập
+                        Sign In
                       </Link>
                     </li>
                     <li>
                       <Link href="/register" className="text-base text-gray-900 font-semibold">
-                        Đăng ký
+                        Sign Up
                       </Link>
                     </li>
                   </>
@@ -167,7 +167,7 @@ function NavBar() {
         <ul className="menu menu-horizontal px-1">
           <li>
             <Link href="/" className="text-base text-gray-900 font-semibold">
-              Trang chủ
+              Home
             </Link>
           </li>
           <li>
@@ -175,22 +175,22 @@ function NavBar() {
               href={profileSlug ? `/profile/${profileSlug}` : "/profile"}
               className="text-base text-gray-900 font-semibold"
             >
-              Hồ sơ
+              Profile
             </Link>
           </li>
           <li>
             <Link href="/chatroom" className="text-base text-gray-900 font-semibold">
-              Tin nhắn
+              Messages
             </Link>
           </li>
           <li>
             <Link href="/aboutus" className="text-base text-gray-900 font-semibold">
-              Giới thiệu
+              About
             </Link>
           </li>
           <li>
             <Link href="/contact" className="text-base text-gray-900 font-semibold">
-              Liên hệ
+              Contact
             </Link>
           </li>
         </ul>
@@ -221,11 +221,16 @@ function NavBar() {
                 tabIndex={0}
                 className="dropdown-content z-50 menu p-2 shadow bg-white rounded-box w-80 border border-gray-200"
               >
-                <div className="p-3 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900">Thông báo</h3>
-                  {notificationCount > 0 && (
-                    <p className="text-sm text-gray-600">Bạn có {notificationCount} thông báo mới</p>
-                  )}
+                <div className="p-3 border-t border-gray-200">
+                  <button 
+                    className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    onClick={() => {
+                      setNotificationCount(0);
+                      setShowNotifications(false);
+                    }}
+                  >
+                    Mark all as read
+                  </button>
                 </div>
               </div>
             )}
@@ -241,15 +246,15 @@ function NavBar() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Đăng xuất
+                Sign Out
               </button>
             ) : (
               <div className="flex gap-2">
                 <Link href="/login" className="btn btn-ghost btn-sm">
-                  Đăng nhập
+                  Sign In
                 </Link>
                 <Link href="/register" className="btn btn-primary btn-sm">
-                  Đăng ký
+                  Sign Up
                 </Link>
               </div>
             )}

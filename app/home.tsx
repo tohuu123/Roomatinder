@@ -12,56 +12,56 @@ import { getUserAvatar } from "@/lib/avatarHelper";
 
 // Helper function to format budget in VND
 function formatBudget(min: number, max: number): string {
-  return `${(min / 1000000).toFixed(1)}-${(max / 1000000).toFixed(1)} triệu VNĐ/tháng`;
+  return `${(min / 1000000).toFixed(1)}-${(max / 1000000).toFixed(1)} million VND/month`;
 }
 
-// Helper function to format field labels in Vietnamese
+// Helper function to format field labels in English
 function formatLabel(value: string): string {
   const translations: { [key: string]: string } = {
-    'early-bird': 'Dậy sớm',
-    'night-owl': 'Thức khuya',
-    'flexible': 'Linh hoạt',
-    'very-clean': 'Rất sạch sẽ',
-    'clean': 'Sạch sẽ',
-    'moderate': 'Trung bình',
-    'relaxed': 'Thoải mái',
-    'no-smoking': 'Không hút thuốc',
-    'smoking-ok': 'Chấp nhận hút thuốc',
-    'outdoor-only': 'Chỉ ngoài trời',
-    'no-pets': 'Không nuôi thú',
-    'pets-ok': 'Chấp nhận thú cưng',
-    'have-pets': 'Có thú cưng',
-    'daily': 'Hàng ngày',
-    'weekly': 'Hàng tuần',
-    'bi-weekly': '2 tuần/lần',
-    'monthly': 'Hàng tháng',
-    'as-needed': 'Khi cần',
-    'very-quiet': 'Rất yên tĩnh',
-    'quiet': 'Yên tĩnh',
-    'lively': 'Sôi động',
-    'never': 'Không bao giờ',
-    'rarely': 'Hiếm khi',
-    'sometimes': 'Thỉnh thoảng',
-    'often': 'Thường xuyên',
-    'very-flexible': 'Rất linh hoạt',
-    'library': 'Thư viện',
-    'home-quiet': 'Nhà (yên tĩnh)',
-    'home-music': 'Nhà (có nhạc)',
-    'group-study': 'Học nhóm',
-    'introvert': 'Hướng nội',
-    'ambivert': 'Trung tính',
-    'extrovert': 'Hướng ngoại',
-    'no': 'Không biết',
-    'basic': 'Cơ bản',
-    'intermediate': 'Trung bình',
-    'advanced': 'Giỏi',
+    'early-bird': 'Early Bird',
+    'night-owl': 'Night Owl',
+    'flexible': 'Flexible',
+    'very-clean': 'Very Clean',
+    'clean': 'Clean',
+    'moderate': 'Moderate',
+    'relaxed': 'Relaxed',
+    'no-smoking': 'No Smoking',
+    'smoking-ok': 'Smoking OK',
+    'outdoor-only': 'Outdoor Only',
+    'no-pets': 'No Pets',
+    'pets-ok': 'Pets OK',
+    'have-pets': 'Have Pets',
+    'daily': 'Daily',
+    'weekly': 'Weekly',
+    'bi-weekly': 'Bi-weekly',
+    'monthly': 'Monthly',
+    'as-needed': 'As Needed',
+    'very-quiet': 'Very Quiet',
+    'quiet': 'Quiet',
+    'lively': 'Lively',
+    'never': 'Never',
+    'rarely': 'Rarely',
+    'sometimes': 'Sometimes',
+    'often': 'Often',
+    'very-flexible': 'Very Flexible',
+    'library': 'Library',
+    'home-quiet': 'Home (Quiet)',
+    'home-music': 'Home (With Music)',
+    'group-study': 'Group Study',
+    'introvert': 'Introvert',
+    'ambivert': 'Ambivert',
+    'extrovert': 'Extrovert',
+    'no': 'No',
+    'basic': 'Basic',
+    'intermediate': 'Intermediate',
+    'advanced': 'Advanced',
   };
   return translations[value] || value;
 }
 
-// Helper function to format date in Vietnamese
+// Helper function to format date in English
 function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('vi-VN', { 
+  return new Intl.DateTimeFormat('en-US', { 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric' 
@@ -139,7 +139,7 @@ export default function HomePage({ email }: HomePageProps) {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100">
         <div className="text-center">
           <span className="loading loading-spinner loading-lg"></span>
-          <p className="mt-4 text-gray-600">Đang tải hồ sơ...</p>
+          <p className="mt-4 text-gray-600">Loading profiles...</p>
         </div>
       </div>
     );
@@ -149,12 +149,12 @@ export default function HomePage({ email }: HomePageProps) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4 text-gray-600">Hết hồ sơ rồi!</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
           <button 
             onClick={() => setCurrentIndex(0)}
             className="btn btn-primary"
           >
-            Bắt đầu lại
+            Start Over
           </button>
         </div>
       </div>
@@ -204,15 +204,15 @@ export default function HomePage({ email }: HomePageProps) {
             {/* Profile Info */}
             <div className="p-6 space-y-4">
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Giới thiệu</h3>
+                <h3 className="font-semibold text-gray-800 mb-2">About</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  {currentProfile.bio || "Chưa có giới thiệu"}
+                  {currentProfile.bio || "No bio available"}
                 </p>
               </div>
 
               {currentProfile.interests && currentProfile.interests.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Sở thích</h3>
+                  <h3 className="font-semibold text-gray-800 mb-2">Interests</h3>
                   <div className="flex flex-wrap gap-2">
                     {currentProfile.interests.map((interest, index) => (
                       <span
@@ -229,20 +229,20 @@ export default function HomePage({ email }: HomePageProps) {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {currentProfile.gender && (
                   <div>
-                    <h4 className="font-semibold text-gray-800">Giới tính</h4>
+                    <h4 className="font-semibold text-gray-800">Gender</h4>
                     <p className="text-gray-600">
-                      {currentProfile.gender === 'male' && '👨 Nam'}
-                      {currentProfile.gender === 'female' && '👩 Nữ'}
-                      {currentProfile.gender === 'other' && 'Khác'}
+                      {currentProfile.gender === 'male' && '👨 Male'}
+                      {currentProfile.gender === 'female' && '👩 Female'}
+                      {currentProfile.gender === 'other' && 'Other'}
                     </p>
                   </div>
                 )}
                 <div>
-                  <h4 className="font-semibold text-gray-800">Ngân sách</h4>
+                  <h4 className="font-semibold text-gray-800">Budget</h4>
                   <p className="text-gray-600">{formatBudget(currentProfile.budgetMin, currentProfile.budgetMax)}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-800">Độ sạch sẽ</h4>
+                  <h4 className="font-semibold text-gray-800">Cleanliness</h4>
                   <p className="text-gray-600">{formatLabel(currentProfile.cleanlinessLevel)}</p>
                 </div>
               </div>
@@ -326,10 +326,10 @@ export default function HomePage({ email }: HomePageProps) {
               <div>
                 <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
                   <Icon icon="mdi:account-circle" className="mr-2 text-xl text-blue-600" />
-                  Giới thiệu
+                  About
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  {currentProfile.bio || "Chưa có giới thiệu"}
+                  {currentProfile.bio || "No bio available"}
                 </p>
               </div>
 
@@ -338,7 +338,7 @@ export default function HomePage({ email }: HomePageProps) {
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
                     <Icon icon="mdi:heart-multiple" className="mr-2 text-xl text-pink-600" />
-                    Sở thích
+                    Interests
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {currentProfile.interests.map((interest, index) => (
@@ -359,19 +359,19 @@ export default function HomePage({ email }: HomePageProps) {
                   <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
                     <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
                       <Icon icon="mdi:account" className="mr-2 text-lg text-purple-600" />
-                      Giới tính
+                      Gender
                     </h4>
                     <p className="text-gray-700 text-sm font-medium">
-                      {currentProfile.gender === 'male' && '👨 Nam'}
-                      {currentProfile.gender === 'female' && '👩 Nữ'}
-                      {currentProfile.gender === 'other' && 'Khác'}
+                      {currentProfile.gender === 'male' && '👨 Male'}
+                      {currentProfile.gender === 'female' && '👩 Female'}
+                      {currentProfile.gender === 'other' && 'Other'}
                     </p>
                   </div>
                 )}
                 <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
                   <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
                     <Icon icon="mdi:cash-multiple" className="mr-2 text-lg text-green-600" />
-                    Ngân sách
+                    Budget
                   </h4>
                   <p className="text-gray-700 text-sm font-medium">
                     {formatBudget(currentProfile.budgetMin, currentProfile.budgetMax)}
@@ -380,7 +380,7 @@ export default function HomePage({ email }: HomePageProps) {
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
                   <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
                     <Icon icon="mdi:calendar" className="mr-2 text-lg text-blue-600" />
-                    Ngày dọn vào
+                    Move-in Date
                   </h4>
                   <p className="text-gray-700 text-sm font-medium">
                     {formatDate(currentProfile.moveInDate)}
@@ -392,35 +392,35 @@ export default function HomePage({ email }: HomePageProps) {
               <div className="bg-gray-50 p-4 rounded-xl">
                 <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
                   <Icon icon="mdi:home-heart" className="mr-2 text-xl text-gray-600" />
-                  Phong cách sống
+                  Lifestyle
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center">
                     <Icon icon="mdi:broom" className="mr-2 text-base text-blue-500" />
-                    <span className="text-gray-700"><strong>Độ sạch sẽ:</strong> {formatLabel(currentProfile.cleanlinessLevel)}</span>
+                    <span className="text-gray-700"><strong>Cleanliness:</strong> {formatLabel(currentProfile.cleanlinessLevel)}</span>
                   </div>
                   <div className="flex items-center">
                     <Icon icon="mdi:sleep" className="mr-2 text-base text-purple-500" />
-                    <span className="text-gray-700"><strong>Giấc ngủ:</strong> {formatLabel(currentProfile.sleepSchedule)}</span>
+                    <span className="text-gray-700"><strong>Sleep Schedule:</strong> {formatLabel(currentProfile.sleepSchedule)}</span>
                   </div>
                   <div className="flex items-center">
                     <Icon icon="mdi:smoking-off" className="mr-2 text-base text-red-500" />
-                    <span className="text-gray-700"><strong>Hút thuốc:</strong> {formatLabel(currentProfile.smokingPolicy)}</span>
+                    <span className="text-gray-700"><strong>Smoking:</strong> {formatLabel(currentProfile.smokingPolicy)}</span>
                   </div>
                   <div className="flex items-center">
                     <Icon icon="mdi:paw" className="mr-2 text-base text-orange-500" />
-                    <span className="text-gray-700"><strong>Thú cưng:</strong> {formatLabel(currentProfile.petPolicy)}</span>
+                    <span className="text-gray-700"><strong>Pets:</strong> {formatLabel(currentProfile.petPolicy)}</span>
                   </div>
                   {currentProfile.noiseLevelPreference && (
                     <div className="flex items-center">
                       <Icon icon="mdi:volume-high" className="mr-2 text-base text-yellow-500" />
-                      <span className="text-gray-700"><strong>Độ ồn:</strong> {formatLabel(currentProfile.noiseLevelPreference)}</span>
+                      <span className="text-gray-700"><strong>Noise Level:</strong> {formatLabel(currentProfile.noiseLevelPreference)}</span>
                     </div>
                   )}
                   {currentProfile.socialProfile && (
                     <div className="flex items-center">
                       <Icon icon="mdi:account-group" className="mr-2 text-base text-green-500" />
-                      <span className="text-gray-700"><strong>Tính cách:</strong> {formatLabel(currentProfile.socialProfile)}</span>
+                      <span className="text-gray-700"><strong>Social Profile:</strong> {formatLabel(currentProfile.socialProfile)}</span>
                     </div>
                   )}
                 </div>
@@ -430,23 +430,23 @@ export default function HomePage({ email }: HomePageProps) {
               <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
                 <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
                   <Icon icon="mdi:map-marker" className="mr-2 text-xl text-purple-600" />
-                  Địa điểm & Giáo dục
+                  Location & Education
                 </h3>
                 <div className="grid grid-cols-1 gap-3 text-sm">
                   <div className="flex items-center">
                     <Icon icon="mdi:city" className="mr-2 text-base text-purple-500" />
-                    <span className="text-gray-700"><strong>Khu vực:</strong> {currentProfile.location}</span>
+                    <span className="text-gray-700"><strong>Area:</strong> {currentProfile.location}</span>
                   </div>
                   {currentProfile.district && (
                     <div className="flex items-center">
                       <Icon icon="mdi:map" className="mr-2 text-base text-purple-500" />
-                      <span className="text-gray-700"><strong>Quận:</strong> {currentProfile.district}</span>
+                      <span className="text-gray-700"><strong>District:</strong> {currentProfile.district}</span>
                     </div>
                   )}
                   {currentProfile.university && (
                     <div className="flex items-center">
                       <Icon icon="mdi:school" className="mr-2 text-base text-purple-500" />
-                      <span className="text-gray-700"><strong>Trường:</strong> {currentProfile.university}</span>
+                      <span className="text-gray-700"><strong>University:</strong> {currentProfile.university}</span>
                     </div>
                   )}
                 </div>
@@ -459,49 +459,49 @@ export default function HomePage({ email }: HomePageProps) {
                 <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
                   <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
                     <Icon icon="mdi:cog" className="mr-2 text-xl text-orange-600" />
-                    Thông tin bổ sung
+                    Additional Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     {currentProfile.sharedSpaceCleaning && (
                       <div className="flex items-center">
                         <Icon icon="mdi:home-cleaning" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Dọn dẹp:</strong> {formatLabel(currentProfile.sharedSpaceCleaning)}</span>
+                        <span className="text-gray-700"><strong>Cleaning:</strong> {formatLabel(currentProfile.sharedSpaceCleaning)}</span>
                       </div>
                     )}
                     {currentProfile.overnightGuestPolicy && (
                       <div className="flex items-center">
                         <Icon icon="mdi:bed" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Khách qua đêm:</strong> {formatLabel(currentProfile.overnightGuestPolicy)}</span>
+                        <span className="text-gray-700"><strong>Overnight Guests:</strong> {formatLabel(currentProfile.overnightGuestPolicy)}</span>
                       </div>
                     )}
                     {currentProfile.partyFrequency && (
                       <div className="flex items-center">
                         <Icon icon="mdi:party-popper" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Tiệc tùng:</strong> {formatLabel(currentProfile.partyFrequency)}</span>
+                        <span className="text-gray-700"><strong>Parties:</strong> {formatLabel(currentProfile.partyFrequency)}</span>
                       </div>
                     )}
                     {currentProfile.studyHabits && (
                       <div className="flex items-center">
                         <Icon icon="mdi:book-open" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Học tập:</strong> {formatLabel(currentProfile.studyHabits)}</span>
+                        <span className="text-gray-700"><strong>Study Habits:</strong> {formatLabel(currentProfile.studyHabits)}</span>
                       </div>
                     )}
                     {currentProfile.cookingSkills && (
                       <div className="flex items-center">
                         <Icon icon="mdi:chef-hat" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Nấu ăn:</strong> {formatLabel(currentProfile.cookingSkills)}</span>
+                        <span className="text-gray-700"><strong>Cooking:</strong> {formatLabel(currentProfile.cookingSkills)}</span>
                       </div>
                     )}
                     {currentProfile.guestPolicy && (
                       <div className="flex items-center">
                         <Icon icon="mdi:account-multiple" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Chính sách khách:</strong> {formatLabel(currentProfile.guestPolicy)}</span>
+                        <span className="text-gray-700"><strong>Guest Policy:</strong> {formatLabel(currentProfile.guestPolicy)}</span>
                       </div>
                     )}
                     {currentProfile.wakeUpTime && (
                       <div className="flex items-center">
                         <Icon icon="mdi:alarm" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Giờ thức dậy:</strong> {currentProfile.wakeUpTime}</span>
+                        <span className="text-gray-700"><strong>Wake-up Time:</strong> {currentProfile.wakeUpTime}</span>
                       </div>
                     )}
                   </div>
@@ -518,7 +518,7 @@ export default function HomePage({ email }: HomePageProps) {
                   className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-3 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
                 >
                   <Icon icon="mdi:close-circle" className="text-lg" />
-                  Bỏ qua
+                  Pass
                 </button>
                 <button
                   onClick={() => {
@@ -528,7 +528,7 @@ export default function HomePage({ email }: HomePageProps) {
                   className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
                 >
                   <Icon icon="mdi:thumb-up-outline" className="text-lg" />
-                  Thích
+                  Like
                 </button>
               </div>
             </div>

@@ -162,9 +162,9 @@ export const COOKING_SKILLS_OPTIONS = [
 ];
 
 export const GENDER_OPTIONS = [
-  { value: 'male', label: 'Nam' },
-  { value: 'female', label: 'Nữ' },
-  { value: 'other', label: 'Khác' },
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
 ];
 
 // Popular interests/hobbies tags
