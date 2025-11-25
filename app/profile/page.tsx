@@ -360,20 +360,6 @@ export default function ProfilePage() {
             </label>
           </div>
 
-          {/* Desired Districts */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Desired Districts</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Example: District 1, HCMC"
-              className="input input-bordered text-gray-900"
-              value={profile.location || ''}
-              onChange={(e) => handleInputChange('location', e.target.value)}
-            />
-          </div>
-
           {/* University & District */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="form-control">
@@ -477,26 +463,42 @@ export default function ProfilePage() {
               ))}
             </select>
           </div>
+        </div>
 
-          {/* Accommodation Status */}
+         {/* Accommodation Status */}
+        <div className="form-control mb-4">
+          <label className="label">
+            <span className="label-text font-semibold text-gray-900">Accommodation Status *</span>
+          </label>
+          <select
+            className="select select-bordered text-gray-900"
+            value={profile.hasAccommodation || ''}
+            onChange={(e) => handleInputChange('hasAccommodation', e.target.value)}
+            >
+            <option value="">Select status</option>
+              {ACCOMMODATION_STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+              ))}
+          </select>
+        </div>
+
+        {/* Desired Districts - Only show when looking for accommodation */}
+        {profile.hasAccommodation === 'looking' && (
           <div className="form-control mb-4">
             <label className="label">
-              <span className="label-text font-semibold text-gray-900">Accommodation Status *</span>
+              <span className="label-text font-semibold text-gray-900">Desired Districts</span>
             </label>
-            <select
-              className="select select-bordered text-gray-900"
-              value={profile.hasAccommodation || ''}
-              onChange={(e) => handleInputChange('hasAccommodation', e.target.value)}
-            >
-              <option value="">Select status</option>
-              {ACCOMMODATION_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              placeholder="Example: District 1, HCMC"
+              className="input input-bordered text-gray-900"
+              value={profile.location || ''}
+              onChange={(e) => handleInputChange('location', e.target.value)}
+            />
           </div>
-        </div>
+        )}
 
         {/* Accommodation Details (for users who have accommodation) */}
         {profile.hasAccommodation === 'have-room' && (
