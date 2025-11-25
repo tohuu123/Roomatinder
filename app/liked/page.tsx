@@ -7,6 +7,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase";
 import { getLikedProfiles, getMatches, unlikeUser } from "@/lib/profileService";
 import { UserProfile } from "@/types/profile";
+import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
+import { useUserChats } from "@/lib/hooks/useChat";
 
 export default function LikedPage() {
   const router = useRouter();
@@ -15,6 +17,10 @@ export default function LikedPage() {
   const [matches, setMatches] = useState<UserProfile[]>([]);
   const [activeTab, setActiveTab] = useState<'liked' | 'matches'>('liked');
   const [loading, setLoading] = useState(true);
+  const [creatingChat, setCreatingChat] = useState<string | null>(null);
+
+  // Get user's chats to check existing conversations
+  const { chats } = useUserChats(currentUserId);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -58,6 +64,38 @@ export default function LikedPage() {
   const handleViewProfile = (slug?: string) => {
     if (slug) {
       router.push(`/profile/${slug}`);
+    }
+  };
+
+  const handleStartChat = async (matchedUserId: string) => {
+    if (!currentUserId) return;
+
+    setCreatingChat(matchedUserId);
+
+    try {
+      // Check if chat already exists
+      const existingChatId = checkChatExists(currentUserId, matchedUserId, chats);
+      
+      if (existingChatId) {
+        // Navigate to existing chat
+        router.push(`/chatroom?chatId=${existingChatId}`);
+        return;
+      }
+      
+      // Create new chat
+      const chatId = await createChatFromMatch(currentUserId, matchedUserId);
+      
+      if (chatId) {
+        router.push(`/chatroom?chatId=${chatId}`);
+      } else {
+        alert('Không thể tạo cuộc trò chuyện. Vui lòng thử lại.');
+      }
+    } catch (error: any) {
+      console.error('Error starting chat:', error);
+      const errorMessage = error?.message || 'Đã xảy ra lỗi không xác định';
+      alert(`Lỗi: ${errorMessage}`);
+    } finally {
+      setCreatingChat(null);
     }
   };
 
@@ -196,6 +234,22 @@ export default function LikedPage() {
                   )}
 
                   <div className="card-actions justify-end mt-4">
+                    {activeTab === 'matches' && (
+                      <button
+                        onClick={() => handleStartChat(profile.userId)}
+                        disabled={creatingChat === profile.userId}
+                        className="btn btn-success btn-sm"
+                      >
+                        {creatingChat === profile.userId ? (
+                          <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                          <>
+                            <Icon icon="mdi:message" className="mr-1" />
+                            Nhắn tin
+                          </>
+                        )}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleViewProfile(profile.slug)}
                       className="btn btn-primary btn-sm"
