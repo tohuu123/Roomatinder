@@ -44,16 +44,16 @@ export default function ContactPage() {
     },
     {
       icon: "mdi:map-marker",
-      title: "Địa chỉ",
-      content: "TP. Hồ Chí Minh",
-      description: "Trường Đại học Khoa học Tự nhiên - ĐHQG TP.HCM"
+      title: "Address",
+      content: "Ho Chi Minh City",
+      description: "University of Science - VNU-HCM"
     },
   ];
 
   const faqItems = [
     {
-      question: "Dữ liệu cá nhân có được bảo mật không?",
-      answer: "Tuyệt đối có. Chúng tôi sử dụng Firebase với các biện pháp bảo mật cao và không chia sẻ thông tin cá nhân với bên thứ ba."
+      question: "Is personal data kept confidential?",
+      answer: "Absolutely. We use Firebase with high security measures and do not share personal information with third parties."
     }
   ];
 
@@ -64,11 +64,11 @@ export default function ContactPage() {
         {/* Header Section */}
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-gray-800 mb-6">
-            Liên hệ với chúng tôi
+            Contact Us
           </h1>
           <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-pink-500 mx-auto mb-8"></div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Chúng tôi luôn sẵn sàng lắng nghe ý kiến và hỗ trợ bạn. Hãy liên hệ với nhóm <strong className="text-blue-600">devebugger</strong> qua các kênh bên dưới.
+            We are always ready to listen to your feedback and support you. Contact the <strong className="text-blue-600">devebugger</strong> team through the channels below.
           </p>
         </div>
 

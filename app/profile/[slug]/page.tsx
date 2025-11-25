@@ -77,9 +77,16 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                 </div>
               </div>
               <div>
-                <h1 className="text-3xl font-bold mb-1 text-gray-900">
-                  {profile.displayName || profile.email?.split('@')[0] || 'No name'}
-                </h1>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    {profile.displayName || profile.email?.split('@')[0] || 'No name'}
+                  </h1>
+                  {profile.hasAccommodation && (
+                    <span className="text-sm px-3 py-1 rounded-full font-semibold bg-blue-500 text-white shadow-md">
+                      {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-600">{profile.email}</p>
                 {profile.university && (
                   <p className="text-sm text-gray-600 mt-1 flex items-center gap-1">
@@ -127,7 +134,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className="bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">
-                    {profile.hasAccommodation === 'have-room' ? '🏠 Has Room' : '🔍 Looking'}
+                    {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
                   </span>
                   {profile.hasAccommodation === 'have-room' && (
                     <button
@@ -143,15 +150,6 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                 </div>
               </div>
               <div className="space-y-3 text-sm">
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="text-gray-700">
-                    <strong>Status:</strong> {profile.hasAccommodation === 'have-room' ? 'Has room to share' : 'Looking for accommodation'}
-                  </span>
-                </div>
-                
                 {/* Show desired location for users looking */}
                 {profile.hasAccommodation === 'looking' && profile.location && (
                   <div className="flex items-center">

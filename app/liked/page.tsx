@@ -88,12 +88,12 @@ export default function LikedPage() {
       if (chatId) {
         router.push(`/chatroom?chatId=${chatId}`);
       } else {
-        alert('Không thể tạo cuộc trò chuyện. Vui lòng thử lại.');
+        alert('Could not create conversation. Please try again.');
       }
     } catch (error: any) {
       console.error('Error starting chat:', error);
-      const errorMessage = error?.message || 'Đã xảy ra lỗi không xác định';
-      alert(`Lỗi: ${errorMessage}`);
+      const errorMessage = error?.message || 'An unknown error occurred';
+      alert(`Error: ${errorMessage}`);
     } finally {
       setCreatingChat(null);
     }
@@ -104,7 +104,7 @@ export default function LikedPage() {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100">
         <div className="text-center">
           <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="mt-4 text-gray-600">Đang tải...</p>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -124,7 +124,7 @@ export default function LikedPage() {
             <Icon icon="mdi:arrow-left" className="text-2xl" />
           </button>
           <h1 className="text-3xl font-bold text-gray-800">
-            {activeTab === 'liked' ? 'Đã thích' : 'Đã match'}
+            {activeTab === 'liked' ? 'Liked' : 'Matches'}
           </h1>
           <div className="w-12"></div>
         </div>
@@ -132,18 +132,18 @@ export default function LikedPage() {
         {/* Tabs */}
         <div className="tabs tabs-box mb-6 bg-white shadow-lg rounded-2xl p-2">
           <button
-            className={`tab flex-1 ${activeTab === 'liked' ? 'tab-active bg-pink-500 text-white' : 'text-gray-600'} rounded-xl transition-all`}
+            className={`tab flex-1 ${activeTab === 'liked' ? 'tab-active bg-pink-500 text-black' : 'text-gray-600'} rounded-xl transition-all`}
             onClick={() => setActiveTab('liked')}
           >
-            <Icon icon="mdi:heart" className="mr-2 text-xl" />
-            Đã thích ({likedProfiles.length})
+            <Icon icon="mdi:account-check" className="mr-2 text-xl" />
+            Liked ({likedProfiles.length})
           </button>
           <button
-            className={`tab flex-1 ${activeTab === 'matches' ? 'tab-active bg-green-500 text-white' : 'text-gray-600'} rounded-xl transition-all`}
+            className={`tab flex-1 ${activeTab === 'matches' ? 'tab-active bg-green-500 text-black' : 'text-gray-600'} rounded-xl transition-all`}
             onClick={() => setActiveTab('matches')}
           >
-            <Icon icon="mdi:heart-multiple" className="mr-2 text-xl" />
-            Đã match ({matches.length})
+            <Icon icon="mdi:handshake" className="mr-2 text-xl" />
+            Matches ({matches.length})
           </button>
         </div>
 
@@ -151,23 +151,23 @@ export default function LikedPage() {
         {displayProfiles.length === 0 ? (
           <div className="text-center py-16">
             <Icon 
-              icon={activeTab === 'liked' ? "mdi:heart-outline" : "mdi:heart-multiple-outline"} 
+              icon={activeTab === 'liked' ? "mdi:account-search-outline" : "mdi:account-group-outline"} 
               className="text-6xl text-gray-300 mx-auto mb-4" 
             />
             <h2 className="text-2xl font-bold text-gray-600 mb-2">
-              {activeTab === 'liked' ? 'Chưa có ai trong danh sách' : 'Chưa có match nào'}
+              {activeTab === 'liked' ? 'No one in the list yet' : 'No matches yet'}
             </h2>
             <p className="text-gray-500 mb-6">
               {activeTab === 'liked' 
-                ? 'Hãy bắt đầu swipe để tìm bạn cùng phòng!' 
-                : 'Khi có người cũng thích bạn lại, match sẽ xuất hiện ở đây'}
+                ? 'Start swiping to find your roommate!' 
+                : 'When someone likes you back, matches will appear here'}
             </p>
             <button
               onClick={() => router.push('/Swipe')}
               className="btn btn-primary"
             >
               <Icon icon="mdi:cards" className="mr-2" />
-              Bắt đầu Swipe
+              Start Swiping
             </button>
           </div>
         ) : (
@@ -185,53 +185,103 @@ export default function LikedPage() {
                   />
                   {activeTab === 'matches' && (
                     <div className="absolute top-4 right-4 badge badge-success badge-lg shadow-lg">
-                      <Icon icon="mdi:heart-multiple" className="mr-1" />
+                      <Icon icon="mdi:handshake" className="mr-1" />
                       Match!
                     </div>
                   )}
                 </figure>
 
                 <div className="card-body">
-                  <h2 className="card-title">
-                    {profile.displayName || 'Anonymous'}
-                    <span className="text-sm font-normal text-gray-500">
-                      {profile.gender === 'male' ? '♂' : profile.gender === 'female' ? '♀' : ''}
-                    </span>
-                  </h2>
-
-                  <div className="space-y-2 text-sm">
-                    <p className="flex items-center text-gray-600">
-                      <Icon icon="mdi:map-marker" className="mr-2" />
-                      {profile.location || 'Chưa cập nhật'}
-                    </p>
-                    <p className="flex items-center text-gray-600">
-                      <Icon icon="mdi:cash" className="mr-2" />
-                      {profile.budgetMin?.toLocaleString('vi-VN')} - {profile.budgetMax?.toLocaleString('vi-VN')} VNĐ
-                    </p>
-                    {profile.bio && (
-                      <p className="text-gray-600 line-clamp-2">
-                        {profile.bio}
-                      </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="card-title text-gray-800">
+                      {profile.displayName || 'Anonymous'}
+                      <span className="text-sm font-normal text-gray-500">
+                        {profile.gender === 'male' ? '♂' : profile.gender === 'female' ? '♀' : ''}
+                      </span>
+                    </h2>
+                    {profile.hasAccommodation && (
+                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">
+                        {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
+                      </span>
                     )}
                   </div>
 
-                  {profile.interests && profile.interests.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {profile.interests.slice(0, 3).map((interest, idx) => (
-                        <span
-                          key={idx}
-                          className="badge badge-soft badge-sm"
-                        >
-                          {interest}
-                        </span>
-                      ))}
-                      {profile.interests.length > 3 && (
-                        <span className="badge badge-ghost badge-sm">
-                          +{profile.interests.length - 3}
-                        </span>
-                      )}
+                  <div className="space-y-4">
+                    {/* About Section */}
+                    {profile.bio && (
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <h3 className="font-semibold text-gray-800 mb-2">About</h3>
+                        <p className="text-gray-600 text-sm leading-relaxed">
+                          {profile.bio}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Interests Section */}
+                    {profile.interests && profile.interests.length > 0 && (
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <h3 className="font-semibold text-gray-800 mb-2">Interests</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {profile.interests.slice(0, 5).map((interest, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-xs font-medium"
+                            >
+                              {interest}
+                            </span>
+                          ))}
+                          {profile.interests.length > 5 && (
+                            <span className="text-gray-500 text-xs self-center">
+                              +{profile.interests.length - 5} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Basic Information Section */}
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <h3 className="font-semibold text-gray-800 mb-2">Basic Information</h3>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        {profile.gender && (
+                          <div>
+                            <h4 className="font-semibold text-gray-800">Gender</h4>
+                            <p className="text-gray-600">
+                              {profile.gender === 'male' && 'Male'}
+                              {profile.gender === 'female' && 'Female'}
+                              {profile.gender === 'other' && 'Other'}
+                            </p>
+                          </div>
+                        )}
+                        {(profile.budgetMin || profile.budgetMax) && (
+                          <div>
+                            <h4 className="font-semibold text-gray-800">Budget</h4>
+                            <p className="text-gray-600">
+                              {profile.budgetMin?.toLocaleString('vi-VN')} - {profile.budgetMax?.toLocaleString('vi-VN')} VNĐ
+                            </p>
+                          </div>
+                        )}
+                        {(profile.hasAccommodation === 'looking' && profile.location) && (
+                          <div>
+                            <h4 className="font-semibold text-gray-800">Desired Location</h4>
+                            <p className="text-gray-600">{profile.location}</p>
+                          </div>
+                        )}
+                        {(profile.hasAccommodation === 'have-room' && profile.accommodationLocation) && (
+                          <div>
+                            <h4 className="font-semibold text-gray-800">Room Location</h4>
+                            <p className="text-gray-600">{profile.accommodationLocation}</p>
+                          </div>
+                        )}
+                        {profile.cleanlinessLevel && (
+                          <div>
+                            <h4 className="font-semibold text-gray-800">Cleanliness</h4>
+                            <p className="text-gray-600 capitalize">{profile.cleanlinessLevel}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  </div>
 
                   <div className="card-actions justify-end mt-4">
                     {activeTab === 'matches' && (
@@ -245,7 +295,7 @@ export default function LikedPage() {
                         ) : (
                           <>
                             <Icon icon="mdi:message" className="mr-1" />
-                            Nhắn tin
+                            Message
                           </>
                         )}
                       </button>
@@ -255,14 +305,14 @@ export default function LikedPage() {
                       className="btn btn-primary btn-sm"
                     >
                       <Icon icon="mdi:account" className="mr-1" />
-                      Xem profile
+                      View Profile
                     </button>
                     <button
                       onClick={() => handleUnlike(profile.userId)}
                       className="btn btn-ghost btn-sm text-red-500"
                     >
-                      <Icon icon="mdi:heart-off" className="mr-1" />
-                      Bỏ thích
+                      <Icon icon="mdi:account-remove" className="mr-1" />
+                      Unlike
                     </button>
                   </div>
                 </div>

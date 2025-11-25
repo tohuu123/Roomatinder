@@ -257,9 +257,20 @@ export default function ProfilePage() {
             
             {/* Display Name and Email */}
             <div className="text-center mt-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                {profile.displayName || user?.displayName || 'No name set'}
-              </h2>
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {profile.displayName || user?.displayName || 'No name set'}
+                </h2> 
+                {profile.hasAccommodation ? (
+                  <span className="text-sm px-3 py-1 rounded-full font-semibold bg-blue-500 text-white shadow-md">
+                    {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
+                  </span>
+                ) : (
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-gray-200 text-gray-600">
+                    No status set
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-600">{user?.email}</p>
             </div>
           </div>

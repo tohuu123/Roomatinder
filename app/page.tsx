@@ -185,7 +185,7 @@ export default function HomePage({ email }: HomePageProps) {
             onClick={() => router.push('/liked')}
             className="btn btn-circle btn-ghost relative"
           >
-            <Icon icon="mdi:heart-multiple" className="text-2xl text-pink-500" />
+            <Icon icon="mdi:home-account" className="text-2xl text-pink-500" />
           </button>
           <h1 className="text-3xl font-bold text-gray-800">Roomatinder</h1>
           <div className="w-12"></div>
@@ -214,9 +214,16 @@ export default function HomePage({ email }: HomePageProps) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
               <div className="absolute bottom-4 left-4 text-white">
-                <h2 className="text-2xl font-bold">
-                  {currentProfile.displayName || currentProfile.email.split('@')[0]}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-bold">
+                    {currentProfile.displayName || currentProfile.email.split('@')[0]}
+                  </h2>
+                  {currentProfile.hasAccommodation && (
+                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-white/20 backdrop-blur-sm border border-white/30">
+                      {currentProfile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm opacity-90">{currentProfile.location}</p>
               </div>
             </div>
@@ -361,7 +368,7 @@ export default function HomePage({ email }: HomePageProps) {
               {currentProfile.interests && currentProfile.interests.length > 0 && (
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                    <Icon icon="mdi:heart-multiple" className="mr-2 text-xl text-pink-600" />
+                    <Icon icon="mdi:star" className="mr-2 text-xl text-pink-600" />
                     Interests
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -724,20 +731,20 @@ export default function HomePage({ email }: HomePageProps) {
           >
             {/* Match Icon */}
             <div className="mb-6">
-              <Icon icon="mdi:heart-multiple" className="text-8xl text-pink-500 mx-auto animate-pulse" />
+              <Icon icon="mdi:home" className="text-8xl text-yellow-500 mx-auto animate-pulse" />
             </div>
 
             {/* Match Title */}
             <h2 className="text-4xl font-bold text-gray-800 mb-4">
-              It's a Match! 🎉
+              It's a Match!
             </h2>
             <p className="text-gray-600 mb-6">
-              Bạn và <span className="font-bold text-pink-600">{matchedProfile.displayName || matchedProfile.email}</span> đã thích nhau!
+              You and <span className="font-bold text-yellow-600">{matchedProfile.displayName || matchedProfile.email}</span> have liked each other!
             </p>
 
             {/* Profile Preview */}
             <div className="flex justify-center gap-4 mb-6">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-pink-500 shadow-lg">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-yellow-500 shadow-lg">
                 <img
                   src={getUserAvatar(matchedProfile.photoURL, matchedProfile.email || matchedProfile.userId)}
                   alt={matchedProfile.displayName || 'User'}
@@ -756,13 +763,13 @@ export default function HomePage({ email }: HomePageProps) {
                 className="btn btn-primary btn-lg w-full"
               >
                 <Icon icon="mdi:message" className="mr-2" />
-                Xem Matches
+                View Matches
               </button>
               <button
                 onClick={() => setShowMatchModal(false)}
-                className="btn btn-ghost btn-lg w-full"
-              >
-                Tiếp tục Swipe
+                className="btn btn-ghost btn-lg w-full text-gray-600"
+              > 
+                Continue Swipe
               </button>
             </div>
           </div>
