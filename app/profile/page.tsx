@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, storage } from '@/firebase';
+import { auth } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getUserAvatar } from '@/lib/avatarHelper';
 import {
   UserProfile,
@@ -112,32 +111,30 @@ export default function ProfilePage() {
 
     setUploading(true);
     try {
-      // Create a reference to the storage location
-      const storageRef = ref(storage, `profile-images/${user.uid}/${Date.now()}_${file.name}`);
+      // Convert image to base64
+      const base64String = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
       
-      console.log('Uploading to:', storageRef.fullPath);
+      console.log('Image converted to base64, size:', base64String.length, 'characters');
       
-      // Upload the file
-      const uploadResult = await uploadBytes(storageRef, file);
-      console.log('Upload result:', uploadResult);
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(storageRef);
-      console.log('Download URL:', downloadURL);
-      
-      // Update profile with new photo URL
+      // Update profile with base64 string
       setProfile((prev) => ({
         ...prev,
-        photoURL: downloadURL,
+        photoURL: base64String,
       }));
       
-      setImagePreview(downloadURL);
+      setImagePreview(base64String);
       alert('Image uploaded successfully!');
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      const errorMsg = error?.code === 'storage/unauthorized' 
-        ? 'No upload permission. Please check Firebase Storage rules.'
-        : error?.message || 'Upload failed. Please try again.';
+      const errorMsg = error?.message || 'Upload failed. Please try again.';
       setUploadError(errorMsg);
     } finally {
       setUploading(false);

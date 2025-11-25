@@ -23,13 +23,7 @@ import {
   arrayRemove,
   DocumentSnapshot,
 } from 'firebase/firestore';
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  UploadTask,
-} from 'firebase/storage';
-import { db, storage } from '@/firebase';
+import { db } from '@/firebase';
 import {
   Chat,
   Message,
@@ -323,7 +317,7 @@ export async function sendMessage(
 }
 
 /**
- * Upload media file to Firebase Storage
+ * Convert media file to base64 string
  */
 async function uploadMediaFile(
   chatId: string,
@@ -331,33 +325,37 @@ async function uploadMediaFile(
   onProgress: (progress: number) => void
 ): Promise<{ url: string; thumbnail?: string }> {
   try {
-    const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.name}`;
-    const storageRef = ref(storage, `chats/${chatId}/${fileName}`);
+    // Report progress as we start
+    onProgress(10);
 
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    return new Promise((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+    // Convert file to base64
+    const base64String = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result);
+      };
+      reader.onerror = reject;
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const progress = (event.loaded / event.total) * 90 + 10; // 10-100%
           onProgress(progress);
-        },
-        (error) => {
-          console.error('Upload error:', error);
-          reject(error);
-        },
-        async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve({ url: downloadURL });
         }
-      );
+      };
+      reader.readAsDataURL(file);
     });
+
+    // Complete progress
+    onProgress(100);
+
+    console.log('Media converted to base64, size:', base64String.length, 'characters');
+
+    // For images, we could generate a thumbnail by creating a smaller version
+    // For now, we'll use the same base64 for both URL and thumbnail
+    return { url: base64String, thumbnail: base64String };
   } catch (error) {
-    console.error('Error uploading media:', error);
-    throw new Error('Failed to upload media');
+    console.error('Error converting media:', error);
+    throw new Error('Failed to convert media to base64');
   }
 }
 
