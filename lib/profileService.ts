@@ -264,13 +264,19 @@ export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boole
   const required = [
     profile.budgetMin && profile.budgetMin > 0,
     profile.budgetMax && profile.budgetMax > 0,
-    profile.location && profile.location.trim() !== '',
     profile.sleepSchedule,
     profile.cleanlinessLevel,
     profile.smokingPolicy,
     profile.petPolicy,
     profile.hasAccommodation,
   ];
+  
+  // Additional required fields for users who are looking for accommodation
+  if (profile.hasAccommodation === 'looking') {
+    required.push(
+      profile.location && profile.location.trim() !== ''
+    );
+  }
   
   // Additional required fields for users who have accommodation
   if (profile.hasAccommodation === 'have-room') {

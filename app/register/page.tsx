@@ -2,7 +2,7 @@
 
 import { FormEvent, useState, useEffect } from "react";
 import Link from "next/link";
-import { getAuth, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
 import { app, auth, googleProvider } from "../../firebase";
 import { useRouter } from "next/navigation";
 import { createProfile, getProfile, hasCompletedRequiredFields } from "@/lib/profileService";
@@ -28,7 +28,6 @@ export default function Register() {
           budgetMin: 0,
           budgetMax: 0,
           location: "",
-          moveInDate: new Date(),
           sleepSchedule: "flexible",
           cleanlinessLevel: "moderate",
           smokingPolicy: "no-smoking",
@@ -89,7 +88,6 @@ export default function Register() {
           budgetMin: 0,
           budgetMax: 0,
           location: "",
-          moveInDate: new Date(),
           sleepSchedule: "flexible",
           cleanlinessLevel: "moderate",
           smokingPolicy: "no-smoking",
@@ -102,6 +100,8 @@ export default function Register() {
         return;
       }
       
+      // Sign out the user after registration so they need to sign in
+      await signOut(auth);
       router.push("/login");
     } catch (e) {
       setTimeout(() => {
@@ -140,14 +140,14 @@ export default function Register() {
     <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-base-200">
       <div className="w-full bg-base-100 rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0">
         <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-          <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">Sign Up</h1>
+          <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">Sign In</h1>
 
           {/* google button */}
           <button
             type="button"
             onClick={handleGoogle}
             disabled={loadingGoogle}
-            className="w-full bg-white border border-base-300 rounded-lg px-5 py-2.5 font-medium flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.99] transition text-gray-900"
+            className="w-full text-primary-content bg-primary transform hover:scale-105 transition duration-200 ease-in-out font-medium rounded-lg px-5 py-2.5 flex items-center justify-center gap-2"
           >
             {/* logo gg */}
             <svg width="18" height="18" viewBox="0 0 48 48" className="-ml-1" aria-hidden="true">
@@ -156,7 +156,7 @@ export default function Register() {
               <path fill="#4CAF50" d="M24 44c5.166 0 9.818-1.977 13.309-5.191l-6.154-5.208C29.108 35.174 26.671 36 24 36c-5.214 0-9.706-3.726-11.289-8.733l-6.53 5.03C9.479 39.556 16.181 44 24 44z"/>
               <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-1.018 3.291-3.536 5.988-6.849 7.098l6.154 5.208C36.355 41.038 43 36 43 25c0-1.341-.138-2.651-.389-3.917z"/>
             </svg>
-            {loadingGoogle ? "Signing up..." : "Continue with Google"}
+            {loadingGoogle ? "Signing in..." : "Sign in with Google"}
           </button>
 
           <div className="divider my-2 divider-neutral !text-black before:bg-base-300 after:bg-base-300">
@@ -189,19 +189,13 @@ export default function Register() {
               <input type="password" name="confirm-password" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} id="confirm-password" placeholder="••••••••" className="bg-base-200 border border-base-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5" required />
             </div>
             <button type="submit" className="w-full text-primary-content bg-primary transform hover:scale-105 transition duration-200 ease-in-out font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-              Create Account
+              Sign in
             </button>
             {error && (
               <div className="text-red-700 relative text-sm font-bold" role="alert">
                 <span className="block sm:inline">⚠ {error}</span>
               </div>
             )}
-            <p className="text-sm font-light text-info-content">
-              Already have an account?{" "}
-              <Link href="/login" className="font-medium text-gray-900 hover:underline">
-                Sign in here
-              </Link>
-            </p>
           </form>
         </div>
       </div>

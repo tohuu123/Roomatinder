@@ -69,7 +69,7 @@ export interface UserProfile {
   cookingSkills?: 'no' | 'basic' | 'intermediate' | 'advanced';
 
   // Guest Policy (general)
-  guestPolicy?: 'rarely' | 'sometimes' | 'often' | 'very-open';
+  guestPolicy?: 'never' | 'rarely' | 'sometimes' | 'often' | 'very-flexible';
 
   // === AI/LLM FIELDS (Text-Based) ===
   
