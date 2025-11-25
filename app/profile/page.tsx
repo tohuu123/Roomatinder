@@ -512,7 +512,7 @@ export default function ProfilePage() {
             {/* Accommodation Location */}
             <div className="form-control mb-4">
               <label className="label">
-                <span className="label-text font-semibold text-gray-900">Home's location: address, district (địa chỉ đầy đủ) *</span>
+                <span className="label-text font-semibold text-gray-900">Home's location: address, district *</span>
               </label>
               <input
                 type="text"
