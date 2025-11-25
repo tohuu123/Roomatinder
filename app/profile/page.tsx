@@ -363,10 +363,10 @@ export default function ProfilePage() {
             </label>
           </div>
 
-          {/* Location */}
+          {/* Desired Districts */}
           <div className="form-control mb-4">
             <label className="label">
-              <span className="label-text font-semibold text-gray-900">Location *</span>
+              <span className="label-text font-semibold text-gray-900">Desired Districts</span>
             </label>
             <input
               type="text"
@@ -386,7 +386,7 @@ export default function ProfilePage() {
               <input
                 type="text"
                 placeholder="Example: HCMC University of Technology"
-                className="input input-bordered text-gray-900"
+                className="input input-bordered text-gray-900"  
                 value={profile.university || ''}
                 onChange={(e) => handleInputChange('university', e.target.value)}
               />
@@ -512,7 +512,7 @@ export default function ProfilePage() {
             {/* Accommodation Location */}
             <div className="form-control mb-4">
               <label className="label">
-                <span className="label-text font-semibold text-gray-900">Accommodation Location *</span>
+                <span className="label-text font-semibold text-gray-900">Home's location: address, district (địa chỉ đầy đủ) *</span>
               </label>
               <input
                 type="text"
@@ -542,17 +542,85 @@ export default function ProfilePage() {
               </select>
             </div>
 
-            {/* Home Fees */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Home Fees, Utilities, Electricity/Water *</span>
-              </label>
-              <textarea
-                className="textarea textarea-bordered h-24"
-                placeholder="e.g., Monthly rent: 3,000,000 VND, Electricity: separate meter, Water: included, Internet: included"
-                value={profile.accommodationHomeFees || ''}
-                onChange={(e) => handleInputChange('accommodationHomeFees', e.target.value)}
-              ></textarea>
+            {/* Fee Structure */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Fee Breakdown *</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Home Fees */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold text-gray-900">Home Fees</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 3,500,000 VND/month"
+                    className="input input-bordered text-gray-900"
+                    value={profile.accommodationHomeFeesAmount || ''}
+                    onChange={(e) => handleInputChange('accommodationHomeFeesAmount', e.target.value)}
+                  />  
+                  <label className="label">
+                    <span className="label-text-alt text-gray-600">
+                      Example input home fees: 2.5 = 2,500,000 VND, 5 = 5,000,000 VND
+                    </span>
+                  </label>
+                </div>
+
+                {/* Electricity Fees */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold text-gray-900">Electricity Fees</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 4,000 VND/kWh or included"
+                    className="input input-bordered text-gray-900"
+                    value={profile.accommodationElectricityFees || ''}
+                    onChange={(e) => handleInputChange('accommodationElectricityFees', e.target.value)}
+                  />
+                </div>
+
+                {/* Water Fees */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold text-gray-900">Water Fees</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 20,000 VND/m³ or included"
+                    className="input input-bordered text-gray-900"
+                    value={profile.accommodationWaterFees || ''}
+                    onChange={(e) => handleInputChange('accommodationWaterFees', e.target.value)}
+                  />
+                </div>
+
+                {/* Utilities Fees */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold text-gray-900">Utilities Fees</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Internet, gas, cable - 200,000 VND/month"
+                    className="input input-bordered text-gray-900"
+                    value={profile.accommodationUtilitiesFees || ''}
+                    onChange={(e) => handleInputChange('accommodationUtilitiesFees', e.target.value)}
+                  />
+                </div>
+
+                {/* Additional Fees */}
+                <div className="form-control md:col-span-2">
+                  <label className="label">
+                    <span className="label-text font-semibold text-gray-900">Additional Fees</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Parking, security, cleaning service, maintenance"
+                    className="input input-bordered text-gray-900"
+                    value={profile.accommodationAdditionalFees || ''}
+                    onChange={(e) => handleInputChange('accommodationAdditionalFees', e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* House Type */}
@@ -589,7 +657,7 @@ export default function ProfilePage() {
                 <span className="label-text font-semibold text-gray-900">Furniture & Amenities</span>
               </label>
               <textarea
-                className="textarea textarea-bordered h-24"
+                className="textarea textarea-bordered h-24 text-gray-900"
                 placeholder="e.g., Fully furnished, Kitchen, Air-conditioner, Washing machine, Refrigerator, WiFi"
                 value={profile.accommodationFurniture || ''}
                 onChange={(e) => handleInputChange('accommodationFurniture', e.target.value)}
@@ -643,7 +711,7 @@ export default function ProfilePage() {
                 <span className="label-text font-semibold text-gray-900">General Description</span>
               </label>
               <textarea
-                className="textarea textarea-bordered h-32"
+                className="textarea textarea-bordered h-32 text-gray-900"
                 placeholder="Describe your place, neighborhood, nearby amenities, transportation, what makes it special..."
                 value={profile.accommodationDescription || ''}
                 onChange={(e) => handleInputChange('accommodationDescription', e.target.value)}
@@ -778,7 +846,7 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   placeholder="Add other interests..."
-                  className="input input-bordered join-item flex-1"
+                  className="input input-bordered join-item flex-1 text-gray-900"
                   value={customInterest}
                   onChange={(e) => setCustomInterest(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddCustomInterest()}
@@ -816,7 +884,7 @@ export default function ProfilePage() {
                 <span className="label-text font-semibold text-gray-900">About Yourself</span>
               </label>
               <textarea
-                className="textarea textarea-bordered h-32"
+                className="textarea textarea-bordered h-32 text-gray-900"
                 placeholder="Describe your ideal weekend, things you like to do, or what's important to you when living with others..."
                 value={profile.bio || ''}
                 onChange={(e) => handleInputChange('bio', e.target.value)}

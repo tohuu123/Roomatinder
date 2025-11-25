@@ -42,7 +42,13 @@ export interface UserProfile {
   // === ACCOMMODATION DETAILS (for users who have accommodation) ===
   accommodationLocation?: string;
   accommodationSize?: 'studio' | '1-bedroom' | '2-bedroom' | '3-bedroom' | '4-bedroom' | 'house';
-  accommodationHomeFees?: string; // Home fees, utility fees, electricity/water fees
+  accommodationHomeFees?: string; // Home fees, utility fees, electricity/water fees (legacy field)
+  // Individual fee fields
+  accommodationHomeFeesAmount?: string; // Monthly rent/home fees
+  accommodationElectricityFees?: string; // Electricity fees
+  accommodationWaterFees?: string; // Water fees
+  accommodationUtilitiesFees?: string; // Other utilities (internet, gas, etc.)
+  accommodationAdditionalFees?: string; // Additional fees (parking, security, etc.)
   accommodationHouseType?: string; // House type description
   accommodationPetPolicy?: string; // Pet policy details
   accommodationFurniture?: string; // Kitchen, Air-conditioner, etc.

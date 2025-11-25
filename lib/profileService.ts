@@ -82,9 +82,6 @@ export async function getProfileBySlug(slug: string): Promise<UserProfile | null
   return {
     ...data,
     userId: doc.id,
-    createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-    updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-    moveInDate: (data.moveInDate as Timestamp)?.toDate() || new Date(),
   } as UserProfile;
 }
 
@@ -115,6 +112,8 @@ export function calculateProfileCompletion(profile: Partial<UserProfile>): numbe
   // Add accommodation details as optional fields if user has accommodation
   const accommodationFields = [
     'accommodationLocation', 'accommodationSize', 'accommodationHomeFees',
+    'accommodationHomeFeesAmount', 'accommodationElectricityFees', 'accommodationWaterFees',
+    'accommodationUtilitiesFees', 'accommodationAdditionalFees',
     'accommodationHouseType', 'accommodationFurniture', 'accommodationDescription'
   ];
 
@@ -170,7 +169,6 @@ export async function createProfile(
     location: profileData.location || '',
     university: profileData.university,
     district: profileData.district,
-    moveInDate: profileData.moveInDate || new Date(),
     sleepSchedule: profileData.sleepSchedule || 'flexible',
     cleanlinessLevel: profileData.cleanlinessLevel || 'moderate',
     smokingPolicy: profileData.smokingPolicy || 'no-smoking',
@@ -179,12 +177,7 @@ export async function createProfile(
     // Optional fields
     sharedSpaceCleaning: profileData.sharedSpaceCleaning,
     noiseLevelPreference: profileData.noiseLevelPreference,
-    overnightGuestPolicy: profileData.overnightGuestPolicy,
-    partyFrequency: profileData.partyFrequency,
-    studyHabits: profileData.studyHabits,
-    socialProfile: profileData.socialProfile,
     cookingSkills: profileData.cookingSkills,
-    wakeUpTime: profileData.wakeUpTime,
     guestPolicy: profileData.guestPolicy,
     interests: profileData.interests,
     bio: profileData.bio,
@@ -228,9 +221,6 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
   return {
     ...data,
     userId,
-    createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-    updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-    moveInDate: (data.moveInDate as Timestamp)?.toDate() || new Date(),
   } as UserProfile;
 }
 
@@ -275,7 +265,6 @@ export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boole
     profile.budgetMin && profile.budgetMin > 0,
     profile.budgetMax && profile.budgetMax > 0,
     profile.location && profile.location.trim() !== '',
-    profile.moveInDate,
     profile.sleepSchedule,
     profile.cleanlinessLevel,
     profile.smokingPolicy,
@@ -287,8 +276,8 @@ export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boole
   if (profile.hasAccommodation === 'have-room') {
     required.push(
       profile.accommodationLocation && profile.accommodationLocation.trim() !== '',
-      profile.accommodationSize,
-      profile.accommodationHomeFees && profile.accommodationHomeFees.trim() !== ''
+      !!profile.accommodationSize,
+      profile.accommodationHomeFeesAmount && profile.accommodationHomeFeesAmount.trim() !== ''
     );
   }
   
@@ -314,9 +303,6 @@ export async function getAllProfiles(excludeUserId?: string): Promise<UserProfil
     profiles.push({
       ...data,
       userId: doc.id,
-      createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-      updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-      moveInDate: (data.moveInDate as Timestamp)?.toDate() || new Date(),
     } as UserProfile);
   });
   
