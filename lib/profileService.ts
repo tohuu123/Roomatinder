@@ -13,6 +13,7 @@ import {
   getDocs 
 } from 'firebase/firestore';
 import { UserProfile, ProfileFormData } from '@/types/profile';
+import { addProfileToChroma } from './actions/chromaActions';
 
 const PROFILES_COLLECTION = 'profiles';
 
@@ -202,6 +203,9 @@ export async function createProfile(
     updatedAt: serverTimestamp(),
   });
   
+  // Add profile to ChromaDB for vector-based search
+  await addProfileToChroma(newProfile);
+  
   return newProfile;
 }
 
@@ -255,6 +259,9 @@ export async function updateProfile(
   });
 
   await updateDoc(profileRef, toUpdate);
+  
+  // Update profile in ChromaDB for vector-based search
+  await addProfileToChroma({ ...updatedProfile, profileCompletion });
 }
 
 /**

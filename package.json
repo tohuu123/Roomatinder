@@ -9,8 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@chroma-core/default-embed": "^0.1.9",
     "@firebase/firestore": "^4.6.5",
     "@iconify/react": "^5.0.2",
+    "chromadb": "^3.1.6",
     "diff": "^6.0.0-beta",
     "firebase": "^10.12.5",
     "next": "14.2.5",
