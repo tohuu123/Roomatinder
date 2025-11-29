@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { getAllProfiles, likeUser } from "@/lib/profileService";
+import { getProfile, likeUser } from "@/lib/profileService";
+import { queryMatchingProfile } from "@/lib/chromaService";
 import { UserProfile } from "@/types/profile";
 import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -75,12 +76,14 @@ interface HomePageProps {
 
 export default function HomePage({ email }: HomePageProps) {
   const router = useRouter();
-  const [profiles, setProfiles] = useState<UserProfile[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingNext, setLoadingNext] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [seenUserIds, setSeenUserIds] = useState<string[]>([]);
+  const [noMoreProfiles, setNoMoreProfiles] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
@@ -90,16 +93,50 @@ export default function HomePage({ email }: HomePageProps) {
   const [matchedProfile, setMatchedProfile] = useState<UserProfile | null>(null);
   const [showAccommodationDetails, setShowAccommodationDetails] = useState(false);
 
-  // Load profiles from Firebase
+  // Function to load the next matching profile
+  const loadNextProfile = async (userId: string, excludeIds: string[]) => {
+    try {
+      setLoadingNext(true);
+      
+      // Query ChromaDB for a matching profile
+      const result = await queryMatchingProfile(userId, excludeIds);
+      
+      if (!result) {
+        setCurrentProfile(null);
+        setNoMoreProfiles(true);
+        return;
+      }
+      
+      const { userId: matchedUserId, similarity } = result;
+      console.log(`[Match] Profile: ${matchedUserId} | Similarity: ${similarity.toFixed(1)}%`);
+      
+      // Fetch the full profile from Firebase
+      const profile = await getProfile(matchedUserId);
+      
+      if (profile) {
+        setCurrentProfile(profile);
+        setSeenUserIds(prev => [...prev, matchedUserId]);
+      } else {
+        // Profile not found in Firebase, try next one
+        await loadNextProfile(userId, [...excludeIds, matchedUserId]);
+      }
+    } catch (error) {
+      console.error("Error loading next profile:", error);
+      setNoMoreProfiles(true);
+    } finally {
+      setLoadingNext(false);
+    }
+  };
+
+  // Load first profile on mount
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUserId(user.uid);
         try {
-          const fetchedProfiles = await getAllProfiles(user.uid);
-          setProfiles(fetchedProfiles);
+          await loadNextProfile(user.uid, []);
         } catch (error) {
-          console.error("Error fetching profiles:", error);
+          console.error("Error fetching initial profile:", error);
         } finally {
           setLoading(false);
         }
@@ -110,8 +147,6 @@ export default function HomePage({ email }: HomePageProps) {
 
     return () => unsubscribe();
   }, []);
-
-  const currentProfile = profiles[currentIndex];
 
   const handleSwipe = async (direction: 'left' | 'right') => {
     if (isAnimating || !currentProfile || !currentUserId) return;
@@ -130,10 +165,11 @@ export default function HomePage({ email }: HomePageProps) {
       }
     }
     
-    setTimeout(() => {
-      setCurrentIndex((prev) => prev + 1);
+    setTimeout(async () => {
       setSwipeDirection(null);
       setIsAnimating(false);
+      // Load the next profile
+      await loadNextProfile(currentUserId, seenUserIds);
     }, 300);
   };
 
@@ -147,6 +183,13 @@ export default function HomePage({ email }: HomePageProps) {
     setShowDetailModal(false);
   };
 
+  const handleStartOver = async () => {
+    if (!currentUserId) return;
+    setSeenUserIds([]);
+    setNoMoreProfiles(false);
+    await loadNextProfile(currentUserId, []);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100">
@@ -158,13 +201,13 @@ export default function HomePage({ email }: HomePageProps) {
     );
   }
 
-  if (!currentProfile || currentIndex >= profiles.length) {
+  if (!currentProfile || noMoreProfiles) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
           <button 
-            onClick={() => setCurrentIndex(0)}
+            onClick={handleStartOver}
             className="btn btn-primary"
           >
             Start Over
