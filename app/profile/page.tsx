@@ -258,6 +258,15 @@ export default function ProfilePage() {
                 <h2 className="text-xl font-bold text-gray-900">
                   {profile.displayName || user?.displayName || 'No name set'}
                 </h2> 
+                {profile.accommodationStatus ? (
+                  <span className="text-sm px-3 py-1 rounded-full font-semibold bg-blue-500 text-white shadow-md">
+                    {profile.accommodationStatus === 'have-room' ? 'Has Room' : 'Looking'}
+                  </span>
+                ) : (
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-gray-200 text-gray-600">
+                    No status set
+                  </span>
+                )}
               </div>
               <p className="text-sm text-gray-600">{user?.email}</p>
             </div>
@@ -270,34 +279,6 @@ export default function ProfilePage() {
             <span className="mr-2">👤</span>
             Basic Information
           </h2>
-
-          {/* Display Name */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Display Name *</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Enter your display name"
-              className="input input-bordered text-gray-900"
-              value={profile.displayName || ''}
-              onChange={(e) => handleInputChange('displayName', e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Email - read only */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Email</span>
-            </label>
-            <input
-              type="email"
-              className="input input-bordered bg-gray-100 text-gray-500 cursor-not-allowed"
-              value={user?.email || ''}
-              readOnly
-            />
-          </div>
 
           {/* Gender */}
           <div className="form-control mb-4">

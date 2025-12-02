@@ -192,7 +192,7 @@ export default function HomePage({ email }: HomePageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-emerald-100">
         <div className="text-center">
           <span className="loading loading-spinner loading-lg"></span>
           <p className="mt-4 text-gray-600">Loading profiles...</p>
@@ -203,7 +203,7 @@ export default function HomePage({ email }: HomePageProps) {
 
   if (!currentProfile || noMoreProfiles) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-emerald-100">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
           <button 
@@ -220,7 +220,7 @@ export default function HomePage({ email }: HomePageProps) {
   const profileImage = getUserAvatar(currentProfile.photoURL, currentProfile.email || currentProfile.userId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-blue-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-100 to-emerald-100 p-4">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -228,7 +228,7 @@ export default function HomePage({ email }: HomePageProps) {
             onClick={() => router.push('/liked')}
             className="btn btn-circle btn-ghost relative"
           >
-            <Icon icon="mdi:home-account" className="text-2xl text-pink-500" />
+            <Icon icon="mdi:home-account" className="text-2xl text-green-500" />
           </button>
           <h1 className="text-3xl font-bold text-gray-800">Roomatinder</h1>
           <div className="w-12"></div>
@@ -257,7 +257,7 @@ export default function HomePage({ email }: HomePageProps) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
               <div className="absolute bottom-4 left-4 text-white">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-2xl font-bold">
                     {currentProfile.displayName || currentProfile.email?.split('@')[0]}
                   </h2>
@@ -287,8 +287,7 @@ export default function HomePage({ email }: HomePageProps) {
                     {currentProfile.interests.map((interest, index) => (
                       <span
                         key={index}
-                        className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-xs font-medium"
-                      >
+                        className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
                         {interest}
                       </span>
                     ))}
@@ -301,8 +300,7 @@ export default function HomePage({ email }: HomePageProps) {
                   <div>
                     <h4 className="font-semibold text-gray-800">Gender</h4>
                     <p className="text-gray-600">
-                      {currentProfile.gender === 'male' && 'Male'}
-                      {currentProfile.gender === 'female' && 'Female'}
+                      {currentProfile.gender === 'male' ? 'Male' : 'Female'}
                     </p>
                   </div>
                 )}
@@ -414,14 +412,14 @@ export default function HomePage({ email }: HomePageProps) {
               {currentProfile.interests && currentProfile.interests.length > 0 && (
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                    <Icon icon="mdi:star" className="mr-2 text-xl text-pink-600" />
+                    <Icon icon="mdi:star" className="mr-2 text-xl text-green-600" />
                     Interests
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {currentProfile.interests.map((interest, index) => (
                       <span
                         key={index}
-                        className="bg-gradient-to-r from-pink-100 to-blue-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium border border-pink-200 shadow-sm"
+                        className="bg-gradient-to-r from-green-100 to-emerald-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium border border-green-200 shadow-sm"
                       >
                         {interest}
                       </span>
@@ -758,7 +756,7 @@ export default function HomePage({ email }: HomePageProps) {
       {/* Match Modal */}
       {showMatchModal && matchedProfile && (
         <div 
-          className="fixed inset-0 bg-gradient-to-br from-pink-500/90 to-purple-500/90 flex items-center justify-center z-50 p-6"
+          className="fixed inset-0 bg-gradient-to-br from-green-500/90 to-emerald-500/90 flex items-center justify-center z-50 p-6"
           onClick={() => setShowMatchModal(false)}
         >
           <div 
