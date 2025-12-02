@@ -260,7 +260,20 @@ export default function ProfilePage() {
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 <h2 className="text-xl font-bold text-gray-900">
                   {profile.displayName || user?.displayName || 'No name set'}
-                </h2> 
+                </h2>
+                {profile.isStudentVerified && (
+                  <img 
+                    src="/icons/verified.png" 
+                    alt="Verified Student" 
+                    className="w-6 h-6"
+                    title="Verified Student"
+                  />
+                )}
+                {profile.nickname && (
+                  <span className="text-sm px-2 py-1 rounded-full font-medium bg-purple-100 text-purple-800">
+                    "{profile.nickname}"
+                  </span>
+                )}
                 {profile.hasAccommodation ? (
                   <span className="text-sm px-3 py-1 rounded-full font-semibold bg-blue-500 text-white shadow-md">
                     {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
@@ -313,6 +326,25 @@ export default function ProfilePage() {
             <span className="badge badge-error mr-2">Required</span>
             Basic Information
           </h2>
+
+          {/* Nickname */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Nickname</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Enter your nickname (optional)"
+              className="input input-bordered text-gray-900"
+              value={profile.nickname || ''}
+              onChange={(e) => handleInputChange('nickname', e.target.value)}
+            />
+            <label className="label">
+              <span className="label-text-alt text-gray-600">
+                A friendly name others can call you
+              </span>
+            </label>
+          </div>
 
           {/* Gender */}
           <div className="form-control mb-4">

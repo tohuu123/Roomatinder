@@ -107,6 +107,11 @@ function NavBar() {
                 Messages
               </Link>
             </li>
+            <li>
+              <Link href="/liked" className="text-base text-gray-900 font-semibold">
+                People
+              </Link>
+            </li>
             {user && (
               <li>
                 <button
@@ -126,11 +131,6 @@ function NavBar() {
             <li>
               <Link href="/aboutus" className="text-base text-gray-900 font-semibold">
                 About
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact" className="text-base text-gray-900 font-semibold">
-                Contact
               </Link>
             </li>
             {!isLoading && !user && (
@@ -174,13 +174,13 @@ function NavBar() {
             </Link>
           </li>
           <li>
-            <Link href="/aboutus" className="text-base text-gray-900 font-semibold">
-              About
+            <Link href="/liked" className="text-base text-gray-900 font-semibold">
+              People
             </Link>
           </li>
           <li>
-            <Link href="/contact" className="text-base text-gray-900 font-semibold">
-              Contact
+            <Link href="/aboutus" className="text-base text-gray-900 font-semibold">
+              About
             </Link>
           </li>
         </ul>

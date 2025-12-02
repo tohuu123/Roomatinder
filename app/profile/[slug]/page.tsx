@@ -81,6 +81,19 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                   <h1 className="text-3xl font-bold text-gray-900">
                     {profile.displayName || profile.email?.split('@')[0] || 'No name'}
                   </h1>
+                  {profile.isStudentVerified && (
+                    <img 
+                      src="/icons/verified.png" 
+                      alt="Verified Student" 
+                      className="w-7 h-7"
+                      title="Verified Student"
+                    />
+                  )}
+                  {profile.nickname && (
+                    <span className="text-sm px-3 py-1 rounded-full font-medium bg-purple-100 text-purple-800">
+                      "{profile.nickname}"
+                    </span>
+                  )}
                   {profile.hasAccommodation && (
                     <span className="text-sm px-3 py-1 rounded-full font-semibold bg-blue-500 text-white shadow-md">
                       {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
@@ -413,7 +426,6 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                 <p className="text-gray-700 text-sm font-medium">
                   {profile.gender === 'male' && 'Male'}
                   {profile.gender === 'female' && 'Female'}
-                  {profile.gender === 'other' && 'Other'}
                 </p>
               </div>
             )}

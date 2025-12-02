@@ -5,15 +5,17 @@ export interface UserProfile {
   userId: string;
   email: string;
   displayName?: string;
+  nickname?: string; // Friendly nickname or alias
   photoURL?: string;
   slug?: string; // URL-friendly username or normalized full name
+  isStudentVerified?: boolean; // Student verification status
   createdAt: Date;
   updatedAt: Date;
 
   // === REQUIRED FIELDS (Minimum Viable Profile) ===
   
   // Gender
-  gender?: 'male' | 'female' | 'other';
+  gender?: 'male' | 'female';
   
   // Budget Range (VND per month)
   budgetMin: number;
@@ -178,7 +180,6 @@ export const COOKING_SKILLS_OPTIONS = [
 export const GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
-  { value: 'other', label: 'Other' },
 ];
 
 export const ACCOMMODATION_STATUS_OPTIONS = [
