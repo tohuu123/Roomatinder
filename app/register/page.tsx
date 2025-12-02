@@ -25,13 +25,6 @@ export default function Register() {
         await createProfile(user.uid, user.email || "", {
           displayName: user.displayName || undefined,
           photoURL: user.photoURL || undefined,
-          budgetMin: 0,
-          budgetMax: 0,
-          location: "",
-          sleepSchedule: "flexible",
-          cleanlinessLevel: "moderate",
-          smokingPolicy: "no-smoking",
-          petPolicy: "no-pets",
         });
         profile = await getProfile(user.uid);
       } catch (error) {
@@ -80,18 +73,10 @@ export default function Register() {
       const user = credential.user;
 
       try {
-        // Create a basic profile with the new profile system
+        // Create a basic profile with minimal data
         await createProfile(user.uid, email, {
           displayName: name,
           photoURL: user.photoURL || undefined,
-          // Initialize with default/empty required fields
-          budgetMin: 0,
-          budgetMax: 0,
-          location: "",
-          sleepSchedule: "flexible",
-          cleanlinessLevel: "moderate",
-          smokingPolicy: "no-smoking",
-          petPolicy: "no-pets",
         });
         console.log("New user profile created with email: ", email);
       } catch (e) {

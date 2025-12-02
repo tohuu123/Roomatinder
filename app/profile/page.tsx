@@ -11,17 +11,14 @@ import {
   CLEANLINESS_OPTIONS,
   SMOKING_OPTIONS,
   PET_OPTIONS,
-  SHARED_CLEANING_OPTIONS,
   NOISE_LEVEL_OPTIONS,
   GUEST_POLICY_OPTIONS,
-  PARTY_FREQUENCY_OPTIONS,
-  STUDY_HABITS_OPTIONS,
-  SOCIAL_PROFILE_OPTIONS,
   COOKING_SKILLS_OPTIONS,
   COMMON_INTERESTS,
   GENDER_OPTIONS,
   ACCOMMODATION_STATUS_OPTIONS,
   ACCOMMODATION_SIZE_OPTIONS,
+  ACCOMMODATION_TYPE_OPTIONS,
 } from '@/types/profile';
 import {
   getProfile,
@@ -40,6 +37,7 @@ export default function ProfilePage() {
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [customInterest, setCustomInterest] = useState('');
+  const [customService, setCustomService] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -194,7 +192,6 @@ export default function ProfilePage() {
   }
 
   const completion = calculateProfileCompletion(profile);
-  const hasRequired = hasCompletedRequiredFields(profile);
 
   return (
     <div className="min-h-screen bg-base-200 py-8">
@@ -261,68 +258,57 @@ export default function ProfilePage() {
                 <h2 className="text-xl font-bold text-gray-900">
                   {profile.displayName || user?.displayName || 'No name set'}
                 </h2> 
-                {profile.hasAccommodation ? (
-                  <span className="text-sm px-3 py-1 rounded-full font-semibold bg-blue-500 text-white shadow-md">
-                    {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
-                  </span>
-                ) : (
-                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-gray-200 text-gray-600">
-                    No status set
-                  </span>
-                )}
               </div>
               <p className="text-sm text-gray-600">{user?.email}</p>
             </div>
           </div>
-          
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between mb-2">
-              <span className="text-sm font-semibold text-gray-900">Profile Completion</span>
-              <span className="text-sm font-semibold text-gray-900">{completion}%</span>
-            </div>
-            <progress 
-              className="progress progress-primary w-full" 
-              value={completion} 
-              max="100"
-            ></progress>
-          </div>
-
-          {!hasRequired && (
-            <div className="alert alert-warning">
-              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <span>Please complete all required fields first!</span>
-            </div>
-          )}
-
-          {hasRequired && completion < 80 && (
-            <div className="alert alert-info">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <span>Complete {Math.ceil((80 - completion) / 5)} more items to increase your match chance by 70%!</span>
-            </div>
-          )}
         </div>
 
-        {/* Required Fields */}
+        {/* Basic Information */}
         <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
-            <span className="badge badge-error mr-2">Required</span>
+            <span className="mr-2">👤</span>
             Basic Information
           </h2>
+
+          {/* Display Name */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Display Name *</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Enter your display name"
+              className="input input-bordered text-gray-900"
+              value={profile.displayName || ''}
+              onChange={(e) => handleInputChange('displayName', e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Email - read only */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Email</span>
+            </label>
+            <input
+              type="email"
+              className="input input-bordered bg-gray-100 text-gray-500 cursor-not-allowed"
+              value={user?.email || ''}
+              readOnly
+            />
+          </div>
 
           {/* Gender */}
           <div className="form-control mb-4">
             <label className="label">
-              <span className="label-text font-semibold text-gray-900">Gender</span>
+              <span className="label-text font-semibold text-gray-900">Gender *</span>
             </label>
             <select
               className="select select-bordered text-gray-900"
               value={profile.gender || ''}
               onChange={(e) => handleInputChange('gender', e.target.value)}
+              required
             >
               <option value="">Select gender</option>
               {GENDER_OPTIONS.map((opt) => (
@@ -333,71 +319,59 @@ export default function ProfilePage() {
             </select>
           </div>
 
-          {/* Budget Range */}
+          {/* Birth Year */}
           <div className="form-control mb-4">
             <label className="label">
-              <span className="label-text font-semibold text-gray-900">Budget (million VND/month) *</span>
+              <span className="label-text font-semibold text-gray-900">Birth Year *</span>
             </label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="join">
-                <input
-                  type="number"
-                  placeholder="Minimum"
-                  className="input input-bordered text-gray-900 join-item flex-1"
-                  value={profile.budgetMin ? profile.budgetMin / 1000000 : ''}
-                  onChange={(e) => handleInputChange('budgetMin', (parseFloat(e.target.value) || 0) * 1000000)}
-                  step="0.5"
-                  min="0"
-                />
-                <span className="btn btn-ghost join-item no-animation cursor-default">million</span>
-              </div>
-              <div className="join">
-                <input
-                  type="number"
-                  placeholder="Maximum"
-                  className="input input-bordered text-gray-900 join-item flex-1"
-                  value={profile.budgetMax ? profile.budgetMax / 1000000 : ''}
-                  onChange={(e) => handleInputChange('budgetMax', (parseFloat(e.target.value) || 0) * 1000000)}
-                  step="0.5"
-                  min="0"
-                />
-                <span className="btn btn-ghost join-item no-animation cursor-default">million</span>
-              </div>
-            </div>
-            <label className="label">
-              <span className="label-text-alt text-gray-600">
-                Example: 2.5 = 2,500,000 VND, 5 = 5,000,000 VND
-              </span>
-            </label>
+            <input
+              type="number"
+              placeholder="Ex: 2000"
+              className="input input-bordered text-gray-900"
+              value={profile.birthYear || ''}
+              onChange={(e) => handleInputChange('birthYear', parseInt(e.target.value) || undefined)}
+              min="1950"
+              max={new Date().getFullYear()}
+              required
+            />
           </div>
 
-          {/* University & District */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">University</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Example: HCMC University of Technology"
-                className="input input-bordered text-gray-900"  
-                value={profile.university || ''}
-                onChange={(e) => handleInputChange('university', e.target.value)}
-              />
-            </div>
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">University District</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Example: Thu Duc District"
-                className="input input-bordered text-gray-900"
-                value={profile.district || ''}
-                onChange={(e) => handleInputChange('district', e.target.value)}
-              />
-            </div>
+          {/* Hometown */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Hometown *</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: Da Nang, Hanoi, HCMC"
+              className="input input-bordered text-gray-900"
+              value={profile.hometown || ''}
+              onChange={(e) => handleInputChange('hometown', e.target.value)}
+              required
+            />
           </div>
+
+          {/* University */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">University *</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Example: HCMC University of Technology"
+              className="input input-bordered text-gray-900"
+              value={profile.university || ''}
+              onChange={(e) => handleInputChange('university', e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+            <span className="mr-2">🏡</span>
+            Lifestyle
+          </h2>
 
           {/* Sleep Schedule */}
           <div className="form-control mb-4">
@@ -408,6 +382,7 @@ export default function ProfilePage() {
               className="select select-bordered text-gray-900"
               value={profile.sleepSchedule || ''}
               onChange={(e) => handleInputChange('sleepSchedule', e.target.value)}
+              required
             >
               <option value="">Select sleep schedule</option>
               {SLEEP_SCHEDULE_OPTIONS.map((opt) => (
@@ -416,7 +391,7 @@ export default function ProfilePage() {
                 </option>
               ))}
             </select>
-          </div>
+          </div>  
 
           {/* Cleanliness Level */}
           <div className="form-control mb-4">
@@ -427,6 +402,7 @@ export default function ProfilePage() {
               className="select select-bordered text-gray-900"
               value={profile.cleanlinessLevel || ''}
               onChange={(e) => handleInputChange('cleanlinessLevel', e.target.value)}
+              required
             >
               <option value="">Select cleanliness level</option>
               {CLEANLINESS_OPTIONS.map((opt) => (
@@ -435,9 +411,69 @@ export default function ProfilePage() {
                 </option>
               ))}
             </select>
+          </div>  
+          
+          {/* Noise Level */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Preferred Noise Level *</span>
+            </label>
+            <select  
+              className="select select-bordered text-gray-900"
+              value={profile.noiseLevel || ''}
+              onChange={(e) => handleInputChange('noiseLevel', e.target.value)}
+              required
+            >
+              <option value="">Select noise level</option>
+              {NOISE_LEVEL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Smoking Policy */}
+          {/* Cooking Skills */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Cooking Skills *</span>
+            </label>
+            <select
+              className="select select-bordered text-gray-900"
+              value={profile.cookingSkills || ''}
+              onChange={(e) => handleInputChange('cookingSkills', e.target.value)}
+              required
+            >
+              <option value="">Select cooking skills</option>
+              {COOKING_SKILLS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Guest Policy */}
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Guest Policy *</span>
+            </label>
+            <select
+              className="select select-bordered text-gray-900"
+              value={profile.guestPolicy || ''}
+              onChange={(e) => handleInputChange('guestPolicy', e.target.value)}
+              required
+            >
+              <option value="">Select guest policy</option>
+              {GUEST_POLICY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/*Smoking Policy */}
           <div className="form-control mb-4">
             <label className="label">
               <span className="label-text font-semibold text-gray-900">Smoking Policy *</span>
@@ -446,8 +482,9 @@ export default function ProfilePage() {
               className="select select-bordered text-gray-900"
               value={profile.smokingPolicy || ''}
               onChange={(e) => handleInputChange('smokingPolicy', e.target.value)}
+              required
             >
-              <option value="">Select policy</option>
+              <option value="">Select smoking policy</option>
               {SMOKING_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -465,8 +502,9 @@ export default function ProfilePage() {
               className="select select-bordered text-gray-900"
               value={profile.petPolicy || ''}
               onChange={(e) => handleInputChange('petPolicy', e.target.value)}
+              required
             >
-              <option value="">Select policy</option>
+              <option value="">Select pet policy</option>
               {PET_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -474,362 +512,28 @@ export default function ProfilePage() {
               ))}
             </select>
           </div>
+
+          {profile.petPolicy === 'have-pets' && (
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Pet Details</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Describe your pet(s)"
+                className="input input-bordered text-gray-900"
+                value={profile.petType || ''}
+                onChange={(e) => handleInputChange('petType', e.target.value)}
+              />
+            </div>
+          )}
         </div>
-
-         {/* Accommodation Status */}
-        <div className="form-control mb-4">
-          <label className="label">
-            <span className="label-text font-semibold text-gray-900">Accommodation Status *</span>
-          </label>
-          <select
-            className="select select-bordered text-gray-900"
-            value={profile.hasAccommodation || ''}
-            onChange={(e) => handleInputChange('hasAccommodation', e.target.value)}
-            >
-            <option value="">Select status</option>
-              {ACCOMMODATION_STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-              ))}
-          </select>
-        </div>
-
-        {/* Desired Districts - Only show when looking for accommodation */}
-        {profile.hasAccommodation === 'looking' && (
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Desired Districts</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Example: District 1, HCMC"
-              className="input input-bordered text-gray-900"
-              value={profile.location || ''}
-              onChange={(e) => handleInputChange('location', e.target.value)}
-            />
-          </div>
-        )}
-
-        {/* Accommodation Details (for users who have accommodation) */}
-        {profile.hasAccommodation === 'have-room' && (
-          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
-              <span className="badge badge-success mr-2">Accommodation Details</span>
-              Tell us about your place
-            </h2>
-
-            {/* Accommodation Location */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Home's location: address, district *</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., District 1, HCMC - near university"
-                className="input input-bordered text-gray-900"
-                value={profile.accommodationLocation || ''}
-                onChange={(e) => handleInputChange('accommodationLocation', e.target.value)}
-              />
-            </div>
-
-            {/* Accommodation Size */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Size *</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.accommodationSize || ''}
-                onChange={(e) => handleInputChange('accommodationSize', e.target.value)}
-              >
-                <option value="">Select size</option>
-                {ACCOMMODATION_SIZE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Fee Structure */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Fee Breakdown *</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Home Fees */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold text-gray-900">Home Fees</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., 3,500,000 VND/month"
-                    className="input input-bordered text-gray-900"
-                    value={profile.accommodationHomeFeesAmount || ''}
-                    onChange={(e) => handleInputChange('accommodationHomeFeesAmount', e.target.value)}
-                  />  
-                  <label className="label">
-                    <span className="label-text-alt text-gray-600">
-                      Example input home fees: 2.5 = 2,500,000 VND, 5 = 5,000,000 VND
-                    </span>
-                  </label>
-                </div>
-
-                {/* Electricity Fees */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold text-gray-900">Electricity Fees</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., 4,000 VND/kWh or included"
-                    className="input input-bordered text-gray-900"
-                    value={profile.accommodationElectricityFees || ''}
-                    onChange={(e) => handleInputChange('accommodationElectricityFees', e.target.value)}
-                  />
-                </div>
-
-                {/* Water Fees */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold text-gray-900">Water Fees</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., 20,000 VND/m³ or included"
-                    className="input input-bordered text-gray-900"
-                    value={profile.accommodationWaterFees || ''}
-                    onChange={(e) => handleInputChange('accommodationWaterFees', e.target.value)}
-                  />
-                </div>
-
-                {/* Utilities Fees */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold text-gray-900">Utilities Fees</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Internet, gas, cable - 200,000 VND/month"
-                    className="input input-bordered text-gray-900"
-                    value={profile.accommodationUtilitiesFees || ''}
-                    onChange={(e) => handleInputChange('accommodationUtilitiesFees', e.target.value)}
-                  />
-                </div>
-
-                {/* Additional Fees */}
-                <div className="form-control md:col-span-2">
-                  <label className="label">
-                    <span className="label-text font-semibold text-gray-900">Additional Fees</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Parking, security, cleaning service, maintenance"
-                    className="input input-bordered text-gray-900"
-                    value={profile.accommodationAdditionalFees || ''}
-                    onChange={(e) => handleInputChange('accommodationAdditionalFees', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* House Type */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">House Type</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., Apartment, House, Townhouse, Serviced apartment"
-                className="input input-bordered text-gray-900"
-                value={profile.accommodationHouseType || ''}
-                onChange={(e) => handleInputChange('accommodationHouseType', e.target.value)}
-              />
-            </div>
-
-            {/* Pet Policy Details */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Pet Policy Details</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., Small pets allowed, No pets, Cats only"
-                className="input input-bordered text-gray-900"
-                value={profile.accommodationPetPolicy || ''}
-                onChange={(e) => handleInputChange('accommodationPetPolicy', e.target.value)}
-              />
-            </div>
-
-            {/* Furniture & Amenities */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Furniture & Amenities</span>
-              </label>
-              <textarea
-                className="textarea textarea-bordered h-24 text-gray-900"
-                placeholder="e.g., Fully furnished, Kitchen, Air-conditioner, Washing machine, Refrigerator, WiFi"
-                value={profile.accommodationFurniture || ''}
-                onChange={(e) => handleInputChange('accommodationFurniture', e.target.value)}
-              ></textarea>
-            </div>
-
-            {/* Live with Rental Owner */}
-            <div className="form-control mb-4">
-              <label className="label cursor-pointer">
-                <span className="label-text font-semibold text-gray-900">Live with rental property owner</span>
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  checked={profile.accommodationLiveWithRental || false}
-                  onChange={(e) => handleInputChange('accommodationLiveWithRental', e.target.checked)}
-                />
-              </label>
-            </div>
-
-            {/* Restricted Hours */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Restricted Hours</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., No visitors after 10 PM, Quiet hours 10 PM - 6 AM"
-                className="input input-bordered text-gray-900"
-                value={profile.accommodationRestrictedHours || ''}
-                onChange={(e) => handleInputChange('accommodationRestrictedHours', e.target.value)}
-              />
-            </div>
-
-            {/* Security */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Security</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., 24/7 security, CCTV, Key card access, Fingerprint lock"
-                className="input input-bordered text-gray-900"
-                value={profile.accommodationSecurity || ''}
-                onChange={(e) => handleInputChange('accommodationSecurity', e.target.value)}
-              />
-            </div>
-
-            {/* General Description */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">General Description</span>
-              </label>
-              <textarea
-                className="textarea textarea-bordered h-32 text-gray-900"
-                placeholder="Describe your place, neighborhood, nearby amenities, transportation, what makes it special..."
-                value={profile.accommodationDescription || ''}
-                onChange={(e) => handleInputChange('accommodationDescription', e.target.value)}
-              ></textarea>
-            </div>
-          </div>
-        )}
-
-        {/* Optional Fields Toggle */}
-        {hasRequired && (
-          <button
-            className="btn btn-outline btn-primary w-full mb-6"
-            onClick={() => setShowOptionalFields(!showOptionalFields)}
-          >
-            {showOptionalFields ? '▼' : '▶'} Additional Information (Optional - Recommended)
-          </button>
-        )}
-
-        {/* Optional Fields */}
-        {hasRequired && showOptionalFields && (
-          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
-              <span className="badge badge-info mr-2">Optional</span>
-              Detailed Information
-            </h2>
-
-            {/* Shared Space Cleaning */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Shared Space Cleaning Frequency</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.sharedSpaceCleaning || ''}
-                onChange={(e) => handleInputChange('sharedSpaceCleaning', e.target.value)}
-              >
-                <option value="">Select frequency</option>
-                {SHARED_CLEANING_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Noise Level */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Acceptable Noise Level</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.noiseLevelPreference || ''}
-                onChange={(e) => handleInputChange('noiseLevelPreference', e.target.value)}
-              >
-                <option value="">Select level</option>
-                {NOISE_LEVEL_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Cooking Skills */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Cooking Skills</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.cookingSkills || ''}
-                onChange={(e) => handleInputChange('cookingSkills', e.target.value)}
-              >
-                <option value="">Select skill level</option>
-                {COOKING_SKILLS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Guest Policy */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Guest Policy (General)</span>
-              </label>
-              <select
-                className="select select-bordered text-gray-900"
-                value={profile.guestPolicy || ''}
-                onChange={(e) => handleInputChange('guestPolicy', e.target.value)}
-              >
-                <option value="">Select policy</option>
-                {GUEST_POLICY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
 
         {/* AI/LLM Fields */}
-        {hasRequired && showOptionalFields && (
+        {showOptionalFields && (
           <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+              <span className="mr-2">💝</span>
               About you
             </h2>
 
@@ -908,12 +612,565 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Accommodation Status */}
+        <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text font-semibold text-gray-900">Accommodation Status *</span>
+            </label>
+            <select
+              className="select select-bordered text-gray-900"
+              value={profile.accommodationStatus || ''}
+              onChange={(e) => handleInputChange('accommodationStatus', e.target.value)}
+              required
+              >
+              <option value="">Select status</option>
+                {ACCOMMODATION_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+                ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Looking for Accommodation */}
+        {profile.accommodationStatus === 'looking' && (
+          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+              <span className="mr-2">🔍</span>
+              What You're Looking For
+            </h2>
+
+            {/* Preferred Districts */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Preferred Districts *</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['District 1', 'District 2', 'District 3', 'District 4', 'District 5', 'District 7', 'District 8', 'District 10', 'Binh Thanh', 'Phu Nhuan', 'Tan Binh', 'Go Vap', 'Thu Duc'].map((district) => (
+                  <button
+                    key={district}
+                    type="button"
+                    className={`btn btn-sm ${
+                      profile.districts?.includes(district) ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => {
+                      const currentDistricts = profile.districts || [];
+                      if (currentDistricts.includes(district)) {
+                        handleInputChange('districts', currentDistricts.filter(d => d !== district));
+                      } else {
+                        handleInputChange('districts', [...currentDistricts, district]);
+                      }
+                    }}
+                  >
+                    {district}
+                  </button>
+                ))}
+              </div>
+            </div>  
+            
+            {/* Budget Range */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Budget Range (Monthly Rent in VND) *</span>
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="label-text text-gray-900 whitespace-nowrap">Budget Min:</span>
+                  <input
+                    type="number"
+                    className="input input-bordered text-gray-900 flex-1"
+                    placeholder= "EX: 2 is 2.000.000 VND"
+                    value={profile.budgetMin || ''}
+                    onChange={(e) => handleInputChange('budgetMin', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="label-text text-gray-900 whitespace-nowrap">Budget Max:</span>
+                  <input
+                    type="number"
+                    className="input input-bordered text-gray-900 flex-1"
+                    placeholder="EX: 5 is 5.000.000 VND"
+                    value={profile.budgetMax || ''}
+                    onChange={(e) => handleInputChange('budgetMax', e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Accommodation Type */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Preferred Accommodation Type *</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {ACCOMMODATION_TYPE_OPTIONS.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={`btn btn-sm ${
+                      profile.accommodationType?.includes(type) ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => {
+                      const currentTypes = profile.accommodationType || [];
+                      if (currentTypes.includes(type)) {
+                        handleInputChange('accommodationType', currentTypes.filter(t => t !== type));
+                      } else {
+                        handleInputChange('accommodationType', [...currentTypes, type]);
+                      }
+                    }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Accommodation Size */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">
+                  Preferred Accommodation Size *
+                </span>
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                {ACCOMMODATION_SIZE_OPTIONS.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    className={`btn btn-sm ${
+                        profile.accommodationSize === size
+                        ? "btn-primary" 
+                        : "btn-outline"
+                    }`}
+                    onClick={() => {
+                      handleInputChange('accommodationSize', size);
+                    }}
+                  >
+                    {size}
+                  </button>     
+                ))}
+              </div>
+            </div>
+          
+            {/* Number of Roommates */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Preferred Number of Roommates *</span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered text-gray-900"
+                placeholder="Enter preferred number of roommates"
+                value={profile.numberOfRoomates || ''}
+                onChange={(e) => handleInputChange('numberOfRoomates', parseInt(e.target.value) || undefined)}
+                min="0"
+                required
+              />
+            </div>
+
+            {/* Desired Services */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Desired Services</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['WiFi', 'Parking', 'Furnished', 'Air Conditioning', 'Washing Machine', 'Kitchen', 'Elevator', 'Security', 'Gym', 'Swimming Pool'].map((service) => (
+                  <button
+                    key={service}
+                    type="button"
+                    className={`btn btn-sm ${
+                      profile.accommodationServices?.includes(service) ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => {
+                      const currentServices = profile.accommodationServices || [];
+                      if (currentServices.includes(service)) {
+                        handleInputChange('accommodationServices', currentServices.filter(s => s !== service));
+                      } else {
+                        handleInputChange('accommodationServices', [...currentServices, service]);
+                      }
+                    }}
+                  >
+                    {service}
+                  </button>
+                ))}
+                {/* Show custom services with remove button */}
+                {(profile.accommodationServices || []).filter(
+                  service => !['WiFi', 'Parking', 'Furnished', 'Air Conditioning', 'Washing Machine', 'Kitchen', 'Elevator', 'Security', 'Gym', 'Swimming Pool'].includes(service)
+                ).map((service) => (
+                  <button
+                    key={service}
+                    type="button"
+                    className="btn btn-sm btn-primary gap-1"
+                    onClick={() => {
+                      const currentServices = profile.accommodationServices || [];
+                      handleInputChange('accommodationServices', currentServices.filter(s => s !== service));
+                    }}
+                  >
+                    {service}
+                    <span className="text-xs">✕</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Add custom service (e.g., Garden, Balcony)"
+                  className="input input-sm flex-1 text-gray-900 input-bordered"
+                  value={customService}
+                  onChange={(e) => setCustomService(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && customService.trim()) {
+                      e.preventDefault();
+                      const currentServices = profile.accommodationServices || [];
+                      if (!currentServices.includes(customService.trim())) {
+                        handleInputChange('accommodationServices', [...currentServices, customService.trim()]);
+                        setCustomService('');
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={() => {
+                    if (customService.trim()) {
+                      const currentServices = profile.accommodationServices || [];
+                        if (!currentServices.includes(customService.trim())) {
+                        handleInputChange('accommodationServices', [...currentServices, customService.trim()]);
+                        setCustomService('');
+                      }
+                    }
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Live with Landlord Preference */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Live with Landlord</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['No preference', 'Yes', 'No'].map((option) => {
+                  const value = option === 'No preference' ? '' : option.toLowerCase();
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`btn btn-sm ${
+                        profile.liveWithLandlord === value ? 'btn-primary' : 'btn-outline'
+                      }`}
+                      onClick={() => handleInputChange('liveWithLandlord', value)}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Have Accommodation */}
+        {profile.accommodationStatus === 'have-room' && (
+          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+              <span className="mr-2">🏠</span>
+              Your Accommodation Details
+            </h2>
+
+            {/* Accommodation Address */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Accommodation Address *</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered text-gray-900"
+                placeholder="Enter accommodation address  Ex: 123 Nguyen Hue, District 1, HCMC"
+                value={profile.accommodationAddress || ''}
+                onChange={(e) => handleInputChange('accommodationAddress', e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Monthly Rent */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Monthly Rent (Milion VND/month) *</span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered text-gray-900"
+                placeholder="Ex: 3.5 is 3.5 million VND"
+                value={profile.accommodationFee || ''}
+                onChange={(e) => handleInputChange('accommodationFee', parseFloat(e.target.value) || undefined)}
+                required
+              />
+            </div>
+
+            {/* Utility Fees */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Utility Fees *</span>
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="label">
+                    <span className="label-text text-gray-900 text-sm">Electricity (VND/kWh)</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="input input-bordered text-gray-900 w-full"
+                    placeholder="Ex: 4000"
+                    value={profile.accommodationElectricityFee || ''}
+                    onChange={(e) => handleInputChange('accommodationElectricityFee', parseFloat(e.target.value) || undefined)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">
+                    <span className="label-text text-gray-900 text-sm">Water (VND/m³)</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="input input-bordered text-gray-900 w-full"
+                    placeholder="Ex: 20000"
+                    value={profile.accommodationWaterFee || ''}
+                    onChange={(e) => handleInputChange('accommodationWaterFee', parseFloat(e.target.value) || undefined)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">
+                    <span className="label-text text-gray-900 text-sm">Service Fee (VND/month)</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="input input-bordered text-gray-900 w-full"
+                    placeholder="Ex: 200000"
+                    value={profile.accommodationServiceFee || ''}
+                    onChange={(e) => handleInputChange('accommodationServiceFee', parseFloat(e.target.value) || undefined)}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Other Fees */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Other Fees</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered text-gray-900"
+                placeholder="Ex: Parking: 200k/month, Security: 100k/month"
+                value={profile.accommodationOtherFees || ''}
+                onChange={(e) => handleInputChange('accommodationOtherFees', e.target.value)}
+              />
+            </div>
+
+            {/* Accommodation Type (Select only one, button) */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">
+                  Accommodation Size *
+                </span>
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                {ACCOMMODATION_TYPE_OPTIONS.map((size) => {
+                  const isSelected = Array.isArray(profile.accommodationType)
+                    ? profile.accommodationType.includes(size)
+                    : false;
+
+                  return (
+                    <button
+                      key={size}
+                      type="button"
+                      className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                      onClick={() => {
+                        if (isSelected) {
+                          handleInputChange('accommodationType', []);
+                        } else {
+                          handleInputChange('accommodationType', [size]);
+                        }
+                      }}
+                    >
+                      {size}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Accommodation Size (Select only one, button) */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">
+                  Accommodation Size *
+                </span>
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                {ACCOMMODATION_SIZE_OPTIONS.map((size) => {
+                  const isSelected = Array.isArray(profile.accommodationSize)
+                    ? profile.accommodationSize.includes(size)
+                    : false;
+
+                  return (
+                    <button
+                      key={size}
+                      type="button"
+                      className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                      onClick={() => {
+                        if (isSelected) {
+                          handleInputChange('accommodationSize', []);
+                        } else {
+                          handleInputChange('accommodationSize', [size]);
+                        }
+                      }}
+                    >
+                      {size}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Number of Roommates */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Number of Roommates *</span>
+              </label>
+              <input
+                type="number"
+                className="input input-bordered text-gray-900"
+                placeholder="Enter current/maximum number of roommates"
+                value={profile.numberOfRoomates || ''}
+                onChange={(e) => handleInputChange('numberOfRoomates', parseInt(e.target.value) || undefined)}
+                min="0"
+                required
+              />
+            </div>
+
+            {/* Available Services */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Available Services</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['WiFi', 'Parking', 'Furnished', 'Air Conditioning', 'Washing Machine', 'Kitchen', 'Elevator', 'Security', 'Gym', 'Swimming Pool'].map((service) => (
+                  <button
+                    key={service}
+                    type="button"
+                    className={`btn btn-sm ${
+                      profile.accommodationServices?.includes(service) ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => {
+                      const currentServices = profile.accommodationServices || [];
+                      if (currentServices.includes(service)) {
+                        handleInputChange('accommodationServices', currentServices.filter(s => s !== service));
+                      } else {
+                        handleInputChange('accommodationServices', [...currentServices, service]);
+                      }
+                    }}
+                  >
+                    {service}
+                  </button>
+                ))}
+                {/* Show custom services with remove button */}
+                {(profile.accommodationServices || []).filter(
+                  service => !['WiFi', 'Parking', 'Furnished', 'Air Conditioning', 'Washing Machine', 'Kitchen', 'Elevator', 'Security', 'Gym', 'Swimming Pool'].includes(service)
+                ).map((service) => (
+                  <button
+                    key={service}
+                    type="button"
+                    className="btn btn-sm btn-primary gap-1"
+                    onClick={() => {
+                      const currentServices = profile.accommodationServices || [];
+                      handleInputChange('accommodationServices', currentServices.filter(s => s !== service));
+                    }}
+                  >
+                    {service}
+                    <span className="text-xs">✕</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Add additional service (e.g., Garden, Balcony)"
+                  className="input input-sm flex-1 text-gray-900 input-bordered"
+                  value={customService}
+                  onChange={(e) => setCustomService(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && customService.trim()) {
+                      e.preventDefault();
+                      const currentServices = profile.accommodationServices || [];
+                      if (!currentServices.includes(customService.trim())) {
+                        handleInputChange('accommodationServices', [...currentServices, customService.trim()]);
+                        setCustomService('');
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={() => {
+                    if (customService.trim()) {
+                      const currentServices = profile.accommodationServices || [];
+                      if (!currentServices.includes(customService.trim())) {
+                        handleInputChange('accommodationServices', [...currentServices, customService.trim()]);
+                        setCustomService('');
+                      }
+                    }
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Live with Landlord */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Live with Landlord *</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['Yes', 'No'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`btn btn-sm ${
+                      profile.liveWithLandlord === option.toLowerCase() ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => handleInputChange('liveWithLandlord', option.toLowerCase())}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         {/* Action Buttons */}
         <div className="flex gap-4 mb-8">
           <button
             className="btn btn-primary flex-1"
             onClick={handleSave}
-            disabled={!hasRequired || saving}
+            disabled={saving}
           >
             {saving ? (
               <>
