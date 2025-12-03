@@ -100,8 +100,9 @@ function cleanForFirestore(obj: Record<string, any>) {
  */
 export function calculateProfileCompletion(profile: Partial<UserProfile>): number {
   const requiredFields = [
-    'budgetMin', 'budgetMax', 'location', 'moveInDate',
-    'sleepSchedule', 'cleanlinessLevel', 'smokingPolicy', 'petPolicy', 'hasAccommodation'
+    'displayName', 'gender', 'birthYear', 'hometown', 'university',
+    'sleepSchedule', 'cleanlinessLevel', 'noiseLevel', 'cookingSkills', 'guestPolicy', 'smokingPolicy', 'petPolicy',
+    'accommodationStatus', 'accommodationSize', 'accommodationType', 'numberOfRoomates',
   ];
   
   const optionalFields = [
@@ -265,13 +266,44 @@ export async function updateProfile(
  */
 export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boolean {
   const required = [
-    profile.budgetMin && profile.budgetMin > 0,
-    profile.budgetMax && profile.budgetMax > 0,
+    profile.displayName && profile.displayName.trim() !== '',
+    profile.gender,
+    profile.birthYear && profile.birthYear > 1900 && profile.birthYear <= new Date().getFullYear(),
+    profile.hometown && profile.hometown.trim() !== '',
+    profile.university && profile.university.trim() !== '',
+
     profile.sleepSchedule,
     profile.cleanlinessLevel,
+    profile.noiseLevel,
+    profile.cookingSkills,
+    profile.guestPolicy,
     profile.smokingPolicy,
     profile.petPolicy,
-    profile.accommodationStatus,
+    
+    profile.accommodationStatus,    
+
+    (profile.accommodationStatus === 'have-room' && (
+      profile.accommodationAddress && profile.accommodationAddress.trim() !== '' &&
+      profile.accommodationFee !== undefined && profile.accommodationFee !== null && profile.accommodationFee >= 0 &&
+      profile.accommodationElectricityFee !== undefined && profile.accommodationElectricityFee !== null && profile.accommodationElectricityFee >= 0 &&
+      profile.accommodationWaterFee !== undefined && profile.accommodationWaterFee !== null && profile.accommodationWaterFee >= 0 &&
+      profile.accommodationServiceFee !== undefined && profile.accommodationServiceFee !== null && profile.accommodationServiceFee >= 0 &&
+      profile.accommodationSize && profile.accommodationSize.length > 0 &&
+      profile.accommodationType && profile.accommodationType.length > 0 &&
+      profile.numberOfRoomates && profile.numberOfRoomates > 0 &&
+      profile.liveWithLandlord !== undefined && profile.liveWithLandlord !== null
+    )) ||
+
+    (profile.accommodationStatus === 'looking' && (
+      profile.districts && profile.districts.length > 0) &&
+      profile.budgetMin !== undefined && profile.budgetMin !== null &&
+      profile.budgetMax !== undefined && profile.budgetMax !== null &&
+      profile.budgetMin! <= profile.budgetMax! &&
+      profile.accommodationType && profile.accommodationType.length > 0 &&
+      profile.accommodationSize && profile.accommodationSize.length > 0 &&
+      profile.numberOfRoomates && profile.numberOfRoomates > 0 &&
+      profile.liveWithLandlord !== undefined && profile.liveWithLandlord !== null
+    )
   ];
   
   // Additional required fields for users who are looking for accommodation

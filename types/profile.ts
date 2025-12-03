@@ -14,8 +14,8 @@ export interface UserProfile {
   
   // -------------------- General Info <First Part> --------------------
   
-  // photoURL
-  // Display Name
+  // *photoURL
+  // *Display Name
   gender?: 'male' | 'female';
   birthYear?: number;
   accommodationStatus?: 'looking' | 'have-room';
@@ -25,7 +25,7 @@ export interface UserProfile {
   // Basic Info
 
   hometown?: string;
-  //email
+  // *email
   university?: string;
   bio?: string;
 
@@ -46,7 +46,7 @@ export interface UserProfile {
   // -------------------- Accommodation Preferences <Third Part> --------------------
 
   // General Preferences
-  districts?: string[]; // Preferred districts || accmodation districts
+  districts?: string[]; // Preferred districts || accommodation districts
   accommodationType?: string[]; // e.g., apartment, house, studio
   accommodationSize?: string[]; // e.g., 1-bedroom, 2-bedrooms
   numberOfRoomates?: number; // Preferred number of roommates
@@ -144,12 +144,11 @@ export const ACCOMMODATION_STATUS_OPTIONS = [
 ];
 
 export const ACCOMMODATION_SIZE_OPTIONS = [
-  '1-bedroom',
-  '2-bedrooms',
-  '3-bedrooms',
-  '4-bedrooms+',
-  'studio',
-  'house',
+  '1 Bedroom',
+  '2 Bedrooms',
+  '3 Bedrooms',
+  '4 Bedrooms+',
+  'House',
 ];
 
 export const WITH_LANDLORD_OPTIONS = [
@@ -161,7 +160,6 @@ export const WITH_LANDLORD_OPTIONS = [
 export const ACCOMMODATION_TYPE_OPTIONS = [
   'Apartment',
   'House',
-  'Studio',
   'Shared House',
 ];
 
@@ -174,7 +172,10 @@ export const ACCOMMODATION_SERVICE_OPTIONS = [
   'Washing Machine',
   'Kitchen',
   'Elevator',
+  'Fingerprint Access',
+  'Password Access',
   'Security',
+  'Balcony',
   'Gym',
   'Swimming Pool',
 ];

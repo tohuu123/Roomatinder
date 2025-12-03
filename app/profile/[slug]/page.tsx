@@ -181,6 +181,23 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
           </div>
         )}
 
+        {/* Interests Section */}
+        {profile.interests && profile.interests.length > 0 && (
+          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-2xl font-bold mb-4 text-gray-900 flex items-center">
+              <Icon icon="mdi:heart-multiple" className="w-6 h-6 mr-2 text-red-600" />
+              Interests & Hobby
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {profile.interests.map((interest: string, index: number) => (
+                <span key={index} className="badge badge-outline text-sm text-gray-900">
+                  {interest}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Lifestyle Section */}
         {(profile.sleepSchedule || profile.cleanlinessLevel || profile.noiseLevel || profile.cookingSkills || profile.guestPolicy || profile.smokingPolicy || profile.petPolicy) && (
           <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
@@ -323,7 +340,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         <Icon icon="mdi:home" className="w-5 h-5 text-yellow-500" />
                         <div>
                           <p className="text-xs text-gray-900">Accommodation Type</p>
-                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationType}</p>
+                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationType.join(", ")}</p>
                         </div>
                       </div>
                     )}
@@ -332,7 +349,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         <Icon icon="mdi:vector-square" className="w-5 h-5 text-purple-500" />
                         <div>
                           <p className="text-xs text-gray-900">Accommodation Size</p>
-                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationSize}</p>
+                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationSize.join(", ")}</p>
                         </div>
                       </div>
                     )}
@@ -369,7 +386,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         <Icon icon="mdi:currency-usd" className="w-5 h-5 text-green-500" />
                         <div>
                           <p className="text-xs text-gray-900">Monthly Rent</p>
-                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationFee ? `${profile.accommodationFee.toLocaleString()} VND` : "N/A"}</p>
+                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationFee ? `${profile.accommodationFee.toLocaleString()} million VND` : "N/A"}</p>
                         </div>
                       </div>
 
@@ -399,15 +416,13 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                     </div>
 
                     {/* Other Fees */}
-                    {profile.accommodationOtherFees && (
                       <div className="flex gap-3 p-3 bg-base-200 rounded-lg">
                         <Icon icon="mdi:cash-plus" className="w-5 h-5 text-orange-500 mt-0.5" />
                         <div>
                           <p className="text-xs text-gray-900 mb-1">Other Fees</p>
-                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationOtherFees}</p>
+                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationOtherFees ? `${profile.accommodationOtherFees}` : "N/A"}</p>
                         </div>
                       </div>
-                    )}
 
                     <div className="col-span-1 md:col-span-2">
                       <h3 className="text-lg font-bold mb-2 text-gray-900">Other Details</h3>
