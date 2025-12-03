@@ -445,7 +445,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         <div>
                           <p className="text-xs text-gray-900 mb-1">Preferred Districts</p>
                           <div className="flex flex-wrap gap-2">
-                            {profile.districts.map((district, index) => (
+                            {profile.districts.map((district: string, index: number) => (
                               <span key={index} className="badge badge-outline text-xs text-gray-900">
                                 {district}
                               </span>
@@ -462,7 +462,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         <div>
                           <p className="text-xs text-gray-900 mb-1">Accommodation Type</p>
                           <div className="flex flex-wrap gap-2">
-                            {profile.accommodationType.map((type, index) => (
+                            {profile.accommodationType.map((type: string, index: number) => (
                               <span key={index} className="badge badge-outline text-xs text-gray-900">
                                 {type}
                               </span>
@@ -514,7 +514,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         <div>
                           <p className="text-xs text-gray-900 mb-1">Desired Services</p>
                           <div className="flex flex-wrap gap-2">
-                            {profile.accommodationServices.map((service, index) => (
+                            {profile.accommodationServices.map((service: string, index: number) => (
                               <span key={index} className="badge badge-primary badge-outline text-xs">
                                 {service}
                               </span>

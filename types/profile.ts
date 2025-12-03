@@ -6,24 +6,24 @@ export interface UserProfile {
   email: string;
   photoURL?: string;
   displayName?: string;
-  nickname?: string; // Friendly nickname or alias
-  photoURL?: string;
   slug?: string; // URL-friendly username or normalized full name
-  isStudentVerified?: boolean; // Student verification status
   createdAt: Date;
   updatedAt: Date;
   
   // -------------------- General Info <First Part> --------------------
   
-  // Gender
+  // photoURL
+  // Display Name
   gender?: 'male' | 'female';
+  birthYear?: number;
+  accommodationStatus?: 'looking' | 'have-room';
   
-  // Budget Range (VND per month)
-  budgetMin: number;
-  budgetMax: number;
+  // -------------------- Personal Information <Second Part> --------------------
+  
+  // Basic Info
 
-  // Location / University
-  location: string;
+  hometown?: string;
+  //email
   university?: string;
   bio?: string;
 
@@ -46,10 +46,10 @@ export interface UserProfile {
   // General Preferences
   districts?: string[]; // Preferred districts || accmodation districts
   accommodationType?: string[]; // e.g., apartment, house, studio
-  accommodationSize?: string; // e.g., 1-bedroom, 2-bedrooms (single selection)
+  accommodationSize?: string[]; // e.g., 1-bedroom, 2-bedrooms
   numberOfRoomates?: number; // Preferred number of roommates
   accommodationServices?: string[]; // e.g., wifi, parking, furnished
-  liveWithLandlord?: 'yes' | 'no';
+  liveWithLandlord?: 'yes' | 'no' | '';
 
   // Looking For Preferences
   budgetMin?: number;

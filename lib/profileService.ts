@@ -118,7 +118,7 @@ export function calculateProfileCompletion(profile: Partial<UserProfile>): numbe
     'accommodationHouseType', 'accommodationFurniture', 'accommodationDescription'
   ];
 
-  const allOptionalFields = profile.hasAccommodation === 'have-room' 
+  const allOptionalFields = profile.accommodationStatus === 'have-room' 
     ? [...optionalFields, ...accommodationFields]
     : optionalFields;
 
@@ -167,17 +167,13 @@ export async function createProfile(
     // Required fields
     budgetMin: profileData.budgetMin || 0,
     budgetMax: profileData.budgetMax || 0,
-    location: profileData.location || '',
     university: profileData.university,
-    district: profileData.district,
     sleepSchedule: profileData.sleepSchedule || 'flexible',
     cleanlinessLevel: profileData.cleanlinessLevel || 'moderate',
     smokingPolicy: profileData.smokingPolicy || 'no-smoking',
     petPolicy: profileData.petPolicy || 'no-pets',
     
     // Optional fields
-    sharedSpaceCleaning: profileData.sharedSpaceCleaning,
-    noiseLevelPreference: profileData.noiseLevelPreference,
     cookingSkills: profileData.cookingSkills,
     guestPolicy: profileData.guestPolicy,
     interests: profileData.interests,
@@ -275,22 +271,22 @@ export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boole
     profile.cleanlinessLevel,
     profile.smokingPolicy,
     profile.petPolicy,
-    profile.hasAccommodation,
+    profile.accommodationStatus,
   ];
   
   // Additional required fields for users who are looking for accommodation
-  if (profile.hasAccommodation === 'looking') {
+  if (profile.accommodationStatus === 'looking') {
     required.push(
-      profile.location && profile.location.trim() !== ''
+      profile.districts && profile.districts.length > 0
     );
   }
   
   // Additional required fields for users who have accommodation
-  if (profile.hasAccommodation === 'have-room') {
+  if (profile.accommodationStatus === 'have-room') {
     required.push(
-      profile.accommodationLocation && profile.accommodationLocation.trim() !== '',
+      !!(profile.accommodationAddress && profile.accommodationAddress.trim() !== ''),
       !!profile.accommodationSize,
-      profile.accommodationHomeFeesAmount && profile.accommodationHomeFeesAmount.trim() !== ''
+      !!(profile.accommodationFee !== undefined && profile.accommodationFee !== null)
     );
   }
   
