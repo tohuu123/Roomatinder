@@ -5,8 +5,10 @@ export interface UserProfile {
   userId: string;
   email: string;
   photoURL?: string;
+  nickname?: string;
   displayName?: string;
   slug?: string; // URL-friendly username or normalized full name
+  isStudentVerified?: boolean; // Student verification status
   createdAt: Date;
   updatedAt: Date;
   

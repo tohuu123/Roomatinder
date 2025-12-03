@@ -473,12 +473,18 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                     )}
 
                     {/* Accommodation Size */}
-                    {profile.accommodationSize && (
-                      <div className="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
-                        <Icon icon="mdi:vector-square" className="w-5 h-5 text-purple-500" />
+                    {profile.accommodationSize && profile.accommodationSize.length > 0 && (
+                      <div className="flex items-start gap-3 p-3 bg-base-200 rounded-lg">
+                        <Icon icon="mdi:home-variant" className="w-5 h-5 text-yellow-500 mt-0.5" />
                         <div>
-                          <p className="text-xs text-gray-900">Accommodation Size</p>
-                          <p className="text-sm font-semibold text-gray-900">{profile.accommodationSize}</p>
+                          <p className="text-xs text-gray-900 mb-1">Accommodation Size</p>
+                          <div className="flex flex-wrap gap-2">
+                            {profile.accommodationSize.map((size: string, index: number) => (
+                              <span key={index} className="badge badge-outline text-xs text-gray-900">
+                                {size}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
