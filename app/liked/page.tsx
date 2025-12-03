@@ -101,7 +101,7 @@ export default function LikedPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-100 to-blue-100">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-emerald-100">
         <div className="text-center">
           <span className="loading loading-spinner loading-lg text-primary"></span>
           <p className="mt-4 text-gray-600">Loading...</p>
@@ -113,7 +113,7 @@ export default function LikedPage() {
   const displayProfiles = activeTab === 'liked' ? likedProfiles : matches;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 to-blue-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-100 to-emerald-100 p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -124,7 +124,7 @@ export default function LikedPage() {
             <Icon icon="mdi:arrow-left" className="text-2xl" />
           </button>
           <h1 className="text-3xl font-bold text-gray-800">
-            {activeTab === 'liked' ? 'Liked' : 'Matches'}
+            People
           </h1>
           <div className="w-12"></div>
         </div>
@@ -132,7 +132,7 @@ export default function LikedPage() {
         {/* Tabs */}
         <div className="tabs tabs-box mb-6 bg-white shadow-lg rounded-2xl p-2">
           <button
-            className={`tab flex-1 ${activeTab === 'liked' ? 'tab-active bg-pink-500 text-black' : 'text-gray-600'} rounded-xl transition-all`}
+            className={`tab flex-1 ${activeTab === 'liked' ? 'tab-active bg-green-500 text-white' : 'text-gray-600'} rounded-xl transition-all`}
             onClick={() => setActiveTab('liked')}
           >
             <Icon icon="mdi:account-check" className="mr-2 text-xl" />
@@ -193,12 +193,27 @@ export default function LikedPage() {
 
                 <div className="card-body">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="card-title text-gray-800">
-                      {profile.displayName || 'Anonymous'}
-                      <span className="text-sm font-normal text-gray-500">
-                        {profile.gender === 'male' ? '♂' : profile.gender === 'female' ? '♀' : ''}
-                      </span>
-                    </h2>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="card-title text-gray-800">
+                        {profile.displayName || 'Anonymous'}
+                        <span className="text-sm font-normal text-gray-500">
+                          {profile.gender === 'male' ? '♂' : profile.gender === 'female' ? '♀' : ''}
+                        </span>
+                      </h2>
+                      {profile.isStudentVerified && (
+                        <img 
+                          src="/icons/verified.png" 
+                          alt="Verified Student" 
+                          className="w-5 h-5"
+                          title="Verified Student"
+                        />
+                      )}
+                      {profile.nickname && (
+                        <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-100 text-purple-800">
+                          "{profile.nickname}"
+                        </span>
+                      )}
+                    </div>
                     {profile.hasAccommodation && (
                       <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">
                         {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
@@ -225,7 +240,7 @@ export default function LikedPage() {
                           {profile.interests.slice(0, 5).map((interest, idx) => (
                             <span
                               key={idx}
-                              className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-xs font-medium"
+                              className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium"
                             >
                               {interest}
                             </span>
@@ -249,7 +264,6 @@ export default function LikedPage() {
                             <p className="text-gray-600">
                               {profile.gender === 'male' && 'Male'}
                               {profile.gender === 'female' && 'Female'}
-                              {profile.gender === 'other' && 'Other'}
                             </p>
                           </div>
                         )}

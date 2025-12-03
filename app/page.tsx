@@ -259,15 +259,28 @@ export default function HomePage({ email }: HomePageProps) {
               <div className="absolute bottom-4 left-4 text-white">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-2xl font-bold">
-                    {currentProfile.displayName || currentProfile.email?.split('@')[0]}
+                    {currentProfile.displayName || currentProfile.email.split('@')[0]}
                   </h2>
-                  {currentProfile.accommodationStatus && (
+                  {currentProfile.isStudentVerified && (
+                    <img 
+                      src="/icons/verified.png" 
+                      alt="Verified Student" 
+                      className="w-6 h-6"
+                      title="Verified Student"
+                    />
+                  )}
+                  {currentProfile.nickname && (
+                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-400/80 backdrop-blur-sm border border-purple-300/50">
+                      "{currentProfile.nickname}"
+                    </span>
+                  )}
+                  {currentProfile.hasAccommodation && (
                     <span className="text-xs px-2 py-1 rounded-full font-medium bg-white/20 backdrop-blur-sm border border-white/30">
-                      {currentProfile.accommodationStatus === 'have-room' ? 'Has Room' : 'Looking'}
+                      {currentProfile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
                     </span>
                   )}
                 </div>
-                <p className="text-sm opacity-90">{currentProfile.districts?.[0] || 'Location not set'}</p>
+                <p className="text-sm opacity-90">{currentProfile.location}</p>
               </div>
             </div>
 
@@ -288,6 +301,7 @@ export default function HomePage({ email }: HomePageProps) {
                       <span
                         key={index}
                         className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                      >
                         {interest}
                       </span>
                     ))}
@@ -300,27 +314,24 @@ export default function HomePage({ email }: HomePageProps) {
                   <div>
                     <h4 className="font-semibold text-gray-800">Gender</h4>
                     <p className="text-gray-600">
-                      {currentProfile.gender === 'male' ? 'Male' : 'Female'}
+                      {currentProfile.gender === 'male' && 'Male'}
+                      {currentProfile.gender === 'female' && 'Female'}
                     </p>
                   </div>
                 )}
-                {(currentProfile.budgetMin !== undefined && currentProfile.budgetMax !== undefined) && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800">Budget</h4>
-                    <p className="text-gray-600">{formatBudget(currentProfile.budgetMin, currentProfile.budgetMax)}</p>
-                  </div>
-                )}
-                {currentProfile.cleanlinessLevel && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800">Cleanliness</h4>
-                    <p className="text-gray-600">{formatLabel(currentProfile.cleanlinessLevel)}</p>
-                  </div>
-                )}
-                {currentProfile.accommodationStatus && (
+                <div>
+                  <h4 className="font-semibold text-gray-800">Budget</h4>
+                  <p className="text-gray-600">{formatBudget(currentProfile.budgetMin, currentProfile.budgetMax)}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Cleanliness</h4>
+                  <p className="text-gray-600">{formatLabel(currentProfile.cleanlinessLevel)}</p>
+                </div>
+                {currentProfile.hasAccommodation && (
                   <div>
                     <h4 className="font-semibold text-gray-800">Accommodation</h4>
                     <p className="text-gray-600">
-                      {currentProfile.accommodationStatus === 'have-room' ? 'Has room' : 'Looking'}
+                      {currentProfile.hasAccommodation === 'have-room' ? 'Has room' : 'Looking'}
                     </p>
                   </div>
                 )}
@@ -393,7 +404,7 @@ export default function HomePage({ email }: HomePageProps) {
               {/* Profile Name */}
               <div className="text-center mb-4">
                 <h2 className="text-2xl font-bold mb-1 text-gray-800">
-                  {currentProfile.displayName || currentProfile.email?.split('@')[0]}
+                  {currentProfile.displayName || currentProfile.email.split('@')[0]}
                 </h2>
               </div>
               
@@ -442,64 +453,50 @@ export default function HomePage({ email }: HomePageProps) {
                     </p>
                   </div>
                 )}
-                {(currentProfile.budgetMin !== undefined && currentProfile.budgetMax !== undefined) && (
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-                    <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
-                      <Icon icon="mdi:cash-multiple" className="mr-2 text-lg text-green-600" />
-                      Budget
-                    </h4>
-                    <p className="text-gray-700 text-sm font-medium">
-                      {formatBudget(currentProfile.budgetMin, currentProfile.budgetMax)}
-                    </p>
-                  </div>
-                )}
+                <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
+                  <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
+                    <Icon icon="mdi:cash-multiple" className="mr-2 text-lg text-green-600" />
+                    Budget
+                  </h4>
+                  <p className="text-gray-700 text-sm font-medium">
+                    {formatBudget(currentProfile.budgetMin, currentProfile.budgetMax)}
+                  </p>
+                </div>
               </div>
 
               {/* Lifestyle Section */}
-              {(currentProfile.cleanlinessLevel || currentProfile.sleepSchedule || currentProfile.smokingPolicy || currentProfile.petPolicy || currentProfile.noiseLevel) && (
               <div className="bg-gray-50 p-4 rounded-xl">
                 <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
                   <Icon icon="mdi:home-heart" className="mr-2 text-xl text-gray-600" />
                   Lifestyle
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  {currentProfile.cleanlinessLevel && (
-                    <div className="flex items-center">
-                      <Icon icon="mdi:broom" className="mr-2 text-base text-blue-500" />
-                      <span className="text-gray-700"><strong>Cleanliness:</strong> {formatLabel(currentProfile.cleanlinessLevel)}</span>
-                    </div>
-                  )}
-                  {currentProfile.sleepSchedule && (
-                    <div className="flex items-center">
-                      <Icon icon="mdi:sleep" className="mr-2 text-base text-purple-500" />
-                      <span className="text-gray-700"><strong>Sleep Schedule:</strong> {formatLabel(currentProfile.sleepSchedule)}</span>
-                    </div>
-                  )}
-                  {currentProfile.smokingPolicy && (
-                    <div className="flex items-center">
-                      <Icon icon="mdi:smoking-off" className="mr-2 text-base text-red-500" />
-                      <span className="text-gray-700"><strong>Smoking:</strong> {formatLabel(currentProfile.smokingPolicy)}</span>
-                    </div>
-                  )}
-                  {currentProfile.petPolicy && (
-                    <div className="flex items-center">
-                      <Icon icon="mdi:paw" className="mr-2 text-base text-orange-500" />
-                      <span className="text-gray-700"><strong>Pets:</strong> {formatLabel(currentProfile.petPolicy)}</span>
-                    </div>
-                  )}
-                  {currentProfile.noiseLevel && (
+                  <div className="flex items-center">
+                    <Icon icon="mdi:broom" className="mr-2 text-base text-blue-500" />
+                    <span className="text-gray-700"><strong>Cleanliness:</strong> {formatLabel(currentProfile.cleanlinessLevel)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Icon icon="mdi:sleep" className="mr-2 text-base text-purple-500" />
+                    <span className="text-gray-700"><strong>Sleep Schedule:</strong> {formatLabel(currentProfile.sleepSchedule)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Icon icon="mdi:smoking-off" className="mr-2 text-base text-red-500" />
+                    <span className="text-gray-700"><strong>Smoking:</strong> {formatLabel(currentProfile.smokingPolicy)}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Icon icon="mdi:paw" className="mr-2 text-base text-orange-500" />
+                    <span className="text-gray-700"><strong>Pets:</strong> {formatLabel(currentProfile.petPolicy)}</span>
+                  </div>
+                  {currentProfile.noiseLevelPreference && (
                     <div className="flex items-center">
                       <Icon icon="mdi:volume-high" className="mr-2 text-base text-yellow-500" />
-                      <span className="text-gray-700"><strong>Noise Level:</strong> {formatLabel(currentProfile.noiseLevel)}</span>
+                      <span className="text-gray-700"><strong>Noise Level:</strong> {formatLabel(currentProfile.noiseLevelPreference)}</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              )}
-
-              {/* Education Section */}
-              {(currentProfile.university || currentProfile.districts) && (
+              {/* Educatio Section */}
               <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
                 <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
                   <Icon icon="mdi:map-marker" className="mr-2 text-xl text-purple-600" />
@@ -512,18 +509,17 @@ export default function HomePage({ email }: HomePageProps) {
                       <span className="text-gray-700"><strong>University:</strong> {currentProfile.university}</span>
                     </div>
                   )}
-                  {currentProfile.districts && currentProfile.districts.length > 0 && (
+                  {currentProfile.district && (
                     <div className="flex items-center">
                       <Icon icon="mdi:map" className="mr-2 text-base text-purple-500" />
-                      <span className="text-gray-700"><strong>Districts:</strong> {currentProfile.districts.join(', ')}</span>
+                      <span className="text-gray-700"><strong>University District:</strong> {currentProfile.district}</span>
                     </div>
                   )}
                 </div>
               </div>
-              )}
 
               {/* Accommodation Information Section */}
-              {(currentProfile.accommodationStatus || process.env.NODE_ENV === 'development') && (
+              {(currentProfile.hasAccommodation || process.env.NODE_ENV === 'development') && (
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold text-gray-800 flex items-center">
@@ -532,9 +528,9 @@ export default function HomePage({ email }: HomePageProps) {
                     </h3>
                     <div className="flex items-center gap-2">
                       <span className="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-                        {currentProfile.accommodationStatus === 'have-room' ? '🏠 Has Room' : '🔍 Looking'}
+                        {currentProfile.hasAccommodation === 'have-room' ? '🏠 Has Room' : '🔍 Looking'}
                       </span>
-                      {currentProfile.accommodationStatus === 'have-room' && (
+                      {currentProfile.hasAccommodation === 'have-room' && (
                         <button
                           onClick={() => setShowAccommodationDetails(!showAccommodationDetails)}
                           className="btn btn-xs btn-circle btn-ghost"
@@ -552,12 +548,12 @@ export default function HomePage({ email }: HomePageProps) {
                     <div className="flex items-center">
                       <Icon icon="mdi:home-account" className="mr-2 text-base text-blue-500" />
                       <span className="text-gray-700">
-                        <strong>Status:</strong> {currentProfile.accommodationStatus === 'have-room' ? 'Has room to share' : 'Looking for accommodation'}
+                        <strong>Status:</strong> {currentProfile.hasAccommodation === 'have-room' ? 'Has room to share' : 'Looking for accommodation'}
                       </span>
                     </div>
                     
                     {/* Accommodation Details for users who have rooms */}
-                    {currentProfile.accommodationStatus === 'have-room' && showAccommodationDetails && (
+                    {currentProfile.hasAccommodation === 'have-room' && showAccommodationDetails && (
                       <div className="bg-white p-4 rounded-lg border border-blue-100 space-y-3">
                         {/* Basic Property Info */}
                         <div className="border-b border-gray-100 pb-3">
@@ -571,19 +567,19 @@ export default function HomePage({ email }: HomePageProps) {
                             <div className="flex items-start">
                               <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500 mt-0.5 flex-shrink-0" />
                               <div className="text-gray-700 text-sm">
-                                <strong>Address:</strong> {currentProfile.accommodationAddress || <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Address:</strong> {currentProfile.accommodationLocation || <span className="text-gray-400 italic">Not specified</span>}
                               </div>
                             </div>
                             <div className="flex items-center">
                               <Icon icon="mdi:resize" className="mr-2 text-base text-blue-500 flex-shrink-0" />
                               <div className="text-gray-700 text-sm">
-                                <strong>Size:</strong> {currentProfile.accommodationSize ? `${currentProfile.accommodationSize} sqm` : <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Size:</strong> {currentProfile.accommodationSize ? currentProfile.accommodationSize.replace('-', ' ').replace('bedroom', ' bedroom') : <span className="text-gray-400 italic">Not specified</span>}
                               </div>
                             </div>
                             <div className="flex items-center">
                               <Icon icon="mdi:home-variant" className="mr-2 text-base text-blue-500 flex-shrink-0" />
                               <div className="text-gray-700 text-sm">
-                                <strong>Type:</strong> {currentProfile.accommodationType?.join(', ') || <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Type:</strong> {currentProfile.accommodationHouseType || <span className="text-gray-400 italic">Not specified</span>}
                               </div>
                             </div>
                           </div>
@@ -601,31 +597,31 @@ export default function HomePage({ email }: HomePageProps) {
                             <div className="flex items-center">
                               <Icon icon="mdi:cash" className="mr-2 text-base text-green-500 flex-shrink-0" />
                               <div className="text-gray-700 text-sm">
-                                <strong>Rent:</strong> {currentProfile.accommodationFee || <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Rent:</strong> {currentProfile.accommodationHomeFeesAmount || currentProfile.accommodationHomeFees || <span className="text-gray-400 italic">Not specified</span>}
                               </div>
                             </div>
                             <div className="flex items-center">
                               <Icon icon="mdi:flash" className="mr-2 text-base text-yellow-500 flex-shrink-0" />
                               <div className="text-gray-700 text-sm">
-                                <strong>Electricity:</strong> {currentProfile.accommodationElectricityFee || <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Electricity:</strong> {currentProfile.accommodationElectricityFees || <span className="text-gray-400 italic">Not specified</span>}
                               </div>
                             </div>
                             <div className="flex items-center">
                               <Icon icon="mdi:water" className="mr-2 text-base text-blue-500 flex-shrink-0" />
                               <div className="text-gray-700 text-sm">
-                                <strong>Water:</strong> {currentProfile.accommodationWaterFee || <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Water:</strong> {currentProfile.accommodationWaterFees || <span className="text-gray-400 italic">Not specified</span>}
                               </div>
                             </div>
                             <div className="flex items-center">
                               <Icon icon="mdi:wifi" className="mr-2 text-base text-purple-500 flex-shrink-0" />
                               <div className="text-gray-700 text-sm">
-                                <strong>Service Fee:</strong> {currentProfile.accommodationServiceFee || <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Utilities:</strong> {currentProfile.accommodationUtilitiesFees || <span className="text-gray-400 italic">Not specified</span>}
                               </div>
                             </div>
                             <div className="flex items-center">
                               <Icon icon="mdi:plus-circle" className="mr-2 text-base text-orange-500 flex-shrink-0" />
                               <div className="text-gray-700 text-sm">
-                                <strong>Other Fees:</strong> {currentProfile.accommodationOtherFees || <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Additional:</strong> {currentProfile.accommodationAdditionalFees || <span className="text-gray-400 italic">Not specified</span>}
                               </div>
                             </div>
                           </div>
@@ -643,9 +639,18 @@ export default function HomePage({ email }: HomePageProps) {
                             <div className="flex items-start">
                               <Icon icon="mdi:sofa" className="mr-2 text-base text-purple-500 mt-0.5 flex-shrink-0" />
                               <div className="flex-1">
-                                <span className="text-gray-700 text-sm"><strong>Services & Amenities:</strong></span>
+                                <span className="text-gray-700 text-sm"><strong>Furniture & Appliances:</strong></span>
                                 <p className="text-gray-600 text-xs mt-0.5">
-                                  {currentProfile.accommodationServices?.join(', ') || <span className="text-gray-400 italic">Not specified</span>}
+                                  {currentProfile.accommodationFurniture || <span className="text-gray-400 italic">Not specified</span>}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start">
+                              <Icon icon="mdi:security" className="mr-2 text-base text-red-500 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-gray-700 text-sm"><strong>Security Features:</strong></span>
+                                <p className="text-gray-600 text-xs mt-0.5">
+                                  {currentProfile.accommodationSecurity || <span className="text-gray-400 italic">Not specified</span>}
                                 </p>
                               </div>
                             </div>
@@ -666,14 +671,23 @@ export default function HomePage({ email }: HomePageProps) {
                               <div className="flex-1">
                                 <span className="text-gray-700 text-sm"><strong>Pet Policy:</strong></span>
                                 <p className="text-gray-600 text-xs mt-0.5">
-                                  {currentProfile.petPolicy ? formatLabel(currentProfile.petPolicy) : <span className="text-gray-400 italic">Not specified</span>}
+                                  {currentProfile.accommodationPetPolicy || <span className="text-gray-400 italic">Not specified</span>}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start">
+                              <Icon icon="mdi:clock-outline" className="mr-2 text-base text-orange-500 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-gray-700 text-sm"><strong>Time Restrictions:</strong></span>
+                                <p className="text-gray-600 text-xs mt-0.5">
+                                  {currentProfile.accommodationRestrictedHours || <span className="text-gray-400 italic">Not specified</span>}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center">
                               <Icon icon="mdi:account-supervisor" className="mr-2 text-base text-orange-500 flex-shrink-0" />
                               <span className="text-gray-700 text-sm">
-                                <strong>Lives with landlord:</strong> {currentProfile.liveWithLandlord === 'yes' ? 'Yes' : currentProfile.liveWithLandlord === 'no' ? 'No' : <span className="text-gray-400 italic">Not specified</span>}
+                                <strong>Lives with landlord:</strong> {currentProfile.accommodationLiveWithRental ? 'Yes' : 'No'}
                               </span>
                             </div>
                           </div>
@@ -689,7 +703,7 @@ export default function HomePage({ email }: HomePageProps) {
                           </div>
                           <div className="bg-gray-50 p-3 rounded-md border">
                             <p className="text-gray-600 text-xs leading-relaxed">
-                              {currentProfile.accommodationServiceDescription || 
+                              {currentProfile.accommodationDescription || 
                                 <span className="text-gray-400 italic">No description provided yet. This would include details about the neighborhood, nearby amenities, transportation, and what makes this place special.</span>
                               }
                             </p>
@@ -702,13 +716,19 @@ export default function HomePage({ email }: HomePageProps) {
               )}
 
               {/* Additional Preferences Section - if any optional fields exist */}
-              {(currentProfile.cookingSkills || currentProfile.guestPolicy) && (
+              {(currentProfile.sharedSpaceCleaning || currentProfile.cookingSkills || currentProfile.guestPolicy) && (
                 <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
                   <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
                     <Icon icon="mdi:cog" className="mr-2 text-xl text-orange-600" />
                     Additional Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    {currentProfile.sharedSpaceCleaning && (
+                      <div className="flex items-center">
+                        <Icon icon="mdi:home-cleaning" className="mr-2 text-base text-orange-500" />
+                        <span className="text-gray-700"><strong>Cleaning:</strong> {formatLabel(currentProfile.sharedSpaceCleaning)}</span>
+                      </div>
+                    )}
                     {currentProfile.cookingSkills && (
                       <div className="flex items-center">
                         <Icon icon="mdi:chef-hat" className="mr-2 text-base text-orange-500" />

@@ -6,24 +6,24 @@ export interface UserProfile {
   email: string;
   photoURL?: string;
   displayName?: string;
+  nickname?: string; // Friendly nickname or alias
+  photoURL?: string;
   slug?: string; // URL-friendly username or normalized full name
+  isStudentVerified?: boolean; // Student verification status
   createdAt: Date;
   updatedAt: Date;
   
   // -------------------- General Info <First Part> --------------------
   
-  // photoURL
-  // Display Name
+  // Gender
   gender?: 'male' | 'female';
-  birthYear?: number;
-  accommodationStatus?: 'looking' | 'have-room';
   
-  // -------------------- Personal Information <Second Part> --------------------
-  
-  // Basic Info
+  // Budget Range (VND per month)
+  budgetMin: number;
+  budgetMax: number;
 
-  hometown?: string;
-  //email
+  // Location / University
+  location: string;
   university?: string;
   bio?: string;
 

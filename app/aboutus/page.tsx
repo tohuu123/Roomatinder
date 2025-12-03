@@ -200,6 +200,35 @@ export default function AboutUsPage() {
         </div>
 
 
+        {/* Contact Section */}
+        <div className="mb-16">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">Contact Us</h2>
+          <p className="text-center text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-12">
+            We are always ready to listen to your feedback and support you. Contact the <strong className="text-blue-600">devebugger</strong> team through the channels below.
+          </p>
+          
+          {/* Contact Info Cards */}
+          <div className="flex justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon icon="mdi:email" className="text-2xl text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Email</h3>
+                <p className="text-blue-600 font-medium mb-2">devebugger@gmail.com</p>
+              </div>
+              <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon icon="mdi:map-marker" className="text-2xl text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Address</h3>
+                <p className="text-blue-600 font-medium mb-2">Ho Chi Minh City</p>
+                <p className="text-gray-600 text-sm">University of Science - VNU-HCM</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Call to Action */}
         <div className="bg-gradient-to-r from-pink-500 to-blue-500 rounded-3xl p-8 text-white text-center">
           <h2 className="text-3xl font-bold mb-4">Join us in finding your perfect roommate</h2>
@@ -209,10 +238,6 @@ export default function AboutUsPage() {
             <a href="/register" className="btn btn-white text-blue-600 btn-lg">
               <Icon icon="mdi:account-plus" className="mr-2" />
               Sign Up Now
-            </a>
-            <a href="/contact" className="btn btn-outline btn-white btn-lg">
-              <Icon icon="mdi:email" className="mr-2" />
-              Contact Us
             </a>
           </div>
         </div>
