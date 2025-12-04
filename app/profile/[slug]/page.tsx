@@ -132,7 +132,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
               <Icon icon="mdi:account-circle" className="w-6 h-6 mr-2 text-blue-600" />
                 About
             </h2>
-              <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+              <p className="text-gray-900 whitespace-pre-wrap leading-relaxed break-words">
                 {profile.bio}
               </p>
           </div>

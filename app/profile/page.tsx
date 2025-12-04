@@ -34,6 +34,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<Partial<UserProfile>>({});
+  const [currentStep, setCurrentStep] = useState(1);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [customInterest, setCustomInterest] = useState('');
@@ -139,6 +140,59 @@ export default function ProfilePage() {
     }
   };
 
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 1: // Basic Information
+        if (!profile.displayName || !profile.gender || !profile.birthYear || !profile.hometown || !profile.university) {
+          alert('Please fill in all required fields in Basic Information!');
+          return false;
+        }
+        return true;
+      case 2: // Lifestyle
+        if (!profile.sleepSchedule || !profile.cleanlinessLevel || !profile.noiseLevel || 
+            !profile.cookingSkills || !profile.guestPolicy || !profile.smokingPolicy || !profile.petPolicy) {
+          alert('Please fill in all required fields in Lifestyle & Habit!');
+          return false;
+        }
+        return true;
+      case 3: // Accommodation
+        if (!profile.accommodationStatus) {
+          alert('Please select your accommodation status!');
+          return false;
+        }
+        // Validate accommodation details based on status
+        if (profile.accommodationStatus === 'looking') {
+          if (!profile.districts || profile.districts.length === 0 || !profile.budgetMin || !profile.budgetMax ||
+              !profile.accommodationType || profile.accommodationType.length === 0 ||
+              !profile.accommodationSize || profile.numberOfRoomates === undefined) {
+            alert('Please fill in all required fields for accommodation preferences!');
+            return false;
+          }
+        } else if (profile.accommodationStatus === 'have-room') {
+          if (!profile.accommodationAddress || !profile.accommodationFee ||
+              !profile.accommodationElectricityFee || !profile.accommodationWaterFee ||
+              !profile.accommodationServiceFee || !profile.accommodationType || profile.accommodationType.length === 0 ||
+              !profile.accommodationSize || profile.numberOfRoomates === undefined || !profile.liveWithLandlord) {
+            alert('Please fill in all required fields for your accommodation!');
+            return false;
+          }
+        }
+        return true;
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep(prev => prev - 1);
+  };
+
   const handleSave = async () => {
     if (!user) return;
 
@@ -193,6 +247,10 @@ export default function ProfilePage() {
 
   const completion = calculateProfileCompletion(profile);
 
+  const getTotalSteps = () => {
+    return 3; // Basic Info, Lifestyle, Accommodation
+  };
+
   return (
     <div className="min-h-screen bg-base-200 py-8">
       <div className="container mx-auto max-w-4xl px-4">
@@ -205,6 +263,15 @@ export default function ProfilePage() {
           <p className="text-gray-700 mb-4">
             Complete your profile to find the most compatible roommate
           </p>
+
+          {/* Step Indicator */}
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <ul className="steps w-full">
+              <li className={`step ${currentStep >= 1 ? 'step-primary' : ''}`}>Basic Info</li>
+              <li className={`step ${currentStep >= 2 ? 'step-primary' : ''}`}>Lifestyle & Habit</li>
+              <li className={`step ${currentStep >= 3 ? 'step-primary' : ''}`}>Accommodation</li>
+            </ul>
+          </div>
           
           {/* Profile Photo Upload */}
           <div className="flex flex-col items-center mb-6">
@@ -264,7 +331,8 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Basic Information */}
+        {/* Step 1: Basic Information */}
+        {currentStep === 1 && (
         <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
             <span className="mr-2">👤</span>
@@ -366,534 +434,573 @@ export default function ProfilePage() {
             />
           </div>
         </div>
+        )}
 
-        <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
-            <span className="mr-2">🏡</span>
-            Lifestyle
-          </h2>
+        {/* Step 2: Lifestyle & Habit */}
+        {currentStep === 2 && (
+          <div>
+            {/* Lifestyle Card */}
+            <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+              <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+                <span className="mr-2">🏡</span>
+                Lifestyle & Habit
+              </h2>
 
-          {/* Sleep Schedule */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Sleep Schedule *</span>
-            </label>
-            <select
-              className="select select-bordered text-gray-900"
-              value={profile.sleepSchedule || ''}
-              onChange={(e) => handleInputChange('sleepSchedule', e.target.value)}
-              required
-            >
-              <option value="">Select sleep schedule</option>
-              {SLEEP_SCHEDULE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>  
-
-          {/* Cleanliness Level */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Cleanliness Level *</span>
-            </label>
-            <select
-              className="select select-bordered text-gray-900"
-              value={profile.cleanlinessLevel || ''}
-              onChange={(e) => handleInputChange('cleanlinessLevel', e.target.value)}
-              required
-            >
-              <option value="">Select cleanliness level</option>
-              {CLEANLINESS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>  
-          
-          {/* Noise Level */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Preferred Noise Level *</span>
-            </label>
-            <select  
-              className="select select-bordered text-gray-900"
-              value={profile.noiseLevel || ''}
-              onChange={(e) => handleInputChange('noiseLevel', e.target.value)}
-              required
-            >
-              <option value="">Select noise level</option>
-              {NOISE_LEVEL_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Cooking Skills */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Cooking Skills *</span>
-            </label>
-            <select
-              className="select select-bordered text-gray-900"
-              value={profile.cookingSkills || ''}
-              onChange={(e) => handleInputChange('cookingSkills', e.target.value)}
-              required
-            >
-              <option value="">Select cooking skills</option>
-              {COOKING_SKILLS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Guest Policy */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Guest Policy *</span>
-            </label>
-            <select
-              className="select select-bordered text-gray-900"
-              value={profile.guestPolicy || ''}
-              onChange={(e) => handleInputChange('guestPolicy', e.target.value)}
-              required
-            >
-              <option value="">Select guest policy</option>
-              {GUEST_POLICY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/*Smoking Policy */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Smoking Policy *</span>
-            </label>
-            <select
-              className="select select-bordered text-gray-900"
-              value={profile.smokingPolicy || ''}
-              onChange={(e) => handleInputChange('smokingPolicy', e.target.value)}
-              required
-            >
-              <option value="">Select smoking policy</option>
-              {SMOKING_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Pet Policy */}
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Pet Policy *</span>
-            </label>
-            <select
-              className="select select-bordered text-gray-900"
-              value={profile.petPolicy || ''}
-              onChange={(e) => handleInputChange('petPolicy', e.target.value)}
-              required
-            >
-              <option value="">Select pet policy</option>
-              {PET_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {profile.petPolicy === 'have-pets' && (
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Pet Details</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Describe your pet(s)"
-                className="input input-bordered text-gray-900"
-                value={profile.petType || ''}
-                onChange={(e) => handleInputChange('petType', e.target.value)}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* AI/LLM Fields */}
-        {showOptionalFields && (
-          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
-              <span className="mr-2">💝</span>
-              About you
-            </h2>
-
-            {/* Interests */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Interests & Hobbies</span>
-              </label>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {COMMON_INTERESTS.map((interest) => (
-                  <button
-                    key={interest}
-                    type="button"
-                    className={`btn btn-sm ${
-                      selectedInterests.includes(interest) ? 'btn-primary' : 'btn-outline'
-                    }`}
-                    onClick={() => handleInterestToggle(interest)}
-                  >
-                    {interest}
-                  </button>
-                ))}
-              </div>
-              <div className="join w-full">
-                <input
-                  type="text"
-                  placeholder="Add other interests..."
-                  className="input input-bordered join-item flex-1 text-gray-900"
-                  value={customInterest}
-                  onChange={(e) => setCustomInterest(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddCustomInterest()}
-                />
-                <button
-                  type="button"
-                  className="btn btn-primary join-item"
-                  onClick={handleAddCustomInterest}
+              {/* Sleep Schedule */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Sleep Schedule *
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered text-gray-900"
+                  value={profile.sleepSchedule || ''}
+                  onChange={(e) => handleInputChange('sleepSchedule', e.target.value)}
+                  required
                 >
-                  Add
-                </button>
-              </div>
-              {selectedInterests.length > 0 && (
-                <div className="mt-2">
-                  <span className="text-sm text-gray-700">Selected: </span>
-                  {selectedInterests.map((interest) => (
-                    <span key={interest} className="badge badge-primary gap-2 mr-1">
-                      {interest}
-                      <button
-                        type="button"
-                        className="btn btn-xs btn-circle btn-ghost"
-                        onClick={() => handleInterestToggle(interest)}
-                      >
-                        ✕
-                      </button>
-                    </span>
+                  <option value="">Select sleep schedule</option>
+                  {SLEEP_SCHEDULE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
+                </select>
+              </div>
+
+              {/* Cleanliness Level */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Cleanliness Level *
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered text-gray-900"
+                  value={profile.cleanlinessLevel || ''}
+                  onChange={(e) => handleInputChange('cleanlinessLevel', e.target.value)}
+                  required
+                >
+                  <option value="">Select cleanliness level</option>
+                  {CLEANLINESS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Noise Level */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Preferred Noise Level *
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered text-gray-900"
+                  value={profile.noiseLevel || ''}
+                  onChange={(e) => handleInputChange('noiseLevel', e.target.value)}
+                  required
+                >
+                  <option value="">Select noise level</option>
+                  {NOISE_LEVEL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cooking Skills */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Cooking Skills *
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered text-gray-900"
+                  value={profile.cookingSkills || ''}
+                  onChange={(e) => handleInputChange('cookingSkills', e.target.value)}
+                  required
+                >
+                  <option value="">Select cooking skills</option>
+                  {COOKING_SKILLS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Guest Policy */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Guest Policy *
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered text-gray-900"
+                  value={profile.guestPolicy || ''}
+                  onChange={(e) => handleInputChange('guestPolicy', e.target.value)}
+                  required
+                >
+                  <option value="">Select guest policy</option>
+                  {GUEST_POLICY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Smoking Policy */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Smoking Policy *
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered text-gray-900"
+                  value={profile.smokingPolicy || ''}
+                  onChange={(e) => handleInputChange('smokingPolicy', e.target.value)}
+                  required
+                >
+                  <option value="">Select smoking policy</option>
+                  {SMOKING_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Pet Policy */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Pet Policy *
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered text-gray-900"
+                  value={profile.petPolicy || ''}
+                  onChange={(e) => handleInputChange('petPolicy', e.target.value)}
+                  required
+                >
+                  <option value="">Select pet policy</option>
+                  {PET_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {profile.petPolicy === 'have-pets' && (
+                <div className="form-control mb-4">
+                  <label className="label">
+                    <span className="label-text font-semibold text-gray-900">
+                      Pet Details
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Describe your pet(s)"
+                    className="input input-bordered text-gray-900"
+                    value={profile.petType || ''}
+                    onChange={(e) => handleInputChange('petType', e.target.value)}
+                  />
                 </div>
               )}
             </div>
 
-            {/* Bio */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">About Yourself</span>
-              </label>
-              <textarea
-                className="textarea textarea-bordered h-32 text-gray-900"
-                placeholder="Describe your ideal weekend, things you like to do, or what's important to you when living with others..."
-                value={profile.bio || ''}
-                onChange={(e) => handleInputChange('bio', e.target.value)}
-              ></textarea>
-              <label className="label">
-                <span className="label-text-alt text-gray-600">
-                  This information helps find more compatible roommates
-                </span>
-              </label>
-            </div>
-          </div>
-        )}
+            {/* About You Card */}
+            <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+              <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+                <span className="mr-2">💝</span>
+                About you
+              </h2>
 
-        {/* Accommodation Status */}
-        <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-          <div className="form-control mb-4">
-            <label className="label">
-              <span className="label-text font-semibold text-gray-900">Accommodation Status *</span>
-            </label>
-            <select
-              className="select select-bordered text-gray-900"
-              value={profile.accommodationStatus || ''}
-              onChange={(e) => handleInputChange('accommodationStatus', e.target.value)}
-              required
-              >
-              <option value="">Select status</option>
-                {ACCOMMODATION_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-                ))}
-            </select>
-          </div>
-        </div>
+              {/* Interests */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Interests & Hobbies
+                  </span>
+                </label>
 
-        {/* Looking for Accommodation */}
-        {profile.accommodationStatus === 'looking' && (
-          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
-              <span className="mr-2">🔍</span>
-              <span className="badge badge-primary mr-2">Looking</span>
-              What You're Looking For
-            </h2>
-
-            {/* Preferred Districts */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Preferred Districts *</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {['District 1', 'District 2', 'District 3', 'District 4', 'District 5', 'District 7', 'District 8', 'District 10', 'Binh Thanh', 'Phu Nhuan', 'Tan Binh', 'Go Vap', 'Thu Duc'].map((district) => (
-                  <button
-                    key={district}
-                    type="button"
-                    className={`btn btn-sm ${
-                      profile.districts?.includes(district) ? 'btn-primary' : 'btn-outline'
-                    }`}
-                    onClick={() => {
-                      const currentDistricts = profile.districts || [];
-                      if (currentDistricts.includes(district)) {
-                        handleInputChange('districts', currentDistricts.filter(d => d !== district));
-                      } else {
-                        handleInputChange('districts', [...currentDistricts, district]);
-                      }
-                    }}
-                  >
-                    {district}
-                  </button>
-                ))}
-              </div>
-            </div>  
-            
-            {/* Budget Range */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Budget Range (Monthly Rent in VND) *</span>
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="label-text text-gray-900 whitespace-nowrap">Budget Min:</span>
-                  <input
-                    type="number"
-                    className="input input-bordered text-gray-900 flex-1"
-                    placeholder= "EX: 2 is 2.000.000 VND"
-                    value={profile.budgetMin || ''}
-                    onChange={(e) => handleInputChange('budgetMin', e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="label-text text-gray-900 whitespace-nowrap">Budget Max:</span>
-                  <input
-                    type="number"
-                    className="input input-bordered text-gray-900 flex-1"
-                    placeholder="EX: 5 is 5.000.000 VND"
-                    value={profile.budgetMax || ''}
-                    onChange={(e) => handleInputChange('budgetMax', e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Accommodation Type */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Preferred Accommodation Type *</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {ACCOMMODATION_TYPE_OPTIONS.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={`btn btn-sm ${
-                      profile.accommodationType?.includes(type) ? 'btn-primary' : 'btn-outline'
-                    }`}
-                    onClick={() => {
-                      const currentTypes = profile.accommodationType || [];
-                      if (currentTypes.includes(type)) {
-                        handleInputChange('accommodationType', currentTypes.filter(t => t !== type));
-                      } else {
-                        handleInputChange('accommodationType', [...currentTypes, type]);
-                      }
-                    }}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Accommodation Size */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">
-                  Preferred Accommodation Size *
-                </span>
-              </label>
-
-              <div className="flex flex-wrap gap-2">
-                {ACCOMMODATION_SIZE_OPTIONS.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    className={`btn btn-sm ${
-                        Array.isArray(profile.accommodationSize) &&
-                        profile.accommodationSize.includes(size)
-                        ? "btn-primary" 
-                        : "btn-outline"
-                    }`}
-                    onClick={() => {
-                      const currentSizes = profile.accommodationSize || [];
-                      if (currentSizes.includes(size)) {
-                        handleInputChange('accommodationSize', currentSizes.filter(s => s !== size));
-                      } else {
-                        handleInputChange('accommodationSize', [...currentSizes, size]);
-                      }
-                    }}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-          
-            {/* Number of Roommates */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Preferred Number of Roommates *</span>
-              </label>
-              <input
-                type="number"
-                className="input input-bordered text-gray-900"
-                placeholder="Enter preferred number of roommates"
-                value={profile.numberOfRoomates || ''}
-                onChange={(e) => handleInputChange('numberOfRoomates', parseInt(e.target.value) || undefined)}
-                min="0"
-                required
-              />
-            </div>
-
-            {/* Desired Services */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Desired Services</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {['WiFi', 'Parking', 'Furnished', 'Air Conditioning', 'Washing Machine', 'Kitchen', 'Elevator', 'Security', 'Gym', 'Swimming Pool'].map((service) => (
-                  <button
-                    key={service}
-                    type="button"
-                    className={`btn btn-sm ${
-                      profile.accommodationServices?.includes(service) ? 'btn-primary' : 'btn-outline'
-                    }`}
-                    onClick={() => {
-                      const currentServices = profile.accommodationServices || [];
-                      if (currentServices.includes(service)) {
-                        handleInputChange('accommodationServices', currentServices.filter(s => s !== service));
-                      } else {
-                        handleInputChange('accommodationServices', [...currentServices, service]);
-                      }
-                    }}
-                  >
-                    {service}
-                  </button>
-                ))}
-                {/* Show custom services with remove button */}
-                {(profile.accommodationServices || []).filter(
-                  service => !['WiFi', 'Parking', 'Furnished', 'Air Conditioning', 'Washing Machine', 'Kitchen', 'Elevator', 'Security', 'Gym', 'Swimming Pool'].includes(service)
-                ).map((service) => (
-                  <button
-                    key={service}
-                    type="button"
-                    className="btn btn-sm btn-primary gap-1"
-                    onClick={() => {
-                      const currentServices = profile.accommodationServices || [];
-                      handleInputChange('accommodationServices', currentServices.filter(s => s !== service));
-                    }}
-                  >
-                    {service}
-                    <span className="text-xs">✕</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Add custom service (e.g., Garden, Balcony)"
-                  className="input input-sm flex-1 text-gray-900 input-bordered"
-                  value={customService}
-                  onChange={(e) => setCustomService(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && customService.trim()) {
-                      e.preventDefault();
-                      const currentServices = profile.accommodationServices || [];
-                      if (!currentServices.includes(customService.trim())) {
-                        handleInputChange('accommodationServices', [...currentServices, customService.trim()]);
-                        setCustomService('');
-                      }
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary"
-                  onClick={() => {
-                    if (customService.trim()) {
-                      const currentServices = profile.accommodationServices || [];
-                        if (!currentServices.includes(customService.trim())) {
-                        handleInputChange('accommodationServices', [...currentServices, customService.trim()]);
-                        setCustomService('');
-                      }
-                    }
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-
-            {/* Live with Landlord Preference */}
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text font-semibold text-gray-900">Live with Landlord</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {['No preference', 'Yes', 'No'].map((option) => {
-                  const value = option === 'No preference' ? '' : option.toLowerCase();
-                  return (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {COMMON_INTERESTS.map((interest: string) => (
                     <button
-                      key={option}
+                      key={interest}
                       type="button"
                       className={`btn btn-sm ${
-                        profile.liveWithLandlord === value ? 'btn-primary' : 'btn-outline'
+                        selectedInterests.includes(interest)
+                          ? 'btn-primary'
+                          : 'btn-outline'
                       }`}
-                      onClick={() => handleInputChange('liveWithLandlord', value)}
+                      onClick={() => handleInterestToggle(interest)}
                     >
-                      {option}
+                      {interest}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+
+                <div className="join w-full">
+                  <input
+                    type="text"
+                    placeholder="Add other interests..."
+                    className="input input-bordered join-item flex-1 text-gray-900"
+                    value={customInterest}
+                    onChange={(e) => setCustomInterest(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddCustomInterest()}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary join-item"
+                    onClick={handleAddCustomInterest}
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {selectedInterests.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-sm text-gray-700">Selected: </span>
+                    {selectedInterests.map((interest: string) => (
+                      <span key={interest} className="badge badge-primary gap-2 mr-1">
+                        {interest}
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-circle btn-ghost"
+                          onClick={() => handleInterestToggle(interest)}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bio */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    About Yourself (max 255 characters)
+                  </span>
+                </label>
+
+                <textarea
+                  className="textarea textarea-bordered h-32 text-gray-900"
+                  placeholder="Describe your ideal weekend, things you like to do, or what's important to you when living with others..."
+                  value={profile.bio || ''}
+                  maxLength={255}
+                  onChange={(e) => handleInputChange('bio', e.target.value)}
+                ></textarea>
+
+                <label className="label">
+                  <span className="label-text-alt text-gray-600">
+                    This information helps find more compatible roommates
+                  </span>
+                </label>
               </div>
             </div>
           </div>
         )}
 
-        {/* Have Accommodation */}
-        {profile.accommodationStatus === 'have-room' && (
-          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
-              <span className="mr-2">🏠</span>
-              <span className="badge badge-success mr-2">Have Room</span>
-              Your Accommodation Details
-            </h2>
+          {/* Step 3: Accommodation */}
+          {currentStep === 3 && (
+          <div>
+            <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+              <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+                <span className="mr-2">🏠</span>
+                Accommodation
+              </h2>
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">Accommodation Status *</span>
+                </label>
+                <select
+                  className="select select-bordered text-gray-900"
+                  value={profile.accommodationStatus || ''}
+                  onChange={(e) => handleInputChange('accommodationStatus', e.target.value)}
+                  required
+                  >
+                  <option value="">Select status</option>
+                    {ACCOMMODATION_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Accommodation Details - Looking */}
+            {profile.accommodationStatus === 'looking' && (
+              <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+                <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+                  <span className="mr-2">🔍</span>
+                  <span className="badge badge-primary mr-2">Looking</span>
+                  What You're Looking For
+                </h2>
+
+              {/* Preferred Districts */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">Preferred Districts *</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['District 1', 'District 2', 'District 3', 'District 4', 'District 5', 'District 7', 'District 8', 'District 10', 'Binh Thanh', 'Phu Nhuan', 'Tan Binh', 'Go Vap', 'Thu Duc'].map((district) => (
+                    <button
+                      key={district}
+                      type="button"
+                      className={`btn btn-sm ${
+                        profile.districts?.includes(district) ? 'btn-primary' : 'btn-outline'
+                      }`}
+                      onClick={() => {
+                        const currentDistricts = profile.districts || [];
+                        if (currentDistricts.includes(district)) {
+                          handleInputChange('districts', currentDistricts.filter(d => d !== district));
+                        } else {
+                          handleInputChange('districts', [...currentDistricts, district]);
+                        }
+                      }}
+                    >
+                      {district}
+                    </button>
+                  ))}
+                </div>
+              </div>  
+              
+              {/* Budget Range */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">Budget Range (Monthly Rent in VND) *</span>
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="label-text text-gray-900 whitespace-nowrap">Budget Min:</span>
+                    <input
+                      type="number"
+                      className="input input-bordered text-gray-900 flex-1"
+                      placeholder= "EX: 2 is 2.000.000 VND"
+                      value={profile.budgetMin || ''}
+                      onChange={(e) => handleInputChange('budgetMin', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="label-text text-gray-900 whitespace-nowrap">Budget Max:</span>
+                    <input
+                      type="number"
+                      className="input input-bordered text-gray-900 flex-1"
+                      placeholder="EX: 5 is 5.000.000 VND"
+                      value={profile.budgetMax || ''}
+                      onChange={(e) => handleInputChange('budgetMax', e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Accommodation Type */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">Preferred Accommodation Type *</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {ACCOMMODATION_TYPE_OPTIONS.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={`btn btn-sm ${
+                        profile.accommodationType?.includes(type) ? 'btn-primary' : 'btn-outline'
+                      }`}
+                      onClick={() => {
+                        const currentTypes = profile.accommodationType || [];
+                        if (currentTypes.includes(type)) {
+                          handleInputChange('accommodationType', currentTypes.filter(t => t !== type));
+                        } else {
+                          handleInputChange('accommodationType', [...currentTypes, type]);
+                        }
+                      }}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Accommodation Size */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">
+                    Preferred Accommodation Size *
+                  </span>
+                </label>
+
+                <div className="flex flex-wrap gap-2">
+                  {ACCOMMODATION_SIZE_OPTIONS.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      className={`btn btn-sm ${
+                          Array.isArray(profile.accommodationSize) &&
+                          profile.accommodationSize.includes(size)
+                          ? "btn-primary" 
+                          : "btn-outline"
+                      }`}
+                      onClick={() => {
+                        const currentSizes = profile.accommodationSize || [];
+                        if (currentSizes.includes(size)) {
+                          handleInputChange('accommodationSize', currentSizes.filter(s => s !== size));
+                        } else {
+                          handleInputChange('accommodationSize', [...currentSizes, size]);
+                        }
+                      }}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            
+              {/* Number of Roommates */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">Preferred Number of Roommates *</span>
+                </label>
+                <input
+                  type="number"
+                  className="input input-bordered text-gray-900"
+                  placeholder="Enter preferred number of roommates"
+                  value={profile.numberOfRoomates || ''}
+                  onChange={(e) => handleInputChange('numberOfRoomates', parseInt(e.target.value) || undefined)}
+                  min="0"
+                  required
+                />
+              </div>
+
+              {/* Desired Services */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">Desired Services</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['WiFi', 'Parking', 'Furnished', 'Air Conditioning', 'Washing Machine', 'Kitchen', 'Elevator', 'Security', 'Gym', 'Swimming Pool'].map((service) => (
+                    <button
+                      key={service}
+                      type="button"
+                      className={`btn btn-sm ${
+                        profile.accommodationServices?.includes(service) ? 'btn-primary' : 'btn-outline'
+                      }`}
+                      onClick={() => {
+                        const currentServices = profile.accommodationServices || [];
+                        if (currentServices.includes(service)) {
+                          handleInputChange('accommodationServices', currentServices.filter(s => s !== service));
+                        } else {
+                          handleInputChange('accommodationServices', [...currentServices, service]);
+                        }
+                      }}
+                    >
+                      {service}
+                    </button>
+                  ))}
+                  {/* Show custom services with remove button */}
+                  {(profile.accommodationServices || []).filter(
+                    service => !['WiFi', 'Parking', 'Furnished', 'Air Conditioning', 'Washing Machine', 'Kitchen', 'Elevator', 'Security', 'Gym', 'Swimming Pool'].includes(service)
+                  ).map((service) => (
+                    <button
+                      key={service}
+                      type="button"
+                      className="btn btn-sm btn-primary gap-1"
+                      onClick={() => {
+                        const currentServices = profile.accommodationServices || [];
+                        handleInputChange('accommodationServices', currentServices.filter(s => s !== service));
+                      }}
+                    >
+                      {service}
+                      <span className="text-xs">✕</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add custom service (e.g., Garden, Balcony)"
+                    className="input input-sm flex-1 text-gray-900 input-bordered"
+                    value={customService}
+                    onChange={(e) => setCustomService(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && customService.trim()) {
+                        e.preventDefault();
+                        const currentServices = profile.accommodationServices || [];
+                        if (!currentServices.includes(customService.trim())) {
+                          handleInputChange('accommodationServices', [...currentServices, customService.trim()]);
+                          setCustomService('');
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    onClick={() => {
+                      if (customService.trim()) {
+                        const currentServices = profile.accommodationServices || [];
+                          if (!currentServices.includes(customService.trim())) {
+                          handleInputChange('accommodationServices', [...currentServices, customService.trim()]);
+                          setCustomService('');
+                        }
+                      }
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Live with Landlord Preference */}
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-semibold text-gray-900">Live with Landlord</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['No preference', 'Yes', 'No'].map((option) => {
+                    const value = option === 'No preference' ? '' : option.toLowerCase();
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`btn btn-sm ${
+                          profile.liveWithLandlord === value ? 'btn-primary' : 'btn-outline'
+                        }`}
+                        onClick={() => handleInputChange('liveWithLandlord', value)}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              </div>
+            )}
+
+            {/* Accommodation Details - Have Room */}
+            {profile.accommodationStatus === 'have-room' && (
+              <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+                <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
+                  <span className="mr-2">🏠</span>
+                  <span className="badge badge-success mr-2">Have Room</span>
+                  Your Accommodation Details
+                </h2>
 
             {/* Accommodation Address */}
             <div className="form-control mb-4">
@@ -1171,28 +1278,51 @@ export default function ProfilePage() {
                 ))}
               </div>
             </div>
-          </div>
-        )}
-        {/* Action Buttons */}
-        <div className="flex gap-4 mb-8">
-          <button
-            className="btn btn-primary flex-1"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <>
-                <span className="loading loading-spinner"></span>
-                Saving...
-              </>
-            ) : (
-              'Save & View Profile'
+              </div>
             )}
-          </button>
+          </div>
+          )}
+
+        {/* Navigation Buttons */}
+        <div className="flex gap-4 mb-8">
+          {currentStep > 1 && (
+            <button
+              className="btn btn-outline"
+              onClick={handlePrevious}
+            >
+              ← Previous
+            </button>
+          )}
+          
+          {currentStep < getTotalSteps() && (
+            <button
+              className="btn btn-primary flex-1"
+              onClick={handleNext}
+            >
+              Next →
+            </button>
+          )}
+          
+          {currentStep === getTotalSteps() && (
+            <button
+              className="btn btn-primary flex-1"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <span className="loading loading-spinner"></span>
+                  Saving...
+                </>
+              ) : (
+                'Save & View Profile'
+              )}
+            </button>
+          )}
+
           <button
             className="btn btn-outline"
             onClick={() => {
-              // If profile exists with slug, go to profile view, otherwise go home
               if (profile.slug) {
                 router.push(`/profile/${profile.slug}`);
               } else {
@@ -1200,7 +1330,7 @@ export default function ProfilePage() {
               }
             }}
           >
-            {profile.slug ? 'Cancel' : 'Back to Home'}
+            Cancel
           </button>
         </div>
       </div>

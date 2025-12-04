@@ -9,6 +9,7 @@ import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getUserAvatar } from "@/lib/avatarHelper";
 import { useRouter } from "next/navigation";
+import { profile } from "console";
 
 // Helper function to format field labels in English
 function formatLabel(value: string): string {
@@ -21,10 +22,10 @@ function formatLabel(value: string): string {
     'moderate': 'Moderate',
     'relaxed': 'Relaxed',
     'no-smoking': 'No Smoking',
-    'smoking-ok': 'Smoking OK',
+    'smoking-ok': 'Smoking Allowed',
     'outdoor-only': 'Outdoor Only',
     'no-pets': 'No Pets',
-    'pets-ok': 'Pets OK',
+    'pets-ok': 'Pets Allowed',
     'have-pets': 'Have Pets',
     'daily': 'Daily',
     'weekly': 'Weekly',
@@ -228,7 +229,7 @@ export default function HomePage({ email }: HomePageProps) {
         </div>
 
         {/* Card Container */}
-        <div className="relative h-[800px] mb-6">
+        <div className="relative h-[900px] mb-6">
           
           <div
             ref={cardRef}
@@ -391,18 +392,43 @@ export default function HomePage({ email }: HomePageProps) {
               
               {/* Have Room Details*/}
               {currentProfile.accommodationStatus === 'have-room' && (
-                <div className={`mt-2 space-y-2`}>
-                  {currentProfile.accommodationAddress && (
-                    <div className="flex items-center">
-                      <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500" />
-                      <span className="text-gray-700"><strong>Address:</strong> {currentProfile.accommodationAddress}</span>
-                    </div>
-                  )}
+                <div>
+                  <div className={`mt-2 space-y-2`}>
+                    {currentProfile.accommodationAddress && (
+                      <div className="flex items-center">
+                        <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500" />
+                        <span className="text-gray-700"><strong>Address:</strong> {currentProfile.accommodationAddress}</span>
+                      </div>
+                    )}
 
-                  {currentProfile.accommodationFee && (
-                    <div className="flex items-center">
-                      <Icon icon="mdi:currency-usd" className="mr-2 text-base text-blue-500" />
-                      <span className="text-gray-700"><strong>Monthly Fee:</strong> {currentProfile.accommodationFee} Million VND/month</span>
+                    {currentProfile.accommodationFee && (
+                      <div className="flex items-center">
+                        <Icon icon="mdi:currency-usd" className="mr-2 text-base text-blue-500" />
+                        <span className="text-gray-700"><strong>Monthly Fee:</strong> {currentProfile.accommodationFee} Million VND/month</span>
+                      </div>
+                    )}
+                  </div>
+
+                 {currentProfile.accommodationServices &&
+                  currentProfile.accommodationServices.length > 0 && (
+                    <div className="mt-2">
+                      <div className="flex items-center mb-1">
+                        <Icon icon="mdi:tools" className="mr-2 text-base text-blue-500" />
+                        <span className="text-gray-700">
+                          <strong>Services:</strong>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {currentProfile.accommodationServices.map((service, index) => (
+                          <span
+                            key={index}
+                            className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium"
+                          >
+                            {service}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -431,7 +457,7 @@ export default function HomePage({ email }: HomePageProps) {
                           <Icon icon="mdi:map" className="mr-2 text-base text-green-500" />
                           <span className="text-gray-700"> <strong>Preferred Districts:</strong></span>
                         </div>
-
+                      
                         <div className="flex flex-wrap gap-2">
                           {currentProfile.districts.map((district, index) => (
                             <span
@@ -525,7 +551,7 @@ export default function HomePage({ email }: HomePageProps) {
                   <Icon icon="mdi:account-circle" className="mr-2 text-xl text-blue-600" />
                   About
                 </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
+                <p className="text-gray-600 text-sm whitespace-pre-wrap leading-relaxed break-words">
                   {currentProfile.bio || "No bio available"}
                 </p>
               </div>
@@ -551,23 +577,30 @@ export default function HomePage({ email }: HomePageProps) {
               )}
 
               {/* Basic Details Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {currentProfile.hometown && (
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
-                    <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
-                      <Icon icon="mdi:account" className="mr-2 text-lg text-purple-600" />
-                      Hometown
-                    </h4>
-                    <p className="text-gray-700 text-sm font-medium">
-                      {currentProfile.hometown}
-                    </p>
-                  </div>
-                )}
-                <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-                  <h4 className="text-base font-bold text-gray-800 mb-2 flex items-center">
-                    <Icon icon="mdi:cash-multiple" className="mr-2 text-lg text-green-600" />
-                    Budget
-                  </h4>
+              <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                  <Icon icon="mdi:information" className="mr-2 text-xl text-yellow-600" />
+                  Basic Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  {currentProfile.birthYear && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:cake" className="mr-2 text-base text-yellow-500" />
+                      <span className="text-gray-700"><strong>Birth Year:</strong> {currentProfile.birthYear}</span>
+                    </div>
+                  )}
+                  {currentProfile.hometown && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:home-city" className="mr-2 text-base text-yellow-500" />
+                      <span className="text-gray-700"><strong>Hometown:</strong> {currentProfile.hometown}</span>
+                    </div>
+                  )}
+                  {currentProfile.university && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:school" className="mr-2 text-base text-yellow-500" />
+                      <span className="text-gray-700"><strong>University:</strong> {currentProfile.university}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -586,151 +619,245 @@ export default function HomePage({ email }: HomePageProps) {
                     <Icon icon="mdi:sleep" className="mr-2 text-base text-purple-500" />
                     <span className="text-gray-700"><strong>Sleep Schedule:</strong> {formatLabel(currentProfile.sleepSchedule ?? 'Not Provided')}</span>
                   </div>
-                  <div className="flex items-center">
-                    <Icon icon="mdi:smoking-off" className="mr-2 text-base text-red-500" />
-                    <span className="text-gray-700"><strong>Smoking:</strong> {formatLabel(currentProfile.smokingPolicy ?? 'Not Provided')}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Icon icon="mdi:paw" className="mr-2 text-base text-orange-500" />
-                    <span className="text-gray-700"><strong>Pets:</strong> {formatLabel(currentProfile.petPolicy ?? 'Not Provided')}</span>
-                  </div>
                   {currentProfile.noiseLevel && (
                     <div className="flex items-center">
                       <Icon icon="mdi:volume-high" className="mr-2 text-base text-yellow-500" />
                       <span className="text-gray-700"><strong>Noise Level:</strong> {formatLabel(currentProfile.noiseLevel ?? 'Not Provided')}</span>
                     </div>
                   )}
-                </div>
-              </div>
-
-              {/* Educatio Section */}
-              <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
-                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                  <Icon icon="mdi:map-marker" className="mr-2 text-xl text-purple-600" />
-                  Education
-                </h3>
-                <div className="grid grid-cols-1 gap-3 text-sm">
-                  {currentProfile.university && (
-                    <div className="flex items-center">
-                      <Icon icon="mdi:school" className="mr-2 text-base text-purple-500" />
-                      <span className="text-gray-700"><strong>University:</strong> {currentProfile.university}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center">
+                    <Icon icon="mdi:smoking-off" className="mr-2 text-base text-red-500" />
+                    <span className="text-gray-700"><strong>Smoking:</strong> {formatLabel(currentProfile.smokingPolicy ?? 'Not Provided')}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Icon icon="mdi:chef-hat" className="mr-2 text-base text-orange-500" />
+                    <span className="text-gray-700"><strong>Cooking Skills:</strong> {formatLabel(currentProfile.cookingSkills ?? 'Not Provided')}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Icon icon="mdi:paw" className="mr-2 text-base text-orange-500" />
+                    <span className="text-gray-700"><strong>Pets:</strong> {formatLabel(currentProfile.petPolicy ?? 'Not Provided')}</span>
+                    { currentProfile.petPolicy === 'have-pets' && currentProfile.petType && (
+                      <span className="ml-2 text-gray-500 italic">({currentProfile.petType})</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Accommodation Information Section */}
-              {(currentProfile.accommodationStatus || process.env.NODE_ENV === 'development') && (
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-bold text-gray-800 flex items-center">
-                      <Icon icon="mdi:home" className="mr-2 text-xl text-blue-600" />
-                      Accommodation Details
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-                        {currentProfile.accommodationStatus === 'have-room' ? '🏠 Has Room' : '🔍 Looking'}
-                      </span>
-                      {currentProfile.accommodationStatus === 'have-room' && (
-                        <button
-                          onClick={() => setShowAccommodationDetails(!showAccommodationDetails)}
-                          className="btn btn-xs btn-circle btn-ghost"
-                          aria-label={showAccommodationDetails ? 'Hide details' : 'Show details'}
-                        >
-                          <Icon 
-                            icon={showAccommodationDetails ? "mdi:chevron-up" : "mdi:chevron-down"} 
-                            className="text-lg text-blue-600" 
-                          />
-                        </button>
+              <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                  <Icon icon="mdi:home-city" className="mr-2 text-xl text-emerald-600" />
+
+                  <span className="mr-3">Accommodation Information</span>
+
+                  {currentProfile.accommodationStatus === 'have-room' ? (
+                    <span className="inline-block bg-emerald-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+                      Has Room
+                    </span>
+                  ) : (
+                    <span className="inline-block bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+                      Looking for Accommodation
+                    </span>
+                  )}
+                </h3>
+
+                <div className="text-sm space-y-3">
+                  {currentProfile.accommodationStatus === 'have-room' ? (
+                    <>
+                      {/* Have Room Details */}
+                      {currentProfile.accommodationAddress && (
+                        <div className="flex items-center">
+                          <Icon icon="mdi:map-marker" className="mr-2 text-base text-emerald-500" />
+                          <span className="text-gray-700"><strong>Address:</strong> {currentProfile.accommodationAddress}</span>
+                        </div>
                       )}
-                    </div>
-                  </div>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center">
-                      <Icon icon="mdi:home-account" className="mr-2 text-base text-blue-500" />
-                      <span className="text-gray-700">
-                        <strong>Status:</strong> {currentProfile.accommodationStatus === 'have-room' ? 'Has room to share' : 'Looking for accommodation'}
-                      </span>
-                    </div>
-                    
-                    {/* Accommodation Details for users who have rooms */}
-                    {currentProfile.accommodationStatus === 'have-room' && showAccommodationDetails && (
-                      <div className="bg-white p-4 rounded-lg border border-blue-100 space-y-3">
-                        {/* Basic Property Info */}
-                        <div className="border-b border-gray-100 pb-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-semibold text-blue-700 flex items-center">
-                              <Icon icon="mdi:home-city" className="mr-1 text-base" />
-                              Property Information
-                            </h4>
-                          </div>
-                          <div className="grid grid-cols-1 gap-2">
-                            <div className="flex items-start">
-                              <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500 mt-0.5 flex-shrink-0" />
-                              <div className="text-gray-700 text-sm">
-                                <strong>Address:</strong> {currentProfile.accommodationAddress || <span className="text-gray-400 italic">Not specified</span>}
-                              </div>
-                            </div>
-                            <div className="flex items-center">
-                              <Icon icon="mdi:resize" className="mr-2 text-base text-blue-500 flex-shrink-0" />
-                              <div className="text-gray-700 text-sm">
-                                <strong>Size:</strong> {currentProfile.accommodationSize ? currentProfile.accommodationSize.join(', ') : <span className="text-gray-400 italic">Not specified</span>}
-                              </div>
-                            </div>
-                            <div className="flex items-center">
-                              <Icon icon="mdi:home-variant" className="mr-2 text-base text-blue-500 flex-shrink-0" />
-                              <div className="text-gray-700 text-sm">
-                                <strong>Type:</strong> {currentProfile.accommodationType ? currentProfile.accommodationType.join(', ') : <span className="text-gray-400 italic">Not specified</span>}
-                              </div>
-                            </div>
-                          </div>
+                      {currentProfile.accommodationType && (
+                        <div className="flex items-center">
+                          <Icon icon="mdi:home-outline" className="mr-2 text-base text-emerald-500" />
+                          <span className="text-gray-700"><strong>Type:</strong> {currentProfile.accommodationType}</span>
                         </div>
+                      )}
+                      {currentProfile.accommodationSize && (
+                        <div className="flex items-center">
+                          <Icon icon="mdi:ruler-square" className="mr-2 text-base text-emerald-500" />
+                          <span className="text-gray-700"><strong>Size:</strong> {currentProfile.accommodationSize}</span>
+                        </div>
+                      )}
+                      {currentProfile.numberOfRoomates && (
+                        <div className="flex items-center">
+                          <Icon icon="mdi:account-group" className="mr-2 text-base text-emerald-500" />
+                          <span className="text-gray-700"><strong>Number of Roommates:</strong> {currentProfile.numberOfRoomates}</span>
+                        </div>
+                      )}
+                      {currentProfile.liveWithLandlord !== undefined && (
+                        <div className="flex items-center">
+                          <Icon icon="mdi:home-account" className="mr-2 text-base text-emerald-500" />
+                          <span className="text-gray-700"><strong>Live with Landlord:</strong> {currentProfile.liveWithLandlord ? 'Yes' : 'No'}</span>
+                        </div>
+                      )}
 
-                        {/* Description */}
+                      {/* Accommodation Fees */}
+                      <div className="mt-2 font-bold text-gray-800">Fees breakdown: </div>
+                      <div className="grid grid-cols-2 gap-4 mt-2 text-gray-700">
+                          {currentProfile.accommodationFee && (
+                            <div className="flex items-center">
+                              <Icon icon="mdi:currency-usd" className="mr-2 text-base text-emerald-500" />
+                              <span className="text-gray-700"><strong>Monthly Fee:</strong> {currentProfile.accommodationFee} Million VND/month</span>
+                            </div>
+                          )}
+                          {currentProfile.accommodationElectricityFee && (
+                            <div className="flex items-center">
+                              <Icon icon="mdi:flash" className="mr-2 text-base text-emerald-500" />
+                              <span className="text-gray-700"><strong>Electricity Fee:</strong> {currentProfile.accommodationElectricityFee}  VND/month</span>
+                            </div>
+                          )}
+                          {currentProfile.accommodationWaterFee && (
+                            <div className="flex items-center">
+                              <Icon icon="mdi:water" className="mr-2 text-base text-emerald-500" />
+                              <span className="text-gray-700"><strong>Water Fee:</strong> {currentProfile.accommodationWaterFee}  VND/month</span>
+                            </div>
+                          )}
+                          {currentProfile.accommodationServiceFee && (
+                            <div className="flex items-center">
+                              <Icon icon="mdi:account-cash" className="mr-2 text-base text-emerald-500" />
+                              <span className="text-gray-700"><strong>Service Fee:</strong> {currentProfile.accommodationServiceFee}  VND/month</span>
+                            </div>
+                          )}
+                      </div>
+                      {currentProfile.accommodationOtherFees && (
+                        <div className="flex items-center mt-2">
+                          <Icon icon="mdi:receipt-text" className="mr-2 text-base text-emerald-500" />
+                          <span className="text-gray-700"><strong>Other Fees:</strong> {currentProfile.accommodationOtherFees}</span>
+                        </div>
+                      )}
+                      {currentProfile.accommodationServices &&
+                        currentProfile.accommodationServices.length > 0 && (
+                          <div>
+                            <div className="flex items-center mb-1">
+                              <Icon icon="mdi:tools" className="mr-2 text-base text-emerald-500" />
+                              <span className="text-gray-700">
+                                <strong>Services:</strong>
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {currentProfile.accommodationServices.map((service, index) => (
+                                <span
+                                  key={index}
+                                  className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-medium"
+                                >
+                                  {service}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                    </>
+                  ) : ( 
+                    <>
+                      {/* Looking For Room Details */}
+                      {currentProfile.budgetMin !== undefined &&
+                        currentProfile.budgetMax !== undefined && (
+                          <div className="flex items-center">
+                            <Icon icon="mdi:cash-multiple" className="mr-2 text-base text-emerald-500" />
+                            <span className="text-gray-700">
+                              <strong>Budget:</strong> {currentProfile.budgetMin} - {currentProfile.budgetMax} Million VND/month
+                            </span>
+                          </div>
+                        )}
+                      { currentProfile.numberOfRoomates && (
+                        <div className="flex items-center">
+                          <Icon icon="mdi:account-group" className="mr-2 text-base text-emerald-500" />
+                          <span className="text-gray-700"><strong>Roommate Preference:</strong> {currentProfile.numberOfRoomates} person(s)</span>
+                        </div>
+                      )}  
+                      {currentProfile.liveWithLandlord !== undefined && (
+                        <div className="flex items-center">
+                          <Icon icon="mdi:home-lock" className="mr-2 text-base text-emerald-500" />
+                          <span className="text-gray-700"><strong>Live with Landlord:</strong> {currentProfile.liveWithLandlord ? 'Yes' : 'No'}</span>
+                        </div>
+                      )}
+                      {currentProfile.districts && currentProfile.districts.length > 0 && (
                         <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-semibold text-gray-700 flex items-center">
-                              <Icon icon="mdi:text" className="mr-1 text-base" />
-                              Property Description
-                            </h4>
+                          <div className="flex items-center mb-1">
+                            <Icon icon="mdi:map" className="mr-2 text-base text-emerald-500" />
+                            <span className="text-gray-700"> <strong>Preferred Districts:</strong></span>
                           </div>
-                          <div className="bg-gray-50 p-3 rounded-md border">
-                            <p className="text-gray-600 text-xs leading-relaxed">
-                              {currentProfile.accommodationServiceDescription || 
-                                <span className="text-gray-400 italic">No description provided yet. This would include details about the neighborhood, nearby amenities, transportation, and what makes this place special.</span>
-                              }
-                            </p>
+                          <div className="flex flex-wrap gap-2">
+                            {currentProfile.districts.map((district, index) => (
+                              <span
+                                key={index}
+                                className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-medium"
+                              >
+                                {district}
+                              </span>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                      { currentProfile.accommodationType && (
+                        <div>
+                          <div className="flex items-center mb-1">
+                            <Icon icon="mdi:tools" className="mr-2 text-base text-emerald-500" />
+                            <span className="text-gray-700">
+                              <strong>Preferred Accommodation Type:</strong>
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {currentProfile.accommodationType.map((service, index) => (
+                              <span
+                                key={index}
+                                className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-medium"
+                              >
+                                {service}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      { currentProfile.accommodationSize && (
+                        <div>
+                          <div className="flex items-center mb-1">
+                            <Icon icon="mdi:tools" className="mr-2 text-base text-emerald-500" />
+                            <span className="text-gray-700">
+                              <strong>Preferred Accommodation Size:</strong>
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {currentProfile.accommodationSize.map((size, index) => (
+                              <span
+                                key={index}
+                                className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-medium"
+                              >
+                                {size}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      { currentProfile.accommodationServices && (
+                        <div>
+                          <div className="flex items-center mb-1">
+                            <Icon icon="mdi:tools" className="mr-2 text-base text-emerald-500" />
+                            <span className="text-gray-700">
+                              <strong>Desired Services:</strong>
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {currentProfile.accommodationServices.map((service, index) => (
+                              <span
+                                key={index}
+                                className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-medium"
+                              >
+                                {service}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
-
-              {/* Additional Preferences Section - if any optional fields exist */}
-              {(currentProfile.cookingSkills || currentProfile.guestPolicy) && (
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
-                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                    <Icon icon="mdi:cog" className="mr-2 text-xl text-orange-600" />
-                    Additional Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    {currentProfile.cookingSkills && (
-                      <div className="flex items-center">
-                        <Icon icon="mdi:chef-hat" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Cooking:</strong> {formatLabel(currentProfile.cookingSkills)}</span>
-                      </div>
-                    )}
-                    {currentProfile.guestPolicy && (
-                      <div className="flex items-center">
-                        <Icon icon="mdi:account-multiple" className="mr-2 text-base text-orange-500" />
-                        <span className="text-gray-700"><strong>Guest Policy:</strong> {formatLabel(currentProfile.guestPolicy)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              </div>
 
               {/* Action Buttons in Modal */}
               <div className="flex gap-4 pt-4">
