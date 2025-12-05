@@ -163,7 +163,7 @@ export default function LikedPage() {
                 : 'When someone likes you back, matches will appear here'}
             </p>
             <button
-              onClick={() => router.push('/Swipe')}
+              onClick={() => router.push('/')}
               className="btn btn-primary"
             >
               <Icon icon="mdi:cards" className="mr-2" />
@@ -185,156 +185,88 @@ export default function LikedPage() {
                   />
                   {activeTab === 'matches' && (
                     <div className="absolute top-4 right-4 badge badge-success badge-lg shadow-lg">
-                      <Icon icon="mdi:handshake" className="mr-1" />
+                      <Icon icon="mdi:handshake" className="mr-1" /> 
                       Match!
                     </div>
                   )}
                 </figure>
-
                 <div className="card-body">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="card-title text-gray-800">
-                        {profile.displayName || 'Anonymous'}
-                        <span className="text-sm font-normal text-gray-500">
-                          {profile.gender === 'male' ? '♂' : profile.gender === 'female' ? '♀' : ''}
-                        </span>
-                      </h2>
-                      {profile.isStudentVerified && (
-                        <img 
-                          src="/icons/verified.png" 
-                          alt="Verified Student" 
-                          className="w-5 h-5"
-                          title="Verified Student"
-                        />
-                      )}
-                      {profile.nickname && (
-                        <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-100 text-purple-800">
-                          "{profile.nickname}"
-                        </span>
-                      )}
-                    </div>
-                    {profile.hasAccommodation && (
-                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">
-                        {profile.hasAccommodation === 'have-room' ? 'Has Room' : 'Looking'}
-                      </span>
-                    )}
-                  </div>
+                  {/* Display Name */}
+                  <h2 className="card-title text-gray-800 text-xl">
+                    {profile.displayName || 'Unnamed'}
+                  </h2>                  
 
-                  <div className="space-y-4">
-                    {/* About Section */}
-                    {profile.bio && (
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <h3 className="font-semibold text-gray-800 mb-2">About</h3>
-                        <p className="text-gray-600 text-sm leading-relaxed">
-                          {profile.bio}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Interests Section */}
-                    {profile.interests && profile.interests.length > 0 && (
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <h3 className="font-semibold text-gray-800 mb-2">Interests</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {profile.interests.slice(0, 5).map((interest, idx) => (
-                            <span
-                              key={idx}
-                              className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium"
-                            >
-                              {interest}
-                            </span>
-                          ))}
-                          {profile.interests.length > 5 && (
-                            <span className="text-gray-500 text-xs self-center">
-                              +{profile.interests.length - 5} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Basic Information Section */}
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <h3 className="font-semibold text-gray-800 mb-2">Basic Information</h3>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        {profile.gender && (
-                          <div>
-                            <h4 className="font-semibold text-gray-800">Gender</h4>
-                            <p className="text-gray-600">
-                              {profile.gender === 'male' && 'Male'}
-                              {profile.gender === 'female' && 'Female'}
-                            </p>
-                          </div>
-                        )}
-                        {(profile.budgetMin || profile.budgetMax) && (
-                          <div>
-                            <h4 className="font-semibold text-gray-800">Budget</h4>
-                            <p className="text-gray-600">
-                              {profile.budgetMin?.toLocaleString('vi-VN')} - {profile.budgetMax?.toLocaleString('vi-VN')} VNĐ
-                            </p>
-                          </div>
-                        )}
-                        {(profile.hasAccommodation === 'looking' && profile.location) && (
-                          <div>
-                            <h4 className="font-semibold text-gray-800">Desired Location</h4>
-                            <p className="text-gray-600">{profile.location}</p>
-                          </div>
-                        )}
-                        {(profile.hasAccommodation === 'have-room' && profile.accommodationLocation) && (
-                          <div>
-                            <h4 className="font-semibold text-gray-800">Room Location</h4>
-                            <p className="text-gray-600">{profile.accommodationLocation}</p>
-                          </div>
-                        )}
-                        {profile.cleanlinessLevel && (
-                          <div>
-                            <h4 className="font-semibold text-gray-800">Cleanliness</h4>
-                            <p className="text-gray-600 capitalize">{profile.cleanlinessLevel}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="card-actions justify-end mt-4">
-                    {activeTab === 'matches' && (
+                  {/* Liked Profiles */}
+                  {activeTab === 'liked' && (
+                    <div className="card-actions grid grid-cols-2 justify-end mt-4">
                       <button
+                        className="btn btn-outline btn-error w-full"
+                        onClick={() => handleUnlike(profile.userId)}
+                      >
+                        <Icon icon="mdi:thumb-down-outline" className="mr-2" />
+                        Unlike
+                      </button>
+
+                      <button
+                        className="btn btn-primary w-full"
+                        onClick={() => handleViewProfile(profile.slug)}
+                      >
+                        <Icon icon="mdi:account-circle-outline" className="mr-2" />
+                        View Profile
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Matched Profiles */}
+                  {activeTab === 'matches' && (
+                  <>
+                    {/* Row 1: Unlike + View Profile */}
+                    <div className="card-actions grid grid-cols-2 gap-3 mt-4">
+                      <button
+                        className="btn btn-outline btn-error w-full"
+                        onClick={() => handleUnlike(profile.userId)}
+                      >
+                        <Icon icon="mdi:thumb-down-outline" className="mr-2" />
+                        Unlike
+                      </button>
+
+                      <button
+                        className="btn w-full"
+                        onClick={() => handleViewProfile(profile.slug)}
+                      >
+                        <Icon icon="mdi:account-circle-outline" className="mr-2" />
+                        View Profile
+                      </button>
+                    </div>
+
+                    {/* Row 2: Start Chat (full width) */}
+                    <div className="card-actions mt-3">
+                      <button
+                        className="btn btn-success w-full"
                         onClick={() => handleStartChat(profile.userId)}
                         disabled={creatingChat === profile.userId}
-                        className="btn btn-success btn-sm"
                       >
                         {creatingChat === profile.userId ? (
-                          <span className="loading loading-spinner loading-xs"></span>
+                          <>
+                            <span className="loading loading-spinner mr-2"></span>
+                            Starting Chat...
+                          </>
                         ) : (
                           <>
-                            <Icon icon="mdi:message" className="mr-1" />
-                            Message
+                            <Icon icon="mdi:chat-outline" className="mr-2" />
+                            Start Chat
                           </>
                         )}
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleViewProfile(profile.slug)}
-                      className="btn btn-primary btn-sm"
-                    >
-                      <Icon icon="mdi:account" className="mr-1" />
-                      View Profile
-                    </button>
-                    <button
-                      onClick={() => handleUnlike(profile.userId)}
-                      className="btn btn-ghost btn-sm text-red-500"
-                    >
-                      <Icon icon="mdi:account-remove" className="mr-1" />
-                      Unlike
-                    </button>
+                    </div>
+                  </>
+                )}
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
     </div>
   );
 }

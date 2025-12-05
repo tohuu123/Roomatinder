@@ -81,7 +81,7 @@ function profileToDocument(profile: UserProfile): string {
   // Basic info
   if (profile.gender) parts.push(`Gender: ${profile.gender}`);
   if (profile.university) parts.push(`University: ${profile.university}`);
-  if (profile.district) parts.push(`District: ${profile.district}`);
+  if (profile.districts && profile.districts.length > 0) parts.push(`Districts: ${profile.districts.join(', ')}`);
   
   // Budget
   if (profile.budgetMin || profile.budgetMax) {
@@ -91,18 +91,27 @@ function profileToDocument(profile: UserProfile): string {
   // Living preferences
   if (profile.cleanlinessLevel) parts.push(`Cleanliness: ${profile.cleanlinessLevel}`);
   if (profile.smokingPolicy) parts.push(`Smoking: ${profile.smokingPolicy}`);
-  
-  // Optional preferences
-  if (profile.noiseLevelPreference) parts.push(`Noise Level: ${profile.noiseLevelPreference}`);
+  if (profile.noiseLevel) parts.push(`Noise Level: ${profile.noiseLevel}`);
   if (profile.cookingSkills) parts.push(`Cooking: ${profile.cookingSkills}`);
   if (profile.guestPolicy) parts.push(`Guest Policy: ${profile.guestPolicy}`);
-  if (profile.sharedSpaceCleaning) parts.push(`Cleaning: ${profile.sharedSpaceCleaning}`);
   
   // Accommodation details
-  if (profile.hasAccommodation === 'have-room') {
-    if (profile.accommodationLocation) parts.push(`Accommodation Location: ${profile.accommodationLocation}`);
-  } else {
-    if (profile.location) parts.push(`Desired Location: ${profile.location}`);
+  if (profile.accommodationStatus === 'have-room') {
+    if (profile.districts && profile.districts.length > 0) {
+      parts.push(`Accommodation Districts: ${profile.districts.join(', ')}`);
+    }
+    if (profile.accommodationType && profile.accommodationType.length > 0) {
+      parts.push(`Accommodation Type: ${profile.accommodationType.join(', ')}`);
+    }
+    if (profile.accommodationSize && profile.accommodationSize.length > 0) {
+      parts.push(`Accommodation Size: ${profile.accommodationSize.join(', ')}`);
+    }
+    if (profile.liveWithLandlord) {
+      parts.push(`Live With Landlord: ${profile.liveWithLandlord}`);
+    }
+    if (profile.accommodationServices && profile.accommodationServices.length > 0) {
+      parts.push(`Accommodation Services: ${profile.accommodationServices.join(', ')}`);
+    }
   }
   
   return parts.join('. ');
@@ -223,11 +232,11 @@ export async function queryMatchingProfile(
         const id = results.ids[0][i];
         const distance = results.distances[0][i];
         
-        if (!allExcluded.includes(id)) {
-          const similarity = distanceToSimilarity(distance);
-          console.log(`[ChromaDB] Match found: ${id} | Similarity: ${similarity}% (distance: ${distance.toFixed(4)})`);
-          return { userId: id, similarity };
-        }
+        if (distance === null || allExcluded.includes(id)) continue;
+        
+        const similarity = distanceToSimilarity(distance);
+        console.log(`[ChromaDB] Match found: ${id} (similarity: ${similarity}%)`);
+        return { userId: id, similarity };
       }
     }
     

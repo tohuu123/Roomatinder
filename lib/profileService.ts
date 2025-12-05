@@ -283,7 +283,7 @@ export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boole
     profile.accommodationStatus,    
 
     (profile.accommodationStatus === 'have-room' && (
-      profile.accommodationAddress && profile.accommodationAddress.trim() !== '' &&
+      profile.districts && profile.districts.length > 0 &&
       profile.accommodationFee !== undefined && profile.accommodationFee !== null && profile.accommodationFee >= 0 &&
       profile.accommodationElectricityFee !== undefined && profile.accommodationElectricityFee !== null && profile.accommodationElectricityFee >= 0 &&
       profile.accommodationWaterFee !== undefined && profile.accommodationWaterFee !== null && profile.accommodationWaterFee >= 0 &&
@@ -316,7 +316,7 @@ export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boole
   // Additional required fields for users who have accommodation
   if (profile.accommodationStatus === 'have-room') {
     required.push(
-      !!(profile.accommodationAddress && profile.accommodationAddress.trim() !== ''),
+      !!(profile.districts && profile.districts.length > 0),
       !!profile.accommodationSize,
       !!(profile.accommodationFee !== undefined && profile.accommodationFee !== null)
     );

@@ -10,6 +10,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { getUserAvatar } from "@/lib/avatarHelper";
 import { useRouter } from "next/navigation";
 import { profile } from "console";
+import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
+import { useUserChats } from "@/lib/hooks/useChat";
 
 // Helper function to format field labels in English
 function formatLabel(value: string): string {
@@ -79,13 +81,15 @@ export default function HomePage({ email }: HomePageProps) {
   const [seenUserIds, setSeenUserIds] = useState<string[]>([]);
   const [noMoreProfiles, setNoMoreProfiles] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<UserProfile | null>(null);
-  const [showAccommodationDetails, setShowAccommodationDetails] = useState(false);
+  const [creatingChat, setCreatingChat] = useState<string | null>(null);
+
+  // Get user's chats to check existing conversations
+  const { chats } = useUserChats(currentUserId);
 
   // Function to load the next matching profile
   const loadNextProfile = async (userId: string, excludeIds: string[]) => {
@@ -94,6 +98,13 @@ export default function HomePage({ email }: HomePageProps) {
       
       // Query ChromaDB for a matching profile
       const result = await queryMatchingProfile(userId, excludeIds);
+      const targetId = result?.userId;
+
+      if (!targetId) {
+        await loadNextProfile(userId, excludeIds);
+        return;
+      }
+      
       
       if (!result) {
         setCurrentProfile(null);
@@ -102,11 +113,22 @@ export default function HomePage({ email }: HomePageProps) {
       }
       
       const { userId: matchedUserId, similarity } = result;
+      const currentUserProfile = await getProfile(userId);
+
+      if (matchedUserId === userId) {
+        await loadNextProfile(userId, [...excludeIds, matchedUserId]);
+        return;
+      }
+      else if (currentUserProfile?.likedUsers?.includes(matchedUserId) || currentUserProfile?.passedUsers?.includes(matchedUserId)) {
+        await loadNextProfile(userId, [...excludeIds, matchedUserId]);
+        return;
+      }
+
       console.log(`[Match] Profile: ${matchedUserId} | Similarity: ${similarity.toFixed(1)}%`);
       
       // Fetch the full profile from Firebase
       const profile = await getProfile(matchedUserId);
-      
+
       if (profile) {
         setCurrentProfile(profile);
         setSeenUserIds(prev => [...prev, matchedUserId]);
@@ -183,6 +205,49 @@ export default function HomePage({ email }: HomePageProps) {
     setNoMoreProfiles(false);
     await loadNextProfile(currentUserId, []);
   };
+
+  const handleStartChat = async (matchedUserId: string) => {
+      if (!currentUserId) {
+        console.log('No currentUserId');
+        return;
+      }
+  
+      console.log('Starting chat with:', matchedUserId);
+      console.log('Current user:', currentUserId);
+      console.log('Available chats:', chats);
+      
+      setCreatingChat(matchedUserId);
+  
+      try {
+        // Check if chat already exists
+        const existingChatId = checkChatExists(currentUserId, matchedUserId, chats);
+        
+        if (existingChatId) {
+          console.log('Found existing chat:', existingChatId);
+          // Navigate to existing chat
+          router.push(`/chatroom?chatId=${existingChatId}`);
+          return;
+        }
+        
+        console.log('Creating new chat...');
+        // Create new chat
+        const chatId = await createChatFromMatch(currentUserId, matchedUserId);
+        
+        if (chatId) {
+          console.log('Chat created successfully:', chatId);
+          router.push(`/chatroom?chatId=${chatId}`);
+        } else {
+          console.log('Chat creation returned null');
+          alert('Could not create conversation. Please try again.');
+        }
+      } catch (error: any) {
+        console.error('Error starting chat:', error);
+        const errorMessage = error?.message || 'An unknown error occurred';
+        alert(`Error: ${errorMessage}`);
+      } finally {
+        setCreatingChat(null);
+      }
+    };
 
   if (loading) {
     return (
@@ -394,10 +459,10 @@ export default function HomePage({ email }: HomePageProps) {
               {currentProfile.accommodationStatus === 'have-room' && (
                 <div>
                   <div className={`mt-2 space-y-2`}>
-                    {currentProfile.accommodationAddress && (
+                    {currentProfile.districts && (
                       <div className="flex items-center">
                         <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500" />
-                        <span className="text-gray-700"><strong>Address:</strong> {currentProfile.accommodationAddress}</span>
+                        <span className="text-gray-700"><strong>Address:</strong> {currentProfile.districts.join(', ')}</span>
                       </div>
                     )}
 
@@ -665,10 +730,10 @@ export default function HomePage({ email }: HomePageProps) {
                   {currentProfile.accommodationStatus === 'have-room' ? (
                     <>
                       {/* Have Room Details */}
-                      {currentProfile.accommodationAddress && (
+                      {currentProfile.districts && (
                         <div className="flex items-center">
                           <Icon icon="mdi:map-marker" className="mr-2 text-base text-emerald-500" />
-                          <span className="text-gray-700"><strong>Address:</strong> {currentProfile.accommodationAddress}</span>
+                          <span className="text-gray-700"><strong>Address:</strong> {currentProfile.districts.join(', ')}</span>
                         </div>
                       )}
                       {currentProfile.accommodationType && (
@@ -896,10 +961,19 @@ export default function HomePage({ email }: HomePageProps) {
           <div 
             className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl text-center animate-bounce"
             onClick={(e) => e.stopPropagation()}
+            ref={(el) => {
+              if (!el) return;
+
+              // Stop after 1~2 bounces.
+              // Tailwind bounce = ~1s per cycle → stop after 1500ms (~2 bounces)
+              setTimeout(() => {
+                el.classList.remove("animate-bounce");
+              }, 1500); 
+            }}
           >
             {/* Match Icon */}
             <div className="mb-6">
-              <Icon icon="mdi:home" className="text-8xl text-yellow-500 mx-auto animate-pulse" />
+              <Icon icon="mdi:home" className="text-8xl text-green-500 mx-auto animate-pulse" />
             </div>
 
             {/* Match Title */}
@@ -907,12 +981,12 @@ export default function HomePage({ email }: HomePageProps) {
               It's a Match!
             </h2>
             <p className="text-gray-600 mb-6">
-              You and <span className="font-bold text-yellow-600">{matchedProfile.displayName || matchedProfile.email}</span> have liked each other!
+              You and <span className="font-bold text-green-600">{matchedProfile.displayName || matchedProfile.email}</span> have liked each other!
             </p>
 
             {/* Profile Preview */}
             <div className="flex justify-center gap-4 mb-6">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-yellow-500 shadow-lg">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-green-500 shadow-lg">
                 <img
                   src={getUserAvatar(matchedProfile.photoURL, matchedProfile.email || matchedProfile.userId)}
                   alt={matchedProfile.displayName || 'User'}
@@ -922,22 +996,33 @@ export default function HomePage({ email }: HomePageProps) {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-3">
+           <div className="flex flex-col gap-3">
               <button
                 onClick={() => {
-                  setShowMatchModal(false);
-                  router.push('/liked');
+                  handleStartChat(matchedProfile.userId);
                 }}
                 className="btn btn-primary btn-lg w-full"
+                disabled={creatingChat === matchedProfile.userId}
               >
-                <Icon icon="mdi:message" className="mr-2" />
-                View Matches
+                {creatingChat === matchedProfile.userId ? (
+                  <>
+                    <span className="loading loading-spinner mr-2"></span>
+                    Starting Chat...
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="mdi:chat" className="mr-2" />
+                    Start Chat
+                  </>
+                )}
               </button>
+
               <button
                 onClick={() => setShowMatchModal(false)}
-                className="btn btn-ghost btn-lg w-full text-gray-600"
-              > 
-                Continue Swipe
+                className="btn btn-lg w-full"
+                disabled={creatingChat === matchedProfile.userId}
+              >
+                Continue Swiping
               </button>
             </div>
           </div>

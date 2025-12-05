@@ -169,7 +169,7 @@ export default function ProfilePage() {
             return false;
           }
         } else if (profile.accommodationStatus === 'have-room') {
-          if (!profile.accommodationAddress || !profile.accommodationFee ||
+          if (!profile.districts || !profile.accommodationFee ||
               !profile.accommodationElectricityFee || !profile.accommodationWaterFee ||
               !profile.accommodationServiceFee || !profile.accommodationType || profile.accommodationType.length === 0 ||
               !profile.accommodationSize || profile.numberOfRoomates === undefined || !profile.liveWithLandlord) {
@@ -1011,8 +1011,8 @@ export default function ProfilePage() {
                 type="text"
                 className="input input-bordered text-gray-900"
                 placeholder="Enter accommodation address  Ex: 123 Nguyen Hue, District 1, HCMC"
-                value={profile.accommodationAddress || ''}
-                onChange={(e) => handleInputChange('accommodationAddress', e.target.value)}
+                value={profile.districts ? profile.districts.join(', ') : ''}
+                onChange={(e) => handleInputChange('districts', e.target.value.split(',').map(s => s.trim()))}
                 required
               />
             </div>
