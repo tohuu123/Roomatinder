@@ -53,12 +53,9 @@ export default function LikedPage() {
 
   const handleUnlike = async (profileId: string) => {
     if (!currentUserId) return;
-    
-    const success = await unlikeUser(currentUserId, profileId);
-    if (success) {
-      setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
-      setMatches(prev => prev.filter(p => p.userId !== profileId));
-    }
+
+    setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
+    setMatches(prev => prev.filter(p => p.userId !== profileId));
   };
 
   const handleViewProfile = (slug?: string) => {

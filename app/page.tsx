@@ -9,7 +9,6 @@ import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getUserAvatar } from "@/lib/avatarHelper";
 import { useRouter } from "next/navigation";
-import { profile } from "console";
 import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
 
@@ -87,57 +86,56 @@ export default function HomePage({ email }: HomePageProps) {
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedProfile, setMatchedProfile] = useState<UserProfile | null>(null);
   const [creatingChat, setCreatingChat] = useState<string | null>(null);
+  const [fetchingProfile, setFetchingProfile] = useState(false);
 
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
 
   // Function to load the next matching profile
   const loadNextProfile = async (userId: string, excludeIds: string[]) => {
-    try {
-      setLoadingNext(true);
-      
-      // Query ChromaDB for a matching profile
-      const result = await queryMatchingProfile(userId, excludeIds);
-      const targetId = result?.userId;
+    setLoadingNext(true);
 
-      if (!targetId) {
-        await loadNextProfile(userId, excludeIds);
-        return;
-      }
-      
-      
-      if (!result) {
-        setCurrentProfile(null);
-        setNoMoreProfiles(true);
-        return;
-      }
-      
-      const { userId: matchedUserId, similarity } = result;
+    try {
       const currentUserProfile = await getProfile(userId);
 
-      if (matchedUserId === userId) {
-        await loadNextProfile(userId, [...excludeIds, matchedUserId]);
-        return;
-      }
-      else if (currentUserProfile?.likedUsers?.includes(matchedUserId) || currentUserProfile?.passedUsers?.includes(matchedUserId)) {
-        await loadNextProfile(userId, [...excludeIds, matchedUserId]);
-        return;
-      }
+      while (true) {
+        const result = await queryMatchingProfile(userId, excludeIds);
 
-      console.log(`[Match] Profile: ${matchedUserId} | Similarity: ${similarity.toFixed(1)}%`);
-      
-      // Fetch the full profile from Firebase
-      const profile = await getProfile(matchedUserId);
+        if (!result || !result.userId) {
+          console.log("[Loop] No result → stopping");
+          setCurrentProfile(null);
+          setNoMoreProfiles(true);
+          return;
+        }
 
-      if (profile) {
-        setCurrentProfile(profile);
+        const matchedUserId = result.userId;
+
+        if (matchedUserId === userId) {
+          excludeIds.push(matchedUserId);
+          continue;
+        }
+
+        if (
+          currentUserProfile?.likedUsers?.includes(matchedUserId) ||
+          currentUserProfile?.passedUsers?.includes(matchedUserId)
+        ) {
+          excludeIds.push(matchedUserId);
+          continue;
+        }
+
+        const matchedProfile = await getProfile(matchedUserId);
+
+        if (!matchedProfile) {
+          excludeIds.push(matchedUserId);
+          continue;
+        }
+
+        setCurrentProfile(matchedProfile);
         setSeenUserIds(prev => [...prev, matchedUserId]);
-      } else {
-        // Profile not found in Firebase, try next one
-        await loadNextProfile(userId, [...excludeIds, matchedUserId]);
+        return;
       }
-    } catch (error) {
-      console.error("Error loading next profile:", error);
+    } catch (err) {
+      console.error("Error loading next profile:", err);
       setNoMoreProfiles(true);
     } finally {
       setLoadingNext(false);
@@ -169,24 +167,30 @@ export default function HomePage({ email }: HomePageProps) {
     
     setIsAnimating(true);
     setSwipeDirection(direction);
-    
-    // If user liked, save to Firebase
+
+    setTimeout(async () => {
+      setSwipeDirection(null);
+      setIsAnimating(false);
+
+      setFetchingProfile(true);
+
+      // Load next profile
+      await loadNextProfile(currentUserId, seenUserIds);
+
+      setFetchingProfile(false);
+
+
+    }, 300);
+
+    // Save like action
     if (direction === 'right') {
       const result = await likeUser(currentUserId, currentProfile.userId);
-      
+
       if (result.success && result.isMatch) {
-        // Show match modal
         setMatchedProfile(currentProfile);
         setShowMatchModal(true);
       }
     }
-    
-    setTimeout(async () => {
-      setSwipeDirection(null);
-      setIsAnimating(false);
-      // Load the next profile
-      await loadNextProfile(currentUserId, seenUserIds);
-    }, 300);
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -265,12 +269,6 @@ export default function HomePage({ email }: HomePageProps) {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-emerald-100">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
-          <button 
-            onClick={handleStartOver}
-            className="btn btn-primary"
-          >
-            Start Over
-          </button>
         </div>
       </div>
     );
@@ -294,265 +292,271 @@ export default function HomePage({ email }: HomePageProps) {
         </div>
 
         {/* Card Container */}
-        <div className="relative h-[900px] mb-6">
-          
-          <div
-            ref={cardRef}
-            className={`absolute inset-0 bg-white rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 ${
-              swipeDirection === 'left' ? 'transform -translate-x-full rotate-12' :
-              swipeDirection === 'right' ? 'transform translate-x-full -rotate-12' : ''
-            }`}
-            style={{
-              transform: isDragging ? `translateX(${currentX}px) rotate(${currentX / 10}deg)` : undefined,
-            }}
-            onClick={handleCardClick}
-          >
-            {/* Profile Image */}
-            <div className="h-72 relative">
-              <img
-                src={profileImage}
-                alt={currentProfile.displayName || currentProfile.email}
-                className="w-full h-full object-cover"
-              />
+        {fetchingProfile ? (
+          <div className="flex flex-col items-center justify-center h-[900px]">
+            <span className="loading loading-spinner loading-lg"></span>
+            <p className="mt-4 text-gray-600 font-semibold">Fetching profile...</p>
+          </div>
+        ) : (
+          <div className="relative h-[900px] mb-6">
+            <div
+              ref={cardRef}
+              className={`absolute inset-0 bg-white rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 ${
+                swipeDirection === 'left' ? 'transform -translate-x-full rotate-12' :
+                swipeDirection === 'right' ? 'transform translate-x-full -rotate-12' : ''
+              }`}
+              style={{
+                transform: isDragging ? `translateX(${currentX}px) rotate(${currentX / 10}deg)` : undefined,
+              }}
+              onClick={handleCardClick}
+            >
+              {/* Profile Image */}
+              <div className="h-72 relative">
+                <img
+                  src={profileImage}
+                  alt={currentProfile.displayName || currentProfile.email}
+                  className="w-full h-full object-cover"
+                />
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
 
-              <div className="absolute bottom-4 left-4 text-white">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-2xl font-bold">
-                    {currentProfile.displayName || currentProfile.email.split('@')[0]}
-                  </h2>
-                  {currentProfile.isStudentVerified && (
-                    <img 
-                      src="/icons/verified.png" 
-                      alt="Verified Student" 
-                      className="w-6 h-6"
-                      title="Verified Student"
-                    />
-                  )}
-                  {currentProfile.nickname && (
-                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-400/80 backdrop-blur-sm border border-purple-300/50">
-                      "{currentProfile.nickname}"
-                    </span>
-                  )}
-                  {currentProfile.accommodationStatus && (
-                    <span className="text-xs px-2 py-1 rounded-full font-medium bg-white/20 backdrop-blur-sm border border-white/30 bg-green-600">
-                      {currentProfile.accommodationStatus === 'have-room' ? 'Has Room' : 'Looking for Room'}
-                    </span>
-                  )}
-
-                  {/* Hometown*/}
-                  {currentProfile.hometown && (
-                    <span className="w-full text-sm text-white/90 -mt-2.5">
-                      {currentProfile.hometown}
-                    </span>
-                  )}
-
-                  {/* Birth Year */}
-                  {currentProfile.birthYear && (
-                    <span className="w-full text-sm text-white/90 -mt-2.5">
-                      {currentProfile.birthYear}
-                    </span>
-                  )}
-      
-                </div>
-              </div>
-
-            </div>
-
-            {/* Profile Info */}
-            <div className="p-6 space-y-4">
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2">About</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {currentProfile.bio || "No bio available"}
-                </p>
-              </div>
-
-              {currentProfile.interests && currentProfile.interests.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Interests</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {currentProfile.interests.map((interest, index) => (
-                      <span
-                        key={index}
-                        className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
-                        {interest}
+                <div className="absolute bottom-4 left-4 text-white">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-2xl font-bold">
+                      {currentProfile.displayName || currentProfile.email.split('@')[0]}
+                    </h2>
+                    {currentProfile.isStudentVerified && (
+                      <img 
+                        src="/icons/verified.png" 
+                        alt="Verified Student" 
+                        className="w-6 h-6"
+                        title="Verified Student"
+                      />
+                    )}
+                    {currentProfile.nickname && (
+                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-400/80 backdrop-blur-sm border border-purple-300/50">
+                        "{currentProfile.nickname}"
                       </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Lifestyle Preferences */}
-              <div className = "p-0 space-y-0">
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Lifestyle Preferences</h3>
-                </div>
-              </div>
-                
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {/* Sleep Schedule */}
-                {currentProfile.sleepSchedule && (
-                  <div className="flex items-center">
-                    <Icon icon="mdi:sleep" className="mr-2 text-base text-purple-500" />
-                    <span className="text-gray-700"><strong>Sleep:</strong> {formatLabel(currentProfile.sleepSchedule)}</span>
-                  </div>
-                )}
-
-                {/* Cleanliness Level */}
-                {currentProfile.cleanlinessLevel && (
-                  <div className="flex items-center">
-                    <Icon icon="mdi:broom" className="mr-2 text-base text-blue-500" />
-                    <span className="text-gray-700"><strong>Cleanliness:</strong> {formatLabel(currentProfile.cleanlinessLevel)}</span>
-                  </div>
-                )}
-
-                {/* Noise Level */}
-                {currentProfile.noiseLevel && (
-                  <div className="flex items-center">
-                    <Icon icon="mdi:volume-high" className="mr-2 text-base text-yellow-500" />
-                    <span className="text-gray-700"><strong>Noise:</strong> {formatLabel(currentProfile.noiseLevel)}</span>
-                  </div>
-                )}
-
-                {/* Smoking Policy */}
-                {currentProfile.smokingPolicy && (
-                  <div className="flex items-center">
-                    <Icon icon="mdi:smoking-off" className="mr-2 text-base text-red-500" />
-                    <span className="text-gray-700"><strong>Smoking:</strong> {formatLabel(currentProfile.smokingPolicy)}</span>
-                  </div>
-                )}
-
-                {/* Cooking Skills */}
-                {currentProfile.cookingSkills && (
-                  <div className="flex items-center">
-                    <Icon icon="mdi:chef-hat" className="mr-2 text-base text-orange-500" />
-                    <span className="text-gray-700"><strong>Cooking Skills:</strong> {formatLabel(currentProfile.cookingSkills)}</span>
-                  </div>
-                )}
-
-                {/* Guest Policy */}
-                {currentProfile.guestPolicy && (
-                  <div className="flex items-center">
-                    <Icon icon="mdi:account-multiple" className="mr-2 text-base text-green-500" />
-                    <span className="text-gray-700"><strong>Guests:</strong> {formatLabel(currentProfile.guestPolicy)}</span>
-                  </div>
-                )}
-
-              </div>
-              
-              {/* Accommodation Details */}
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-gray-800">Accommodation Status:</h3>
-
-                <p className="rounded-full bg-blue-500 text-white px-3 py-1 text-sm font-semibold shadow-md">
-                  {formatLabel(
-                    currentProfile.accommodationStatus === 'have-room'
-                      ? 'Has Room'
-                      : 'Looking'
-                  )}
-                </p>
-              </div>
-              
-              {/* Have Room Details*/}
-              {currentProfile.accommodationStatus === 'have-room' && (
-                <div>
-                  <div className={`mt-2 space-y-2`}>
-                    {currentProfile.districts && (
-                      <div className="flex items-center">
-                        <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500" />
-                        <span className="text-gray-700"><strong>Address:</strong> {currentProfile.districts.join(', ')}</span>
-                      </div>
+                    )}
+                    {currentProfile.accommodationStatus && (
+                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-white/20 backdrop-blur-sm border border-white/30 bg-green-600">
+                        {currentProfile.accommodationStatus === 'have-room' ? 'Has Room' : 'Looking for Room'}
+                      </span>
                     )}
 
-                    {currentProfile.accommodationFee && (
-                      <div className="flex items-center">
-                        <Icon icon="mdi:currency-usd" className="mr-2 text-base text-blue-500" />
-                        <span className="text-gray-700"><strong>Monthly Fee:</strong> {currentProfile.accommodationFee} Million VND/month</span>
-                      </div>
+                    {/* Hometown*/}
+                    {currentProfile.hometown && (
+                      <span className="w-full text-sm text-white/90 -mt-2.5">
+                        {currentProfile.hometown}
+                      </span>
                     )}
-                  </div>
 
-                 {currentProfile.accommodationServices &&
-                  currentProfile.accommodationServices.length > 0 && (
-                    <div className="mt-2">
-                      <div className="flex items-center mb-1">
-                        <Icon icon="mdi:tools" className="mr-2 text-base text-blue-500" />
-                        <span className="text-gray-700">
-                          <strong>Services:</strong>
+                    {/* Birth Year */}
+                    {currentProfile.birthYear && (
+                      <span className="w-full text-sm text-white/90 -mt-2.5">
+                        {currentProfile.birthYear}
+                      </span>
+                    )}
+        
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Profile Info */}
+              <div className="p-6 space-y-4">
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">About</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {currentProfile.bio || "No bio available"}
+                  </p>
+                </div>
+
+                {currentProfile.interests && currentProfile.interests.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-2">Interests</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {currentProfile.interests.map((interest, index) => (
+                        <span
+                          key={index}
+                          className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                          {interest}
                         </span>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                      <div className="flex flex-wrap gap-2">
-                        {currentProfile.accommodationServices.map((service, index) => (
-                          <span
-                            key={index}
-                            className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium"
-                          >
-                            {service}
-                          </span>
-                        ))}
-                      </div>
+                {/* Lifestyle Preferences */}
+                <div className = "p-0 space-y-0">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-2">Lifestyle Preferences</h3>
+                  </div>
+                </div>
+                  
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {/* Sleep Schedule */}
+                  {currentProfile.sleepSchedule && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:sleep" className="mr-2 text-base text-purple-500" />
+                      <span className="text-gray-700"><strong>Sleep:</strong> {formatLabel(currentProfile.sleepSchedule)}</span>
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Looking For Details*/}
-              {currentProfile.accommodationStatus === 'looking' && (
-                <div>
-                  {/* Looking For Details */}
-                  <div className="mt-2 space-y-2">
-                    {currentProfile.budgetMin !== undefined &&
-                      currentProfile.budgetMax !== undefined && (
+                  {/* Cleanliness Level */}
+                  {currentProfile.cleanlinessLevel && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:broom" className="mr-2 text-base text-blue-500" />
+                      <span className="text-gray-700"><strong>Cleanliness:</strong> {formatLabel(currentProfile.cleanlinessLevel)}</span>
+                    </div>
+                  )}
+
+                  {/* Noise Level */}
+                  {currentProfile.noiseLevel && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:volume-high" className="mr-2 text-base text-yellow-500" />
+                      <span className="text-gray-700"><strong>Noise:</strong> {formatLabel(currentProfile.noiseLevel)}</span>
+                    </div>
+                  )}
+
+                  {/* Smoking Policy */}
+                  {currentProfile.smokingPolicy && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:smoking-off" className="mr-2 text-base text-red-500" />
+                      <span className="text-gray-700"><strong>Smoking:</strong> {formatLabel(currentProfile.smokingPolicy)}</span>
+                    </div>
+                  )}
+
+                  {/* Cooking Skills */}
+                  {currentProfile.cookingSkills && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:chef-hat" className="mr-2 text-base text-orange-500" />
+                      <span className="text-gray-700"><strong>Cooking Skills:</strong> {formatLabel(currentProfile.cookingSkills)}</span>
+                    </div>
+                  )}
+
+                  {/* Guest Policy */}
+                  {currentProfile.guestPolicy && (
+                    <div className="flex items-center">
+                      <Icon icon="mdi:account-multiple" className="mr-2 text-base text-green-500" />
+                      <span className="text-gray-700"><strong>Guests:</strong> {formatLabel(currentProfile.guestPolicy)}</span>
+                    </div>
+                  )}
+
+                </div>
+                
+                {/* Accommodation Details */}
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-800">Accommodation Status:</h3>
+
+                  <p className="rounded-full bg-blue-500 text-white px-3 py-1 text-sm font-semibold shadow-md">
+                    {formatLabel(
+                      currentProfile.accommodationStatus === 'have-room'
+                        ? 'Has Room'
+                        : 'Looking'
+                    )}
+                  </p>
+                </div>
+                
+                {/* Have Room Details*/}
+                {currentProfile.accommodationStatus === 'have-room' && (
+                  <div>
+                    <div className={`mt-2 space-y-2`}>
+                      {currentProfile.districts && (
                         <div className="flex items-center">
-                          <Icon icon="mdi:cash-multiple" className="mr-2 text-base text-green-500" />
-                          <span className="text-gray-700">
-                            <strong>Budget:</strong> {currentProfile.budgetMin} - {currentProfile.budgetMax} Million VND/month
-                          </span>
+                          <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500" />
+                          <span className="text-gray-700"><strong>Address:</strong> {currentProfile.districts.join(', ')}</span>
                         </div>
                       )}
-                  </div>
 
-                  <div className="mt-2">
-                    {currentProfile.districts && currentProfile.districts.length > 0 && (
-                      <div>                    
-                        <div className="flex items-center mb-1">
-                          <Icon icon="mdi:map" className="mr-2 text-base text-green-500" />
-                          <span className="text-gray-700"> <strong>Preferred Districts:</strong></span>
+                      {currentProfile.accommodationFee && (
+                        <div className="flex items-center">
+                          <Icon icon="mdi:currency-usd" className="mr-2 text-base text-blue-500" />
+                          <span className="text-gray-700"><strong>Monthly Fee:</strong> {currentProfile.accommodationFee} Million VND/month</span>
                         </div>
-                      
+                      )}
+                    </div>
+
+                  {currentProfile.accommodationServices &&
+                    currentProfile.accommodationServices.length > 0 && (
+                      <div className="mt-2">
+                        <div className="flex items-center mb-1">
+                          <Icon icon="mdi:tools" className="mr-2 text-base text-blue-500" />
+                          <span className="text-gray-700">
+                            <strong>Services:</strong>
+                          </span>
+                        </div>
+
                         <div className="flex flex-wrap gap-2">
-                          {currentProfile.districts.map((district, index) => (
+                          {currentProfile.accommodationServices.map((service, index) => (
                             <span
                               key={index}
-                              className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium"
+                              className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium"
                             >
-                              {district}
+                              {service}
                             </span>
                           ))}
                         </div>
                       </div>
                     )}
                   </div>
-                </div>
-              )}
+                )}
 
+                {/* Looking For Details*/}
+                {currentProfile.accommodationStatus === 'looking' && (
+                  <div>
+                    {/* Looking For Details */}
+                    <div className="mt-2 space-y-2">
+                      {currentProfile.budgetMin !== undefined &&
+                        currentProfile.budgetMax !== undefined && (
+                          <div className="flex items-center">
+                            <Icon icon="mdi:cash-multiple" className="mr-2 text-base text-green-500" />
+                            <span className="text-gray-700">
+                              <strong>Budget:</strong> {currentProfile.budgetMin} - {currentProfile.budgetMax} Million VND/month
+                            </span>
+                          </div>
+                        )}
+                    </div>
+
+                    <div className="mt-2">
+                      {currentProfile.districts && currentProfile.districts.length > 0 && (
+                        <div>                    
+                          <div className="flex items-center mb-1">
+                            <Icon icon="mdi:map" className="mr-2 text-base text-green-500" />
+                            <span className="text-gray-700"> <strong>Preferred Districts:</strong></span>
+                          </div>
+                        
+                          <div className="flex flex-wrap gap-2">
+                            {currentProfile.districts.map((district, index) => (
+                              <span
+                                key={index}
+                                className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium"
+                              >
+                                {district}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              </div>
             </div>
+            {/* Swipe Indicators */}
+            {isDragging && (
+              <>
+                <div className={`absolute top-20 left-4 p-4 rounded-full ${currentX > 50 ? 'bg-green-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
+                  <Icon icon="mdi:like" className="text-white text-2xl" />
+                </div>
+                <div className={`absolute top-20 right-4 p-4 rounded-full ${currentX < -50 ? 'bg-red-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
+                  <Icon icon="mdi:close" className="text-white text-2xl" />
+                </div>
+              </>
+            )}
           </div>
-          {/* Swipe Indicators */}
-          {isDragging && (
-            <>
-              <div className={`absolute top-20 left-4 p-4 rounded-full ${currentX > 50 ? 'bg-green-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
-                <Icon icon="mdi:like" className="text-white text-2xl" />
-              </div>
-              <div className={`absolute top-20 right-4 p-4 rounded-full ${currentX < -50 ? 'bg-red-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
-                <Icon icon="mdi:close" className="text-white text-2xl" />
-              </div>
-            </>
-          )}
-        </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex justify-center gap-8 mb-6">
