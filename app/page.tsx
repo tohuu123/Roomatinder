@@ -77,6 +77,7 @@ export default function HomePage({ email }: HomePageProps) {
   const [loading, setLoading] = useState(true);
   const [loadingNext, setLoadingNext] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
   const [seenUserIds, setSeenUserIds] = useState<string[]>([]);
   const [noMoreProfiles, setNoMoreProfiles] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -193,11 +194,48 @@ export default function HomePage({ email }: HomePageProps) {
     }
   };
 
+  const Tag = ({
+    label,
+    icon,
+    color,
+    tooltip,
+  }: {
+    label: string;
+    icon: string;
+    color: string; // "blue" | "red" | "green" | etc.
+    tooltip: string;
+  }) => {
+    const COLOR_MAP: Record<string, string> = {
+      blue: "bg-blue-600/80 border-blue-400/50",
+      red: "bg-red-600/80 border-red-400/50",
+      purple: "bg-purple-600/80 border-purple-400/50",
+      green: "bg-green-600/80 border-green-400/50",
+      yellow: "bg-yellow-600/80 border-yellow-400/50",
+      gray: "bg-gray-600/80 border-gray-400/50",
+      emerald: "bg-emerald-600/80 border-emerald-400/50",
+    };
+
+    return (
+      <div className="tooltip tooltip-left" data-tip={tooltip}>
+        <div
+          className={`text-sm font-medium px-2 py-1 rounded-full backdrop-blur-sm border flex items-center gap-1 cursor-default ${COLOR_MAP[color]}`}
+        >
+          <Icon icon={icon} className="w-4 h-4" />
+          {label}
+        </div>
+      </div>
+    );
+  };
+
   // Load first profile on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUserId(user.uid);
+
+        // ⬅ Load current user's profile here
+        const myProfile = await getProfile(user.uid);
+        setCurrentUserProfile(myProfile);
       } else {
         setLoading(false);
       }
@@ -270,55 +308,53 @@ export default function HomePage({ email }: HomePageProps) {
     setShowDetailModal(false);
   };
 
-  const handleStartOver = async () => {
-    if (!currentUserId) return;
-    setSeenUserIds([]);
-    setNoMoreProfiles(false);
-    await loadNextProfile();
-  };
-
   const handleStartChat = async (matchedUserId: string) => {
-      if (!currentUserId) {
-        console.log('No currentUserId');
+    if (!currentUserId) {
+      console.log('No currentUserId');
+      return;
+    }
+  
+    console.log('Starting chat with:', matchedUserId);
+    console.log('Current user:', currentUserId);
+    console.log('Available chats:', chats);
+
+    setCreatingChat(matchedUserId);
+
+    try {
+      // Check if chat already exists
+      const existingChatId = checkChatExists(currentUserId, matchedUserId, chats);
+      
+      if (existingChatId) {
+        console.log('Found existing chat:', existingChatId);
+        // Navigate to existing chat
+        router.push(`/chatroom?chatId=${existingChatId}`);
         return;
       }
-  
-      console.log('Starting chat with:', matchedUserId);
-      console.log('Current user:', currentUserId);
-      console.log('Available chats:', chats);
       
-      setCreatingChat(matchedUserId);
-  
-      try {
-        // Check if chat already exists
-        const existingChatId = checkChatExists(currentUserId, matchedUserId, chats);
-        
-        if (existingChatId) {
-          console.log('Found existing chat:', existingChatId);
-          // Navigate to existing chat
-          router.push(`/chatroom?chatId=${existingChatId}`);
-          return;
-        }
-        
-        console.log('Creating new chat...');
-        // Create new chat
-        const chatId = await createChatFromMatch(currentUserId, matchedUserId);
-        
-        if (chatId) {
-          console.log('Chat created successfully:', chatId);
-          router.push(`/chatroom?chatId=${chatId}`);
-        } else {
-          console.log('Chat creation returned null');
-          alert('Could not create conversation. Please try again.');
-        }
-      } catch (error: any) {
-        console.error('Error starting chat:', error);
-        const errorMessage = error?.message || 'An unknown error occurred';
-        alert(`Error: ${errorMessage}`);
-      } finally {
-        setCreatingChat(null);
+      console.log('Creating new chat...');
+      // Create new chat
+      const chatId = await createChatFromMatch(currentUserId, matchedUserId);
+      
+      if (chatId) {
+        console.log('Chat created successfully:', chatId);
+        router.push(`/chatroom?chatId=${chatId}`);
+      } else {
+        console.log('Chat creation returned null');
+        alert('Could not create conversation. Please try again.');
       }
-    };
+    } catch (error: any) {
+      console.error('Error starting chat:', error);
+      const errorMessage = error?.message || 'An unknown error occurred';
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setCreatingChat(null);
+    }
+  };
+
+  const getSharedInterests = (profileA: UserProfile | null, profileB: UserProfile | null): string[] => {
+    if (!profileA?.interests || !profileB?.interests) return [];
+    return profileA.interests.filter((i) => profileB.interests!.includes(i));
+  };
 
   if (loading) {
     return (
@@ -387,29 +423,70 @@ export default function HomePage({ email }: HomePageProps) {
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
 
-                <div className="absolute bottom-4 left-4 text-white">
+                {/* Profile tags */}
+                <div className="absolute top-4 right-4 text-white text-outline-sm">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {/* Verified Student */}
+                    {currentProfile.isStudentVerified && (
+                      <div>
+                        <Tag
+                          label="Verified Student"
+                          icon="mdi:school"
+                          color="blue"
+                          tooltip="This user is a verified student."
+                        />
+                      </div>
+                    )}
+
+                    {/* Hot match (Profile has more than 3 matches) */}
+                    {currentProfile.matches && currentProfile.matches?.length > 3 && (
+                      <div>
+                        <Tag
+                          label="Hot Match"
+                          icon="mdi:fire"
+                          color="red"
+                          tooltip="This user has more than 3 matches!"
+                        />
+                      </div>
+                    )}
+
+                    {/* Hot like (Profile has more than 5 people liked) */}
+                    {currentProfile.likedBy && currentProfile.likedBy.length > 5 && (
+                      <div>
+                        <Tag
+                          label="Popular"
+                          icon="mdi:thumb-up-multiple"
+                          color="purple"
+                          tooltip="This user is liked by more than 5 people!"
+                        />
+                      </div>
+                    )}
+
+                    {/* Interest Match (Profile shares more than 3 interests) */}
+                    {currentProfile && currentUserProfile && getSharedInterests(currentProfile, currentUserProfile).length > 3 && (
+                      <div>
+                        <Tag
+                          label="Interest Match"
+                          icon="mdi:heart-multiple"
+                          color="green"
+                          tooltip={`You share interests: ${getSharedInterests(currentProfile, currentUserProfile).join(', ')}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="absolute bottom-4 left-4 text-white text-outline-sm">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-2xl font-bold">
-                      {currentProfile.displayName || currentProfile.email.split('@')[0]}
+                      {currentProfile.displayName}
                     </h2>
-                    {currentProfile.isStudentVerified && (
-                      <img 
-                        src="/icons/verified.png" 
-                        alt="Verified Student" 
-                        className="w-6 h-6"
-                        title="Verified Student"
-                      />
-                    )}
                     {currentProfile.nickname && (
                       <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-400/80 backdrop-blur-sm border border-purple-300/50">
                         "{currentProfile.nickname}"
                       </span>
                     )}
-                    {currentProfile.accommodationStatus && (
-                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-white/20 backdrop-blur-sm border border-white/30 bg-green-600">
-                        {currentProfile.accommodationStatus === 'have-room' ? 'Has Room' : 'Looking for Room'}
-                      </span>
-                    )}
+                    
 
                     {/* Hometown*/}
                     {currentProfile.hometown && (
