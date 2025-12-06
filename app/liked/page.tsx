@@ -18,6 +18,7 @@ export default function LikedPage() {
   const [activeTab, setActiveTab] = useState<'liked' | 'matches'>('liked');
   const [loading, setLoading] = useState(true);
   const [creatingChat, setCreatingChat] = useState<string | null>(null);
+  const [processingUnlike, setProcessingUnlike] = useState<Record<string, boolean>>({});
 
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
@@ -54,8 +55,19 @@ export default function LikedPage() {
   const handleUnlike = async (profileId: string) => {
     if (!currentUserId) return;
 
-    setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
-    setMatches(prev => prev.filter(p => p.userId !== profileId));
+    setProcessingUnlike(prev => ({ ...prev, [profileId]: true }));
+    
+    const success = await unlikeUser(currentUserId, profileId);
+    if (success) {
+      setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
+      setMatches(prev => prev.filter(p => p.userId !== profileId));
+    }
+
+    setProcessingUnlike(prev => {
+      const copy = { ...prev };
+      delete copy[profileId];
+      return copy;
+    });  
   };
 
   const handleViewProfile = (slug?: string) => {
@@ -198,10 +210,20 @@ export default function LikedPage() {
                     <div className="card-actions grid grid-cols-2 justify-end mt-4">
                       <button
                         className="btn btn-outline btn-error w-full"
+                        disabled={processingUnlike[profile.userId]}
                         onClick={() => handleUnlike(profile.userId)}
                       >
-                        <Icon icon="mdi:thumb-down-outline" className="mr-2" />
-                        Unlike
+                        {processingUnlike[profile.userId] ? (
+                          <>
+                            <span className="loading loading-spinner mr-2"></span>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Icon icon="mdi:thumb-down-outline" className="mr-2" />
+                            Unlike
+                          </>
+                        )}
                       </button>
 
                       <button
