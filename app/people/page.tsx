@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase";
-import { getLikedProfiles, getMatches, unlikeUser } from "@/lib/profileService";
+import { getLikedProfiles, getMatches, unlikeUser, likeUser, getPassedProfiles, removeAllPassedUsers } from "@/lib/profileService";
 import { UserProfile } from "@/types/profile";
 import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
@@ -14,11 +14,14 @@ export default function LikedPage() {
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [likedProfiles, setLikedProfiles] = useState<UserProfile[]>([]);
+  const [passedProfiles, setPassedProfiles] = useState<UserProfile[]>([]);
   const [matches, setMatches] = useState<UserProfile[]>([]);
-  const [activeTab, setActiveTab] = useState<'liked' | 'matches'>('liked');
+  const [activeTab, setActiveTab] = useState<'liked' | 'passed' | 'matches'>('liked');
   const [loading, setLoading] = useState(true);
   const [creatingChat, setCreatingChat] = useState<string | null>(null);
   const [processingUnlike, setProcessingUnlike] = useState<Record<string, boolean>>({});
+  const [processingLike, setProcessingLike] = useState<Record<string, boolean>>({});
+
 
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
@@ -39,12 +42,14 @@ export default function LikedPage() {
   const loadData = async (userId: string) => {
     setLoading(true);
     try {
-      const [liked, matched] = await Promise.all([
+      const [liked, matched, passed] = await Promise.all([
         getLikedProfiles(userId),
-        getMatches(userId)
+        getMatches(userId),
+        getPassedProfiles(userId)
       ]);
       setLikedProfiles(liked);
       setMatches(matched);
+      setPassedProfiles(passed);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -74,6 +79,39 @@ export default function LikedPage() {
     if (slug) {
       router.push(`/profile/${slug}`);
     }
+  };
+
+  const handleLikeUser = async (profileId: string) => {
+    if (!currentUserId) return;
+
+    setProcessingLike(prev => ({ ...prev, [profileId]: true }));
+
+    const profileToMove = passedProfiles.find(p => p.userId === profileId);
+
+    const result = await likeUser(currentUserId, profileId);
+
+    if (result.success) {
+      setPassedProfiles(prev => prev.filter(p => p.userId !== profileId));
+
+      if (profileToMove) {
+        setLikedProfiles(prev => 
+          prev.some(p => p.userId === profileId)
+            ? prev
+            : [profileToMove, ...prev]
+        );
+      }
+
+      if (result.isMatch && profileToMove) {
+        setMatches(prev => [...prev, profileToMove]);
+        setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
+      }
+    }
+
+    setProcessingLike(prev => {
+      const copy = { ...prev };
+      delete copy[profileId];
+      return copy;
+    });
   };
 
   const handleStartChat = async (matchedUserId: string) => {
@@ -119,7 +157,7 @@ export default function LikedPage() {
     );
   }
 
-  const displayProfiles = activeTab === 'liked' ? likedProfiles : matches;
+  const displayProfiles = activeTab === 'liked' ? likedProfiles : activeTab === 'passed' ? passedProfiles : matches;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 to-emerald-100 p-4">
@@ -154,21 +192,30 @@ export default function LikedPage() {
             <Icon icon="mdi:handshake" className="mr-2 text-xl" />
             Matches ({matches.length})
           </button>
+          <button
+            className={`tab flex-1 ${activeTab === 'passed' ? 'tab-active bg-green-500 text-black' : 'text-gray-600'} rounded-xl transition-all`}
+            onClick={() => setActiveTab('passed')}
+          >
+            <Icon icon="mdi:account-remove" className="mr-2 text-xl" />
+            Passed ({passedProfiles.length})
+          </button>
         </div>
 
         {/* Content */}
         {displayProfiles.length === 0 ? (
           <div className="text-center py-16">
             <Icon 
-              icon={activeTab === 'liked' ? "mdi:account-search-outline" : "mdi:account-group-outline"} 
+              icon={activeTab === 'liked' ? "mdi:account-search-outline" : activeTab === 'passed' ? "mdi:account-remove-outline" : "mdi:account-group-outline"} 
               className="text-6xl text-gray-300 mx-auto mb-4" 
             />
             <h2 className="text-2xl font-bold text-gray-600 mb-2">
-              {activeTab === 'liked' ? 'No one in the list yet' : 'No matches yet'}
+              {activeTab === 'liked' ? 'No one in the list yet' : activeTab === 'passed' ? 'No one in the list yet' : 'No matches yet'}
             </h2>
             <p className="text-gray-500 mb-6">
               {activeTab === 'liked' 
                 ? 'Start swiping to find your roommate!' 
+                : activeTab === 'passed'
+                ? 'You have not passed on anyone yet.'
                 : 'When someone likes you back, matches will appear here'}
             </p>
             <button
@@ -243,14 +290,24 @@ export default function LikedPage() {
                     <div className="card-actions grid grid-cols-2 gap-3 mt-4">
                       <button
                         className="btn btn-outline btn-error w-full"
+                        disabled={processingUnlike[profile.userId]}
                         onClick={() => handleUnlike(profile.userId)}
                       >
-                        <Icon icon="mdi:thumb-down-outline" className="mr-2" />
-                        Unlike
+                        {processingUnlike[profile.userId] ? (
+                          <>
+                            <span className="loading loading-spinner mr-2"></span>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Icon icon="mdi:thumb-down-outline" className="mr-2" />
+                            Unlike
+                          </>
+                        )}
                       </button>
 
                       <button
-                        className="btn w-full"
+                        className="btn btn-primary w-full"
                         onClick={() => handleViewProfile(profile.slug)}
                       >
                         <Icon icon="mdi:account-circle-outline" className="mr-2" />
@@ -261,7 +318,7 @@ export default function LikedPage() {
                     {/* Row 2: Start Chat (full width) */}
                     <div className="card-actions mt-3">
                       <button
-                        className="btn btn-success w-full"
+                        className="btn w-full"
                         onClick={() => handleStartChat(profile.userId)}
                         disabled={creatingChat === profile.userId}
                       >
@@ -280,9 +337,57 @@ export default function LikedPage() {
                     </div>
                   </>
                 )}
+
+                {/* Passed Profiles */}
+                {activeTab === 'passed' && (
+                  <div className="card-actions grid grid-cols-2 justify-end mt-4">
+                    <button
+                      className="btn btn-outline btn-success w-full"
+                      onClick={() => handleLikeUser(profile.userId)}
+                      disabled={processingLike[profile.userId]}
+                    >
+                      {processingLike[profile.userId] ? (
+                        <>
+                          <span className="loading loading-spinner mr-2"></span>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Icon icon="mdi:thumb-up-outline" className="mr-2" />
+                          Like Back
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="btn btn-primary w-full"
+                      onClick={() => handleViewProfile(profile.slug)}
+                    >
+                      <Icon icon="mdi:account-circle-outline" className="mr-2" />
+                      View Profile
+                    </button>
                   </div>
+                )}
                 </div>
-              ))}
+              </div>
+            ))}
+            </div>
+          )}
+          {/* Remove all passed user from passed list button */}
+          {activeTab === 'passed' && passedProfiles.length > 0 && (
+            <div className="text-center mt-8">
+              <button
+                className="btn btn-outline btn-error bg-red-100 hover:bg-red-200"
+                onClick={async () => {
+                  if (!currentUserId) return;
+
+                  const success = await removeAllPassedUsers(currentUserId);
+                  if (success) {
+                    setPassedProfiles([]);   // Clear UI
+                  }
+                }}
+              >
+                Remove All Passed Users
+              </button>
             </div>
           )}
         </div>

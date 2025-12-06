@@ -359,52 +359,49 @@ export async function likeUser(
   likedUserId: string
 ): Promise<{ success: boolean; isMatch: boolean }> {
   try {
-    // Get both profiles
     const currentProfile = await getProfile(currentUserId);
     const likedProfile = await getProfile(likedUserId);
-    
+
     if (!currentProfile || !likedProfile) {
       return { success: false, isMatch: false };
     }
-    
-    // Check if already liked
-    const alreadyLiked = currentProfile.likedUsers?.includes(likedUserId);
-    if (alreadyLiked) {
-      return { success: true, isMatch: false };
-    }
-    
-    // Add to current user's likedUsers
-    const updatedLikedUsers = [...(currentProfile.likedUsers || []), likedUserId];
-    
-    // Add current user to liked user's likedBy
-    const updatedLikedBy = [...(likedProfile.likedBy || []), currentUserId];
-    
-    // Check if it's a match (the other user has already liked this user)
-    const isMatch = likedProfile.likedUsers?.includes(currentUserId) || false;
-    
-    // Update current user's profile
-    const currentUserRef = doc(db, PROFILES_COLLECTION, currentUserId);
-    await updateDoc(currentUserRef, {
-      likedUsers: updatedLikedUsers,
+
+    const currentRef = doc(db, PROFILES_COLLECTION, currentUserId);
+    const likedRef = doc(db, PROFILES_COLLECTION, likedUserId);
+
+    // --- ALWAYS add to currentUser.likedUsers ---
+    const newLikedUsers = new Set(currentProfile.likedUsers || []);
+    newLikedUsers.add(likedUserId);
+
+    // --- ALWAYS add to likedUser.likedBy ---
+    const newLikedBy = new Set(likedProfile.likedBy || []);
+    newLikedBy.add(currentUserId);
+
+    // --- MATCH happens if likedUser previously liked currentUser ---
+    const isMatch = (likedProfile.likedUsers || []).includes(currentUserId);
+
+    // Update current user
+    await updateDoc(currentRef, {
+      likedUsers: Array.from(newLikedUsers),
+      passedUsers: (currentProfile.passedUsers || []).filter(id => id !== likedUserId),
       ...(isMatch && {
         matches: [...(currentProfile.matches || []), likedUserId]
       }),
       updatedAt: serverTimestamp(),
     });
-    
-    // Update liked user's profile
-    const likedUserRef = doc(db, PROFILES_COLLECTION, likedUserId);
-    await updateDoc(likedUserRef, {
-      likedBy: updatedLikedBy,
+
+    // Update liked user
+    await updateDoc(likedRef, {
+      likedBy: Array.from(newLikedBy),
       ...(isMatch && {
         matches: [...(likedProfile.matches || []), currentUserId]
       }),
       updatedAt: serverTimestamp(),
     });
-    
+
     return { success: true, isMatch };
   } catch (error) {
-    console.error('Error liking user:', error);
+    console.error("Error liking user:", error);
     return { success: false, isMatch: false };
   }
 }
@@ -465,6 +462,37 @@ export async function unlikeUser(
 }
 
 /**
+ * Mark a user as passed (swiped left)
+ */
+export async function passUser(
+  currentUserId: string,
+  passedUserId: string
+): Promise<boolean> {
+  try {
+    const currentProfile = await getProfile(currentUserId);
+    
+    if (!currentProfile) {
+      return false;
+    }
+    
+    // Add to current user's passedUsers
+    const updatedPassedUsers = [...(currentProfile.passedUsers || []), passedUserId];
+    
+    // Update current user's profile
+    const currentUserRef = doc(db, PROFILES_COLLECTION, currentUserId);
+    await updateDoc(currentUserRef, {
+      passedUsers: updatedPassedUsers,
+      updatedAt: serverTimestamp(),
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error passing user:', error);
+    return false;
+  }
+}
+
+/**
  * Get all matched profiles for a user
  */
 export async function getMatches(userId: string): Promise<UserProfile[]> {
@@ -495,8 +523,12 @@ export async function getLikedProfiles(userId: string): Promise<UserProfile[]> {
   }
   
   const likedProfiles: UserProfile[] = [];
+
+  const matchedSet = new Set(profile.matches || []);
   
   for (const likedId of profile.likedUsers) {
+    if (matchedSet.has(likedId)) continue;
+
     const likedProfile = await getProfile(likedId);
     if (likedProfile) {
       likedProfiles.push(likedProfile);
@@ -525,4 +557,46 @@ export async function getLikedByProfiles(userId: string): Promise<UserProfile[]>
   }
   
   return likedByProfiles;
+}
+
+export async function getPassedProfiles(userId: string): Promise<UserProfile[]> {
+  const profileRef = doc(db, PROFILES_COLLECTION, userId);
+  const profileSnap = await getDoc(profileRef);
+
+  if (!profileSnap.exists()) return [];
+
+  const data = profileSnap.data();
+  const passedIds: string[] = data.passedUsers || [];
+
+  if (passedIds.length === 0) return [];
+
+  const profiles: UserProfile[] = [];
+
+  for (const id of passedIds) {
+    const pRef = doc(db, PROFILES_COLLECTION, id);
+    const pSnap = await getDoc(pRef);
+
+    if (pSnap.exists()) {
+      profiles.push({
+        ...pSnap.data(),
+        userId: id,
+      } as UserProfile);
+    }
+  }
+
+  return profiles;
+}
+
+export async function removeAllPassedUsers(userId: string): Promise<boolean> {
+  try {
+    const userRef = doc(db, PROFILES_COLLECTION, userId);
+    await updateDoc(userRef, {
+      passedUsers: [],
+      updatedAt: serverTimestamp()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error deleting passed users:", error);
+    return false;
+  }
 }

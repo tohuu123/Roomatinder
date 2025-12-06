@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { getProfile, likeUser } from "@/lib/profileService";
+import { getProfile, likeUser, passUser } from "@/lib/profileService";
 import { queryMatchingProfile } from "@/lib/chromaService";
 import { UserProfile } from "@/types/profile";
 import { auth } from "@/firebase";
@@ -87,55 +87,106 @@ export default function HomePage({ email }: HomePageProps) {
   const [matchedProfile, setMatchedProfile] = useState<UserProfile | null>(null);
   const [creatingChat, setCreatingChat] = useState<string | null>(null);
   const [fetchingProfile, setFetchingProfile] = useState(false);
+  const [profileQueue, setProfileQueue] = useState<UserProfile[]>([]);
 
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
 
+  const fetchProfileBatch = async (
+    userId: string,
+    excludeIds: string[],
+    batchSize = 10
+  ): Promise<UserProfile[]> => {
+    const newProfiles: UserProfile[] = [];
+    const currentUserProfile = await getProfile(userId);
+    let attempts = 0;
+    const maxAttempts = batchSize * 5; // Prevent infinite loops
+
+    while (newProfiles.length < batchSize && attempts < maxAttempts) {
+      attempts++;
+      const result = await queryMatchingProfile(userId, excludeIds);
+
+      if (!result?.userId) {
+        console.log("[Fetch] No more profiles from ChromaDB");
+        break;
+      }
+
+      const matchedId = result.userId;
+
+      // Skip yourself
+      if (matchedId === userId) {
+        console.log("[Fetch] Skipping self:", matchedId);
+        excludeIds.push(matchedId);
+        continue;
+      }
+
+      // Skip already liked or passed
+      if (
+        currentUserProfile?.likedUsers?.includes(matchedId) ||
+        currentUserProfile?.passedUsers?.includes(matchedId)
+      ) {
+        console.log("[Fetch] Skipping already interacted:", matchedId, {
+          liked: currentUserProfile?.likedUsers?.includes(matchedId),
+          passed: currentUserProfile?.passedUsers?.includes(matchedId)
+        });
+        excludeIds.push(matchedId);
+        continue;
+      }
+
+      // Load profile details
+      const prof = await getProfile(matchedId);
+      if (!prof) {
+        console.log("[Fetch] Profile not found in Firebase:", matchedId);
+        excludeIds.push(matchedId);
+        continue;
+      }
+
+      console.log("[Fetch] Added profile to batch:", matchedId, `(${newProfiles.length + 1}/${batchSize})`);
+      newProfiles.push(prof);
+      excludeIds.push(matchedId);
+    }
+
+    console.log(`[Fetch] Batch complete: ${newProfiles.length} profiles fetched in ${attempts} attempts`);
+    return newProfiles;
+  };
+
   // Function to load the next matching profile
-  const loadNextProfile = async (userId: string, excludeIds: string[]) => {
+  const loadNextProfile = async () => {    
+    if (profileQueue.length > 0) {
+      console.log(`[Load] Using queued profile (${profileQueue.length} remaining)`);
+      const next = profileQueue[0];
+      setProfileQueue(prev => prev.slice(1));
+      setCurrentProfile(next);
+      return;
+    }
+
+    console.log("[Load] Queue empty, fetching new batch...");
     setLoadingNext(true);
 
     try {
-      const currentUserProfile = await getProfile(userId);
-
-      while (true) {
-        const result = await queryMatchingProfile(userId, excludeIds);
-
-        if (!result || !result.userId) {
-          console.log("[Loop] No result → stopping");
-          setCurrentProfile(null);
-          setNoMoreProfiles(true);
-          return;
-        }
-
-        const matchedUserId = result.userId;
-
-        if (matchedUserId === userId) {
-          excludeIds.push(matchedUserId);
-          continue;
-        }
-
-        if (
-          currentUserProfile?.likedUsers?.includes(matchedUserId) ||
-          currentUserProfile?.passedUsers?.includes(matchedUserId)
-        ) {
-          excludeIds.push(matchedUserId);
-          continue;
-        }
-
-        const matchedProfile = await getProfile(matchedUserId);
-
-        if (!matchedProfile) {
-          excludeIds.push(matchedUserId);
-          continue;
-        }
-
-        setCurrentProfile(matchedProfile);
-        setSeenUserIds(prev => [...prev, matchedUserId]);
+      if (!currentUserId) {
+        console.log("[Load] No currentUserId, skipping fetch");
         return;
       }
-    } catch (err) {
-      console.error("Error loading next profile:", err);
+
+      const batch = await fetchProfileBatch(currentUserId, [...seenUserIds], 10);
+
+      if (batch.length === 0) {
+        console.log("[Load] No more profiles available");
+        setNoMoreProfiles(true);
+        setCurrentProfile(null);
+        return;
+      }
+
+      console.log(`[Load] Loaded batch of ${batch.length} profiles`);
+      // Put all in queue and load first
+      setProfileQueue(batch.slice(1));
+      setCurrentProfile(batch[0]);
+
+      // Track what we have seen
+      setSeenUserIds(prev => [...prev, ...batch.map(p => p.userId)]);
+    } catch (error) {
+      console.error("[Load] Error loading profiles:", error);
       setNoMoreProfiles(true);
     } finally {
       setLoadingNext(false);
@@ -144,16 +195,9 @@ export default function HomePage({ email }: HomePageProps) {
 
   // Load first profile on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUserId(user.uid);
-        try {
-          await loadNextProfile(user.uid, []);
-        } catch (error) {
-          console.error("Error fetching initial profile:", error);
-        } finally {
-          setLoading(false);
-        }
       } else {
         setLoading(false);
       }
@@ -161,6 +205,24 @@ export default function HomePage({ email }: HomePageProps) {
 
     return () => unsubscribe();
   }, []);
+
+  // Separate effect to load profiles when currentUserId is set
+  useEffect(() => {
+    if (!currentUserId || currentProfile !== null) return;
+
+    console.log("[Init] Loading initial profile for user:", currentUserId);
+    const loadInitialProfile = async () => {
+      try {
+        await loadNextProfile();
+      } catch (error) {
+        console.error("[Init] Error fetching initial profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialProfile();
+  }, [currentUserId]);
 
   const handleSwipe = async (direction: 'left' | 'right') => {
     if (isAnimating || !currentProfile || !currentUserId) return;
@@ -175,21 +237,26 @@ export default function HomePage({ email }: HomePageProps) {
       setFetchingProfile(true);
 
       // Load next profile
-      await loadNextProfile(currentUserId, seenUserIds);
+      await loadNextProfile();
 
       setFetchingProfile(false);
 
 
     }, 300);
 
-    // Save like action
+    // Save user interaction
     if (direction === 'right') {
+      console.log('[Swipe] Liking user:', currentProfile.userId);
       const result = await likeUser(currentUserId, currentProfile.userId);
 
       if (result.success && result.isMatch) {
+        console.log('[Swipe] Match detected!');
         setMatchedProfile(currentProfile);
         setShowMatchModal(true);
       }
+    } else if (direction === 'left') {
+      console.log('[Swipe] Passing user:', currentProfile.userId);
+      await passUser(currentUserId, currentProfile.userId);
     }
   };
 
@@ -207,7 +274,7 @@ export default function HomePage({ email }: HomePageProps) {
     if (!currentUserId) return;
     setSeenUserIds([]);
     setNoMoreProfiles(false);
-    await loadNextProfile(currentUserId, []);
+    await loadNextProfile();
   };
 
   const handleStartChat = async (matchedUserId: string) => {
@@ -298,7 +365,7 @@ export default function HomePage({ email }: HomePageProps) {
             <p className="mt-4 text-gray-600 font-semibold">Fetching profile...</p>
           </div>
         ) : (
-          <div className="relative h-[900px] mb-6">
+          <div className="relative h-[1000px] mb-6">
             <div
               ref={cardRef}
               className={`absolute inset-0 bg-white rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 ${
@@ -367,7 +434,7 @@ export default function HomePage({ email }: HomePageProps) {
               <div className="p-6 space-y-4">
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-2">About</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">
+                  <p className="text-gray-600 text-sm leading-relaxed break-words">
                     {currentProfile.bio || "No bio available"}
                   </p>
                 </div>

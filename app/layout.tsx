@@ -108,7 +108,7 @@ function NavBar() {
               </Link>
             </li>
             <li>
-              <Link href="/liked" className="text-base text-gray-900 font-semibold">
+              <Link href="/people" className="text-base text-gray-900 font-semibold">
                 People
               </Link>
             </li>
@@ -174,7 +174,7 @@ function NavBar() {
             </Link>
           </li>
           <li>
-            <Link href="/liked" className="text-base text-gray-900 font-semibold">
+            <Link href="/people" className="text-base text-gray-900 font-semibold">
               People
             </Link>
           </li>
