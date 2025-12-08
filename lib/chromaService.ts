@@ -92,7 +92,6 @@ function profileToDocument(profile: UserProfile): string {
   if (profile.cleanlinessLevel) parts.push(`Cleanliness: ${profile.cleanlinessLevel}`);
   if (profile.smokingPolicy) parts.push(`Smoking: ${profile.smokingPolicy}`);
   if (profile.noiseLevel) parts.push(`Noise Level: ${profile.noiseLevel}`);
-  if (profile.cookingSkills) parts.push(`Cooking: ${profile.cookingSkills}`);
   if (profile.guestPolicy) parts.push(`Guest Policy: ${profile.guestPolicy}`);
   
   // Accommodation details
