@@ -80,6 +80,19 @@ export interface UserProfile {
   
   // List of matched user IDs (mutual likes)
   matches?: string[];
+
+  // -------------------- Verification (Persona) --------------------
+  
+  // Identity verification using Persona
+  verification?: {
+    inquiryId?: string; // Persona inquiry ID
+    status?: 'pending' | 'completed' | 'approved' | 'declined' | 'failed';
+    isVerified?: boolean; // true if approved
+    completedAt?: string; // ISO date string
+    approvedAt?: string; // ISO date string
+    declinedAt?: string; // ISO date string
+    failedAt?: string; // ISO date string
+  };
 }
 
 // Helper type for form fields
