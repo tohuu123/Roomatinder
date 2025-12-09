@@ -43,7 +43,7 @@ export interface UserProfile {
   // Interests
   interests?: string[];
 
-  // -------------------- Accommodation Preferences <Third Part> --------------------
+  // -------------------- Accommodation Preferences  <Third Part> --------------------
 
   // General Preferences
   districts?: string[]; // Preferred districts || accommodation districts
@@ -58,7 +58,6 @@ export interface UserProfile {
   budgetMax?: number;
 
   // Having Accommodation Details
-  accommodationAddress?: string;
   accommodationFee?: number; // Monthly rent
   accommodationElectricityFee?: number;
   accommodationWaterFee?: number;
@@ -74,6 +73,9 @@ export interface UserProfile {
   
   // List of user IDs that this user has liked
   likedUsers?: string[];
+
+  // List of user IDs that this user has disliked/unliked
+  passedUsers?: string[];
   
   // List of user IDs that have liked this user
   likedBy?: string[];

@@ -11,6 +11,7 @@ import { getUserAvatar } from "@/lib/avatarHelper";
 import { useRouter } from "next/navigation";
 import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
+import { GreenHomeBackground } from "@/components/magicui/green-home-background";
 
 // Helper function to format field labels in English
 function formatLabel(value: string): string {
@@ -358,30 +359,35 @@ export default function HomePage({ email }: HomePageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-emerald-100">
-        <div className="text-center">
-          <span className="loading loading-spinner loading-lg"></span>
-          <p className="mt-4 text-gray-600">Loading profiles...</p>
+      <GreenHomeBackground>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <span className="loading loading-dots loading-lg text-green-600"></span>
+
+          <p className="mt-4 text-gray-700 font-semibold">
+            Searching for profiles that match you...
+          </p>
         </div>
-      </div>
+      </GreenHomeBackground>
     );
   }
 
   if (!currentProfile || noMoreProfiles) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-emerald-100">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
+      <GreenHomeBackground>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
+          </div>
         </div>
-      </div>
+      </GreenHomeBackground>
     );
   }
 
   const profileImage = getUserAvatar(currentProfile.photoURL, currentProfile.email || currentProfile.userId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-100 to-emerald-100 p-4">
-      <div className="max-w-md mx-auto">
+    <GreenHomeBackground>
+      <div className="max-w-md mx-auto p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <button
@@ -635,7 +641,7 @@ export default function HomePage({ email }: HomePageProps) {
                           {currentProfile.accommodationServices.map((service, index) => (
                             <span
                               key={index}
-                              className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium"
+                              className="bg-green-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-medium"
                             >
                               {service}
                             </span>
@@ -1176,6 +1182,6 @@ export default function HomePage({ email }: HomePageProps) {
           </div>
         </div>
       )}
-    </div>
+    </GreenHomeBackground>
   );
 }
