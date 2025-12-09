@@ -331,7 +331,13 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         <Icon icon="mdi:map-marker" className="w-5 h-5 text-red-500" />
                         <div>
                           <p className="text-xs text-gray-900">Address</p>
-                          <p className="text-sm font-semibold text-gray-900">{profile.districts.join(', ')}</p>
+
+                          <p className="text-sm font-semibold text-gray-900">
+                            {Array.isArray(profile.districts) && profile.districts.length > 0
+                              ? profile.districts.join(', ')                          
+                              : profile.districts ||                              
+                                "No address provided"}                        
+                          </p>
                         </div>
                       </div>
                     )}

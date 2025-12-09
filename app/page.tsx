@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
 import { GreenHomeBackground } from "@/components/magicui/green-home-background";
+import MapEmbed from "@/app/components/MapEmbed";
 
 // Helper function to format field labels in English
 function formatLabel(value: string): string {
@@ -90,6 +91,7 @@ export default function HomePage({ email }: HomePageProps) {
   const [creatingChat, setCreatingChat] = useState<string | null>(null);
   const [fetchingProfile, setFetchingProfile] = useState(false);
   const [profileQueue, setProfileQueue] = useState<UserProfile[]>([]);
+  const [showMap, setShowMap] = useState(false);
 
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
@@ -232,12 +234,18 @@ export default function HomePage({ email }: HomePageProps) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        console.log("[Auth] Logged in as:", user.uid);
         setCurrentUserId(user.uid);
 
-        // ⬅ Load current user's profile here
         const myProfile = await getProfile(user.uid);
-        setCurrentUserProfile(myProfile);
+
+        if (!myProfile) {
+          console.warn("[Auth] User has no profile in Firebase. Please complete registration.");
+          // Redirect to profile setup if needed
+          // router.push('/register');
+        }
       } else {
+        console.log("[Auth] Not logged in");
         setLoading(false);
       }
     });
@@ -245,58 +253,77 @@ export default function HomePage({ email }: HomePageProps) {
     return () => unsubscribe();
   }, []);
 
-  // Separate effect to load profiles when currentUserId is set
+  // Load initial profile when userId is available
   useEffect(() => {
     if (!currentUserId || currentProfile !== null) return;
 
-    console.log("[Init] Loading initial profile for user:", currentUserId);
-    const loadInitialProfile = async () => {
-      try {
-        await loadNextProfile();
-      } catch (error) {
-        console.error("[Init] Error fetching initial profile:", error);
-      } finally {
+    console.log("[Init] 🚀 Starting profile load for:", currentUserId);
+
+    const init = async () => {
+      // Step 1: Fetch ONLY 1 profile to show ASAP
+      console.log("[Init] ⚡ Fetching first profile (high priority)...");
+      const firstBatch = await fetchProfileBatch(currentUserId, [], 1);
+      
+      if (firstBatch.length === 0) {
+        console.log("[Init] ❌ No profiles found");
+        setNoMoreProfiles(true);
         setLoading(false);
+        return;
       }
+
+      // Step 2: Show first profile IMMEDIATELY (end loading)
+      console.log("[Init] ✓ Displaying first profile:", firstBatch[0].userId);
+      setCurrentProfile(firstBatch[0]);
+      setSeenUserIds([firstBatch[0].userId]);
+      setLoading(false); // User sees content NOW
+
+      // Step 3: Background preload (non-blocking, user won't notice)
+      console.log("[Init] 🔄 Background: preloading 3 profiles...");
+      fetchProfileBatch(currentUserId, [firstBatch[0].userId], 3)
+        .then(moreBatch => {
+          if (moreBatch.length > 0) {
+            console.log(`[Init] ✓ Preloaded ${moreBatch.length} profiles silently`);
+            setProfileQueue(moreBatch);
+            setSeenUserIds(prev => [...prev, ...moreBatch.map(p => p.userId)]);
+          }
+        })
+        .catch(err => console.error("[Init] ❌ Preload error:", err));
     };
 
-    loadInitialProfile();
+    init();
   }, [currentUserId]);
 
   const handleSwipe = async (direction: 'left' | 'right') => {
     if (isAnimating || !currentProfile || !currentUserId) return;
-    
+
     setIsAnimating(true);
     setSwipeDirection(direction);
 
+    const swipedUserId = currentProfile.userId;
+
+    // Background: Save interaction (non-blocking)
+    if (direction === 'right') {
+      console.log('[Swipe] ❤️ Liking:', swipedUserId);
+      likeUser(currentUserId, swipedUserId).then(result => {
+        if (result?.success && result?.isMatch) {
+          console.log('[Swipe] 🎉 Match!');
+          setMatchedProfile(currentProfile);
+          setShowMatchModal(true);
+        }
+      });
+    } else {
+      console.log('[Swipe] 👎 Passing:', swipedUserId);
+      passUser(currentUserId, swipedUserId);
+    }
+
+    // Animation + instant load next profile
     setTimeout(async () => {
       setSwipeDirection(null);
       setIsAnimating(false);
 
-      setFetchingProfile(true);
-
-      // Load next profile
+      // Load next (instant from queue if available)
       await loadNextProfile();
-
-      setFetchingProfile(false);
-
-
     }, 300);
-
-    // Save user interaction
-    if (direction === 'right') {
-      console.log('[Swipe] Liking user:', currentProfile.userId);
-      const result = await likeUser(currentUserId, currentProfile.userId);
-
-      if (result.success && result.isMatch) {
-        console.log('[Swipe] Match detected!');
-        setMatchedProfile(currentProfile);
-        setShowMatchModal(true);
-      }
-    } else if (direction === 'left') {
-      console.log('[Swipe] Passing user:', currentProfile.userId);
-      await passUser(currentUserId, currentProfile.userId);
-    }
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -391,7 +418,7 @@ export default function HomePage({ email }: HomePageProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => router.push('/liked')}
+            onClick={() => router.push('/people')}
             className="btn btn-circle btn-ghost relative"
           >
             <Icon icon="mdi:home-account" className="text-2xl text-green-500" />
@@ -428,6 +455,20 @@ export default function HomePage({ email }: HomePageProps) {
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+
+                {/* Map Marker Button (Bo ttom Right) */}
+                {currentProfile.accommodationStatus === "have-room" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); 
+                      setShowMap(true);
+                    }}
+                    className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-emerald-600 shadow-lg p-3 rounded-full transition"
+                    >
+                    <Icon icon="mdi:map-marker" className="w-6 h-6" />
+                  </button>
+                )}
+
 
                 {/* Profile tags */}
                 <div className="absolute top-4 right-4 text-white text-outline-sm">
@@ -612,10 +653,15 @@ export default function HomePage({ email }: HomePageProps) {
                 {currentProfile.accommodationStatus === 'have-room' && (
                   <div>
                     <div className={`mt-2 space-y-2`}>
-                      {currentProfile.districts && (
+                      {(currentProfile.districts) && (
                         <div className="flex items-center">
                           <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500" />
-                          <span className="text-gray-700"><strong>Address:</strong> {currentProfile.districts.join(', ')}</span>
+                          <span className="text-gray-700">
+                            <strong>Address:</strong>{" "}
+                            {Array.isArray(currentProfile.districts)
+                              ? currentProfile.districts.join(", ")            
+                              : currentProfile.districts || "No address provided"}  
+                          </span>
                         </div>
                       )}
 
@@ -884,10 +930,15 @@ export default function HomePage({ email }: HomePageProps) {
                   {currentProfile.accommodationStatus === 'have-room' ? (
                     <>
                       {/* Have Room Details */}
-                      {currentProfile.districts && (
+                      {(currentProfile.districts) && (
                         <div className="flex items-center">
                           <Icon icon="mdi:map-marker" className="mr-2 text-base text-emerald-500" />
-                          <span className="text-gray-700"><strong>Address:</strong> {currentProfile.districts.join(', ')}</span>
+                          <span className="text-gray-700">
+                            <strong>Address:</strong>{" "}
+                            {Array.isArray(currentProfile.districts)
+                              ? currentProfile.districts.join(", ")     
+                              : currentProfile.districts || "No address"}
+                          </span>
                         </div>
                       )}
                       {currentProfile.accommodationType && (
@@ -1179,6 +1230,36 @@ export default function HomePage({ email }: HomePageProps) {
                 Continue Swiping
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map Modal */}
+      {showMap && currentProfile.accommodationStatus == "have-room" && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowMap(false)}   // Bấm bên ngoài → tắt
+        >
+          <div
+            className="bg-white p-4 rounded-xl shadow-xl max-w-7xl w-full relative"
+            onClick={(e) => e.stopPropagation()}   // Bấm vào box → không tắt
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowMap(false)}
+              className="absolute top-3 right-3 text-gray-600 hover:text-black"
+            >
+              <Icon icon="mdi:close" className="w-10 h-10" />
+            </button>
+
+            {/* Map Component */} 
+            <MapEmbed
+              location={
+                Array.isArray(currentProfile.districts)
+                  ? currentProfile.districts.join(", ")
+                  : currentProfile.districts || "Ho Chi Minh"
+              }
+            />
           </div>
         </div>
       )}
