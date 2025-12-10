@@ -200,43 +200,32 @@ export async function queryMatchingProfile(
     
     if (!currentUserResult.documents || !currentUserResult.documents[0]) {
       console.log('[ChromaDB] Current user profile not found in ChromaDB');
-      // Fall back to getting profiles without similarity scoring
-      const results = await collection.get({
-        limit: allExcluded.length + 1,
-      });
-      
-      if (results.ids) {
-        for (const id of results.ids) {
-          if (!allExcluded.includes(id)) {
-            console.log(`[ChromaDB] Match found: ${id} (similarity: N/A - no query profile)`);
-            return { userId: id, similarity: 0 };
-          }
-        }
-      }
       return null;
     }
     
     const queryText = currentUserResult.documents[0];
     
-    // Query with the current user's profile as the search text
+    // Build where filter to exclude IDs using $nin (not in)
+    const whereFilter = allExcluded.length > 0 ? {
+      userId: { "$nin": allExcluded }
+    } : undefined;
+    
+    // Query with the current user's profile as the search text and where filter
     const results = await collection.query({
       queryTexts: [queryText],
-      nResults: Math.min(count, allExcluded.length + 5), // Get enough to find one not excluded
+      nResults: 1, // Only get the top match
       include: ['distances'],
+      where: whereFilter,
     });
     
-    // Find first result not in excluded list
-    if (results.ids && results.ids[0] && results.distances && results.distances[0]) {
-      for (let i = 0; i < results.ids[0].length; i++) {
-        const id = results.ids[0][i];
-        const distance = results.distances[0][i];
-        
-        if (distance === null || allExcluded.includes(id)) continue;
-        
-        const similarity = distanceToSimilarity(distance);
-        console.log(`[ChromaDB] Match found: ${id} (similarity: ${similarity}%)`);
-        return { userId: id, similarity };
-      }
+    // Get first result
+    if (results.ids && results.ids[0] && results.ids[0][0] && results.distances && results.distances[0] && results.distances[0][0] !== null) {
+      const id = results.ids[0][0];
+      const distance = results.distances[0][0];
+      
+      const similarity = distanceToSimilarity(distance);
+      console.log(`[ChromaDB] Match found: ${id} (similarity: ${similarity}%)`);
+      return { userId: id, similarity };
     }
     
     console.log('[ChromaDB] No matching profiles found');

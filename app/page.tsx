@@ -93,6 +93,7 @@ export default function HomePage({ email }: HomePageProps) {
   const [profileQueue, setProfileQueue] = useState<UserProfile[]>([]);
   const [showMap, setShowMap] = useState(false);
   const [initialBatchLoaded, setInitialBatchLoaded] = useState(false);
+  const [isPreloading, setIsPreloading] = useState(false);
 
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
@@ -100,16 +101,42 @@ export default function HomePage({ email }: HomePageProps) {
   const fetchProfileBatch = async (
     userId: string,
     excludeIds: string[],
-    batchSize = 10
+    batchSize = 1 // Always fetch 3 profiles at a time
   ): Promise<UserProfile[]> => {
     const newProfiles: UserProfile[] = [];
     const currentUserProfile = await getProfile(userId);
+    
+    if (!currentUserProfile) {
+      console.warn("[Fetch] Current user profile not found. Cannot fetch profiles.");
+      return [];
+    }
+
+    // Build comprehensive exclude list: self + already seen + liked + passed
+    const comprehensiveExcludeIds = [
+      userId,
+      ...excludeIds,
+      ...(currentUserProfile.likedUsers || []),
+      ...(currentUserProfile.passedUsers || [])
+    ];
+
+    // Remove duplicates
+    const uniqueExcludeIds = Array.from(new Set(comprehensiveExcludeIds));
+    
+    console.log(`[Fetch] Fetching ${batchSize} profiles, excluding ${uniqueExcludeIds.length} IDs`);
+    
     let attempts = 0;
-    const maxAttempts = batchSize * 5; // Prevent infinite loops
+    const maxAttempts = batchSize * 10; // Increased for safety
 
     while (newProfiles.length < batchSize && attempts < maxAttempts) {
       attempts++;
-      const result = await queryMatchingProfile(userId, excludeIds);
+      
+      // Pass current exclude list + all fetched IDs in this batch
+      const currentExcludeList = [
+        ...uniqueExcludeIds,
+        ...newProfiles.map(p => p.userId)
+      ];
+      
+      const result = await queryMatchingProfile(userId, currentExcludeList);
 
       if (!result?.userId) {
         console.log("[Fetch] No more profiles from ChromaDB");
@@ -118,37 +145,15 @@ export default function HomePage({ email }: HomePageProps) {
 
       const matchedId = result.userId;
 
-      // Skip yourself
-      if (matchedId === userId) {
-        console.log("[Fetch] Skipping self:", matchedId);
-        excludeIds.push(matchedId);
-        continue;
-      }
-
-      // Skip already liked or passed
-      if (
-        currentUserProfile?.likedUsers?.includes(matchedId) ||
-        currentUserProfile?.passedUsers?.includes(matchedId)
-      ) {
-        console.log("[Fetch] Skipping already interacted:", matchedId, {
-          liked: currentUserProfile?.likedUsers?.includes(matchedId),
-          passed: currentUserProfile?.passedUsers?.includes(matchedId)
-        });
-        excludeIds.push(matchedId);
-        continue;
-      }
-
-      // Load profile details
+      // Load profile details from Firebase
       const prof = await getProfile(matchedId);
       if (!prof) {
         console.log("[Fetch] Profile not found in Firebase:", matchedId);
-        excludeIds.push(matchedId);
         continue;
       }
 
       console.log("[Fetch] Added profile to batch:", matchedId, `(${newProfiles.length + 1}/${batchSize})`);
       newProfiles.push(prof);
-      excludeIds.push(matchedId);
     }
 
     console.log(`[Fetch] Batch complete: ${newProfiles.length} profiles fetched in ${attempts} attempts`);
@@ -159,16 +164,53 @@ export default function HomePage({ email }: HomePageProps) {
   const loadNextProfile = async () => {    
     // Nếu còn trong queue → lấy ra
     if (profileQueue.length > 0) {
+      console.log(`[Load] Using queued profile (${profileQueue.length} remaining)`);
       const next = profileQueue[0];
       setProfileQueue(prev => prev.slice(1));
       setCurrentProfile(next);
+      
+      // Preload more profiles when queue drops below 2 (and not already preloading)
+      if (profileQueue.length - 1 < 2 && currentUserId && !isPreloading) {
+        setIsPreloading(true);
+        fetchProfileBatch(currentUserId, seenUserIds, 1).then(batch => {
+          if (batch.length > 0) {
+            console.log(`[Load] Preloaded ${batch.length} profiles`);
+            setProfileQueue(prev => [...prev, ...batch]);
+            setSeenUserIds(prev => [...prev, ...batch.map(p => p.userId)]);
+          } else {
+            console.log("[Load] No more profiles to preload");
+          }
+          setIsPreloading(false);
+        }).catch(error => {
+          console.error("[Load] Error preloading profiles:", error);
+          setIsPreloading(false);
+        });
+      }
       return;
     }
 
-    // Không fetch lại
-    console.log("[Load] No more queued profiles");
-    setNoMoreProfiles(true);
-    setCurrentProfile(null);
+    // Queue empty, fetch new batch of 3
+    console.log("[Load] Queue empty, fetching new batch of 3 profiles...");
+    
+    if (!currentUserId) {
+      console.log("[Load] No currentUserId");
+      setNoMoreProfiles(true);
+      return;
+    }
+
+    const batch = await fetchProfileBatch(currentUserId, seenUserIds, 1);
+
+    if (batch.length === 0) {
+      console.log("[Load] No more profiles available");
+      setNoMoreProfiles(true);
+      setCurrentProfile(null);
+      return;
+    }
+
+    // Load first profile, queue the rest
+    setCurrentProfile(batch[0]);
+    setProfileQueue(batch.slice(1));
+    setSeenUserIds(prev => [...prev, ...batch.map(p => p.userId)]);
   };
 
   const Tag = ({
@@ -232,9 +274,9 @@ export default function HomePage({ email }: HomePageProps) {
     if (!currentUserId || initialBatchLoaded) return;
 
     const init = async () => {
-      console.log("[Init] Fetching 10 profiles once...");
+      console.log("[Init] Fetching 1 profile once...");
 
-      const batch = await fetchProfileBatch(currentUserId, [], 10);
+      const batch = await fetchProfileBatch(currentUserId, [], 3);
 
       if (batch.length === 0) {
         setNoMoreProfiles(true);
@@ -244,7 +286,7 @@ export default function HomePage({ email }: HomePageProps) {
 
       // load profile đầu tiên
       setCurrentProfile(batch[0]);
-      // bỏ profile đầu tiên → queue còn 9 profile
+      // bỏ profile đầu tiên → queue còn 2 profiles
       setProfileQueue(batch.slice(1));
       setSeenUserIds(batch.map(p => p.userId));
 
