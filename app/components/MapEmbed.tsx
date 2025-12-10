@@ -6,7 +6,7 @@ export default function MapEmbed({ location }: { location: string }) {
   )}&t=&z=14&ie=UTF8&iwloc=B&output=embed`;
 
   return (
-    <div className="relative w-[1200px] h-[800px]">
+    <div className="relative w-[900px] h-[700px]">
       <iframe src={url} className="w-full h-full" />
     </div>
   );

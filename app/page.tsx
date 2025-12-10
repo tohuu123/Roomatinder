@@ -92,6 +92,7 @@ export default function HomePage({ email }: HomePageProps) {
   const [fetchingProfile, setFetchingProfile] = useState(false);
   const [profileQueue, setProfileQueue] = useState<UserProfile[]>([]);
   const [showMap, setShowMap] = useState(false);
+  const [initialBatchLoaded, setInitialBatchLoaded] = useState(false);
 
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
@@ -156,45 +157,18 @@ export default function HomePage({ email }: HomePageProps) {
 
   // Function to load the next matching profile
   const loadNextProfile = async () => {    
+    // Nếu còn trong queue → lấy ra
     if (profileQueue.length > 0) {
-      console.log(`[Load] Using queued profile (${profileQueue.length} remaining)`);
       const next = profileQueue[0];
       setProfileQueue(prev => prev.slice(1));
       setCurrentProfile(next);
       return;
     }
 
-    console.log("[Load] Queue empty, fetching new batch...");
-    setLoadingNext(true);
-
-    try {
-      if (!currentUserId) {
-        console.log("[Load] No currentUserId, skipping fetch");
-        return;
-      }
-
-      const batch = await fetchProfileBatch(currentUserId, [...seenUserIds], 10);
-
-      if (batch.length === 0) {
-        console.log("[Load] No more profiles available");
-        setNoMoreProfiles(true);
-        setCurrentProfile(null);
-        return;
-      }
-
-      console.log(`[Load] Loaded batch of ${batch.length} profiles`);
-      // Put all in queue and load first
-      setProfileQueue(batch.slice(1));
-      setCurrentProfile(batch[0]);
-
-      // Track what we have seen
-      setSeenUserIds(prev => [...prev, ...batch.map(p => p.userId)]);
-    } catch (error) {
-      console.error("[Load] Error loading profiles:", error);
-      setNoMoreProfiles(true);
-    } finally {
-      setLoadingNext(false);
-    }
+    // Không fetch lại
+    console.log("[Load] No more queued profiles");
+    setNoMoreProfiles(true);
+    setCurrentProfile(null);
   };
 
   const Tag = ({
@@ -255,43 +229,32 @@ export default function HomePage({ email }: HomePageProps) {
 
   // Load initial profile when userId is available
   useEffect(() => {
-    if (!currentUserId || currentProfile !== null) return;
-
-    console.log("[Init] 🚀 Starting profile load for:", currentUserId);
+    if (!currentUserId || initialBatchLoaded) return;
 
     const init = async () => {
-      // Step 1: Fetch ONLY 1 profile to show ASAP
-      console.log("[Init] ⚡ Fetching first profile (high priority)...");
-      const firstBatch = await fetchProfileBatch(currentUserId, [], 1);
-      
-      if (firstBatch.length === 0) {
-        console.log("[Init] ❌ No profiles found");
+      console.log("[Init] Fetching 10 profiles once...");
+
+      const batch = await fetchProfileBatch(currentUserId, [], 10);
+
+      if (batch.length === 0) {
         setNoMoreProfiles(true);
         setLoading(false);
         return;
       }
 
-      // Step 2: Show first profile IMMEDIATELY (end loading)
-      console.log("[Init] ✓ Displaying first profile:", firstBatch[0].userId);
-      setCurrentProfile(firstBatch[0]);
-      setSeenUserIds([firstBatch[0].userId]);
-      setLoading(false); // User sees content NOW
+      // load profile đầu tiên
+      setCurrentProfile(batch[0]);
+      // bỏ profile đầu tiên → queue còn 9 profile
+      setProfileQueue(batch.slice(1));
+      setSeenUserIds(batch.map(p => p.userId));
 
-      // Step 3: Background preload (non-blocking, user won't notice)
-      console.log("[Init] 🔄 Background: preloading 3 profiles...");
-      fetchProfileBatch(currentUserId, [firstBatch[0].userId], 3)
-        .then(moreBatch => {
-          if (moreBatch.length > 0) {
-            console.log(`[Init] ✓ Preloaded ${moreBatch.length} profiles silently`);
-            setProfileQueue(moreBatch);
-            setSeenUserIds(prev => [...prev, ...moreBatch.map(p => p.userId)]);
-          }
-        })
-        .catch(err => console.error("[Init] ❌ Preload error:", err));
+      setInitialBatchLoaded(true);
+      setLoading(false);
     };
 
     init();
   }, [currentUserId]);
+
 
   const handleSwipe = async (direction: 'left' | 'right') => {
     if (isAnimating || !currentProfile || !currentUserId) return;
@@ -510,7 +473,7 @@ export default function HomePage({ email }: HomePageProps) {
                     )}
 
                     {/* Interest Match (Profile shares more than 3 interests) */}
-                    {currentProfile && currentUserProfile && getSharedInterests(currentProfile, currentUserProfile).length > 3 && (
+                    {currentProfile && currentUserProfile && getSharedInterests(currentProfile, currentUserProfile).length >= 3 && (
                       <div>
                         <Tag
                           label="Interest Match"
@@ -1241,7 +1204,7 @@ export default function HomePage({ email }: HomePageProps) {
           onClick={() => setShowMap(false)}   // Bấm bên ngoài → tắt
         >
           <div
-            className="bg-white p-4 rounded-xl shadow-xl max-w-7xl w-full relative"
+            className="bg-white p-4 rounded-xl shadow-xl max-w-5xl w-full relative"
             onClick={(e) => e.stopPropagation()}   // Bấm vào box → không tắt
           >
             {/* Close button */}
