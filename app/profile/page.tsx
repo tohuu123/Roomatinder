@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { auth } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getUserAvatar } from '@/lib/avatarHelper';
+import VerificationSection from './components/VerificationSection';
 import {
   UserProfile,
   SLEEP_SCHEDULE_OPTIONS,
@@ -183,8 +184,46 @@ export default function ProfilePage() {
     }
   };
 
-  const handleNext = () => {
+  const saveProgress = async () => {
+    if (!user) return false;
+
+    try {
+      const profileData = {
+        ...profile,
+        interests: selectedInterests,
+        displayName: profile.displayName || user.displayName,
+        photoURL: profile.photoURL || user.photoURL,
+      };
+
+      const existingProfile = await getProfile(user.uid);
+      if (existingProfile) {
+        await updateProfile(user.uid, profileData);
+      } else {
+        await createProfile(user.uid, user.email || '', profileData);
+      }
+      return true;
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      return false;
+    }
+  };
+
+  const handleNext = async () => {
     if (validateStep(currentStep)) {
+      // Auto-save before moving to step 4 (verification)
+      if (currentStep === 3) {
+        setSaving(true);
+        const saved = await saveProgress();
+        setSaving(false);
+        
+        if (!saved) {
+          alert('Failed to save profile. Please try again.');
+          return;
+        }
+        
+        console.log('Profile saved before verification step');
+      }
+      
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -248,7 +287,16 @@ export default function ProfilePage() {
   const completion = calculateProfileCompletion(profile);
 
   const getTotalSteps = () => {
-    return 3; // Basic Info, Lifestyle, Accommodation
+    return 4; // Basic Info, Lifestyle, Accommodation, Verification
+  };
+
+  const handleVerificationComplete = async () => {
+    if (!user) return;
+    // Reload profile to get updated verification status
+    const updatedProfile = await getProfile(user.uid);
+    if (updatedProfile) {
+      setProfile(updatedProfile);
+    }
   };
 
   return (
@@ -270,6 +318,7 @@ export default function ProfilePage() {
               <li className={`step ${currentStep >= 1 ? 'step-primary' : ''}`}>Basic Info</li>
               <li className={`step ${currentStep >= 2 ? 'step-primary' : ''}`}>Lifestyle & Habit</li>
               <li className={`step ${currentStep >= 3 ? 'step-primary' : ''}`}>Accommodation</li>
+              <li className={`step ${currentStep >= 4 ? 'step-primary' : ''}`}>Verification</li>
             </ul>
           </div>
           
@@ -1011,16 +1060,8 @@ export default function ProfilePage() {
                 type="text"
                 className="input input-bordered text-gray-900"
                 placeholder="Enter accommodation address  Ex: 123 Nguyen Hue, District 1, HCMC"
-                onChange={(e) => {
-                  const value = e.target.value;
-
-                  const parsed =
-                    value.includes(",")
-                      ? value.split(",").map((v) => v.trim())
-                      : value;
-
-                  handleInputChange("districts", parsed);
-                }}
+                value={profile.districts ? profile.districts.join(', ') : ''}
+                onChange={(e) => handleInputChange('districts', e.target.value.split(',').map(s => s.trim()))}
                 required
               />
             </div>
@@ -1291,6 +1332,49 @@ export default function ProfilePage() {
           </div>
           )}
 
+          {/* Step 4: Verification */}
+          {currentStep === 4 && user && (
+            <div className="bg-base-100 rounded-lg shadow-lg p-6">
+              <h2 className="text-2xl font-bold mb-6 text-gray-900">
+                Identity Verification
+                <span className="badge badge-ghost ml-2">Optional</span>
+              </h2>
+              
+              {/* Success message when profile is saved */}
+              <div className="alert alert-success mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>✅ Your profile has been saved! You can skip verification or complete it now.</span>
+              </div>
+
+              <p className="text-gray-700 mb-6">
+                Verify your identity to increase trust and unlock more features. This step is <strong>completely optional</strong> - you can skip it and verify later from your profile page.
+              </p>
+              
+              <VerificationSection
+                userId={user.uid}
+                verificationStatus={profile.verification}
+                onVerificationComplete={handleVerificationComplete}
+              />
+
+              <div className="alert alert-info mt-6">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h3 className="font-bold">Why verify?</h3>
+                  <ul className="list-disc list-inside text-sm">
+                    <li>Build trust with potential roommates</li>
+                    <li>Get verified badge on your profile</li>
+                    <li>Increase your chances of finding matches</li>
+                    <li>Access premium features</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
         {/* Navigation Buttons */}
         <div className="flex gap-4 mb-8">
           {currentStep > 1 && (
@@ -1302,7 +1386,7 @@ export default function ProfilePage() {
             </button>
           )}
           
-          {currentStep < getTotalSteps() && (
+          {currentStep < getTotalSteps() && currentStep !== 4 && (
             <button
               className="btn btn-primary flex-1"
               onClick={handleNext}
@@ -1311,35 +1395,54 @@ export default function ProfilePage() {
             </button>
           )}
           
-          {currentStep === getTotalSteps() && (
-            <button
-              className="btn btn-primary flex-1"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <span className="loading loading-spinner"></span>
-                  Saving...
-                </>
-              ) : (
-                'Save & View Profile'
-              )}
-            </button>
+          {/* Step 4: Show both Skip and Save buttons */}
+          {currentStep === 4 && (
+            <>
+              <button
+                className="btn btn-ghost flex-1"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <span className="loading loading-spinner"></span>
+                    Saving...
+                  </>
+                ) : (
+                  '⏭️ Skip Verification'
+                )}
+              </button>
+              <button
+                className="btn btn-primary flex-1"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <span className="loading loading-spinner"></span>
+                    Saving...
+                  </>
+                ) : (
+                  '✅ Save & View Profile'
+                )}
+              </button>
+            </>
           )}
 
-          <button
-            className="btn btn-outline"
-            onClick={() => {
-              if (profile.slug) {
-                router.push(`/profile/${profile.slug}`);
-              } else {
-                router.push('/');
-              }
-            }}
-          >
-            Cancel
-          </button>
+          {currentStep !== 4 && (
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                if (profile.slug) {
+                  router.push(`/profile/${profile.slug}`);
+                } else {
+                  router.push('/');
+                }
+              }}
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </div>
     </div>
