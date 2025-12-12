@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { getProfile, likeUser, passUser } from "@/lib/profileService";
 import { queryMatchingProfile } from "@/lib/chromaService";
-import { UserProfile } from "@/types/profile";
+import { UserProfile, HCMC_DISTRICTS } from "@/types/profile";
 import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getUserAvatar } from "@/lib/avatarHelper";
@@ -94,6 +94,30 @@ export default function HomePage({ email }: HomePageProps) {
   const [showMap, setShowMap] = useState(false);
   const [initialBatchLoaded, setInitialBatchLoaded] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [filterPreferences, setFilterPreferences] = useState({
+    showHaveRoom: true,
+    showLooking: true,
+    showSmoking: true,
+    showNonSmoking: true,
+    showEarlyBird: true,
+    showNightOwl: true,
+    showFlexible: true,
+    showQuiet: true,
+    showModerate: true,
+    showLoud: true,
+    showNoGuests: true,
+    showOccasionalGuests: true,
+    showFrequentGuests: true,
+    showVeryClean: true,
+    showClean: true,
+    showModerateClean: true,
+    showRelaxed: true,
+    selectedDistricts: [] as string[],
+    minFee: null as number | null,
+    maxFee: null as number | null,
+  });
+  const [tempFilters, setTempFilters] = useState(filterPreferences);
 
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
@@ -126,14 +150,16 @@ export default function HomePage({ email }: HomePageProps) {
     
     let attempts = 0;
     const maxAttempts = batchSize * 10; // Increased for safety
+    const queriedIds = new Set<string>(); // Track all IDs we've queried, even if filtered out
 
     while (newProfiles.length < batchSize && attempts < maxAttempts) {
       attempts++;
       
-      // Pass current exclude list + all fetched IDs in this batch
+      // Pass current exclude list + all fetched IDs in this batch + all queried IDs
       const currentExcludeList = [
         ...uniqueExcludeIds,
-        ...newProfiles.map(p => p.userId)
+        ...newProfiles.map(p => p.userId),
+        ...Array.from(queriedIds)
       ];
       
       const result = await queryMatchingProfile(userId, currentExcludeList);
@@ -144,11 +170,32 @@ export default function HomePage({ email }: HomePageProps) {
       }
 
       const matchedId = result.userId;
+      
+      // Add to queried IDs immediately to prevent re-querying
+      queriedIds.add(matchedId);
+      
+      // Safety check: Verify ID is not in exclude list (ChromaDB filter should have handled this)
+      if (currentExcludeList.includes(matchedId)) {
+        console.error(`[Fetch] ERROR: ChromaDB returned excluded ID ${matchedId}. Skipping.`);
+        continue;
+      }
 
       // Load profile details from Firebase
       const prof = await getProfile(matchedId);
       if (!prof) {
         console.log("[Fetch] Profile not found in Firebase:", matchedId);
+        continue;
+      }
+
+      // Check if this profile is already in the batch (extra safety)
+      if (newProfiles.some(p => p.userId === prof.userId)) {
+        console.log("[Fetch] Duplicate profile detected, skipping:", matchedId);
+        continue;
+      }
+
+      // Check if profile passes filter preferences
+      if (!passesFilter(prof)) {
+        console.log("[Fetch] Profile filtered out:", matchedId);
         continue;
       }
 
@@ -158,6 +205,119 @@ export default function HomePage({ email }: HomePageProps) {
 
     console.log(`[Fetch] Batch complete: ${newProfiles.length} profiles fetched in ${attempts} attempts`);
     return newProfiles;
+  };
+
+  // Function to check if profile passes filter preferences
+  const passesFilter = (profile: UserProfile): boolean => {
+    // Accommodation status filters
+    if (!filterPreferences.showHaveRoom && profile.accommodationStatus === 'have-room') {
+      return false;
+    }
+    if (!filterPreferences.showLooking && profile.accommodationStatus === 'looking') {
+      return false;
+    }
+
+    // Smoking policy filters
+    if (!filterPreferences.showSmoking && profile.smokingPolicy === 'smoking-ok') {
+      return false;
+    }
+    if (!filterPreferences.showNonSmoking && profile.smokingPolicy === 'no-smoking') {
+      return false;
+    }
+
+    // Sleep schedule filters
+    if (!filterPreferences.showEarlyBird && profile.sleepSchedule === 'early-bird') {
+      return false;
+    }
+    if (!filterPreferences.showNightOwl && profile.sleepSchedule === 'night-owl') {
+      return false;
+    }
+    if (!filterPreferences.showFlexible && profile.sleepSchedule === 'flexible') {
+      return false;
+    }
+
+    // Noise level filters
+    if (!filterPreferences.showQuiet && (profile.noiseLevel === 'quiet' || profile.noiseLevel === 'very-quiet')) {
+      return false;
+    }
+    if (!filterPreferences.showModerate && profile.noiseLevel === 'moderate') {
+      return false;
+    }
+    if (!filterPreferences.showLoud && profile.noiseLevel === 'lively') {
+      return false;
+    }
+
+    // Cleanliness level filters
+    if (!filterPreferences.showVeryClean && profile.cleanlinessLevel === 'very-clean') {
+      return false;
+    }
+    if (!filterPreferences.showClean && profile.cleanlinessLevel === 'clean') {
+      return false;
+    }
+    if (!filterPreferences.showModerateClean && profile.cleanlinessLevel === 'moderate') {
+      return false;
+    }
+    if (!filterPreferences.showRelaxed && profile.cleanlinessLevel === 'relaxed') {
+      return false;
+    }
+
+    // District filters (only apply when specific districts are selected AND have-room is shown)
+    if (filterPreferences.showHaveRoom && filterPreferences.selectedDistricts.length > 0 && profile.accommodationStatus === 'have-room') {
+      const hasMatchingDistrict = profile.districts?.some(profileDistrict => 
+        filterPreferences.selectedDistricts.some(filterDistrict => {
+          // Normalize both strings for comparison - more precise matching
+          const normalizedProfile = profileDistrict.toLowerCase().trim();
+          const normalizedFilter = filterDistrict.toLowerCase().trim();
+          
+          // Extract numbers from district names for numeric comparison
+          const profileNum = normalizedProfile.match(/\d+/);
+          const filterNum = normalizedFilter.match(/\d+/);
+          
+          // If both have numbers, compare them exactly
+          if (profileNum && filterNum) {
+            return profileNum[0] === filterNum[0];
+          }
+          
+          // For non-numeric districts (like "Binh Thanh"), use exact match or word-based comparison
+          const profileWords = normalizedProfile.replace(/\s+/g, '');
+          const filterWords = normalizedFilter.replace(/\s+/g, '');
+          return profileWords === filterWords;
+        })
+      );
+      if (!hasMatchingDistrict) {
+        return false;
+      }
+    }
+
+    // Fee range filters (only when have-room filter is active AND fee range is set)
+    if (filterPreferences.showHaveRoom && profile.accommodationStatus === 'have-room') {
+      if (profile.accommodationFee) {
+        if (filterPreferences.minFee !== null && profile.accommodationFee < filterPreferences.minFee) {
+          return false;
+        }
+        if (filterPreferences.maxFee !== null && profile.accommodationFee > filterPreferences.maxFee) {
+          return false;
+        }
+      } else {
+        // If fee filters are set but profile has no fee, exclude it
+        if (filterPreferences.minFee !== null || filterPreferences.maxFee !== null) {
+          return false;
+        }
+      }
+    }
+
+    // Guest policy filters
+    if (!filterPreferences.showNoGuests && (profile.guestPolicy === 'never' || profile.guestPolicy === 'rarely')) {
+      return false;
+    }
+    if (!filterPreferences.showOccasionalGuests && (profile.guestPolicy === 'sometimes')) {
+      return false;
+    }
+    if (!filterPreferences.showFrequentGuests && (profile.guestPolicy === 'often' || profile.guestPolicy === 'very-flexible')) {
+      return false;
+    }
+
+    return true;
   };
 
   // Function to load the next matching profile
@@ -297,6 +457,46 @@ export default function HomePage({ email }: HomePageProps) {
     init();
   }, [currentUserId]);
 
+  // Apply filters function
+  const applyFilters = () => {
+    setFilterPreferences(tempFilters);
+    setShowFilterPanel(false);
+  };
+
+  // Reload profiles when filter preferences change
+  useEffect(() => {
+    if (!currentUserId || !initialBatchLoaded) return;
+
+    // Filter current profile if it doesn't pass the new filters
+    if (currentProfile && !passesFilter(currentProfile)) {
+      console.log("[Filter] Current profile filtered out, loading next...");
+      loadNextProfile();
+    }
+
+    // Filter the queue to remove profiles that don't pass the new filters
+    const filteredQueue = profileQueue.filter(passesFilter);
+    if (filteredQueue.length !== profileQueue.length) {
+      console.log(`[Filter] Removed ${profileQueue.length - filteredQueue.length} profiles from queue`);
+      setProfileQueue(filteredQueue);
+    }
+
+    // If queue is too small after filtering, preload more
+    if (filteredQueue.length < 2 && !isPreloading) {
+      setIsPreloading(true);
+      fetchProfileBatch(currentUserId, seenUserIds, 3).then(batch => {
+        if (batch.length > 0) {
+          console.log(`[Filter] Preloaded ${batch.length} profiles after filter change`);
+          setProfileQueue(prev => [...prev, ...batch]);
+          setSeenUserIds(prev => [...prev, ...batch.map(p => p.userId)]);
+        }
+        setIsPreloading(false);
+      }).catch(error => {
+        console.error("[Filter] Error preloading after filter change:", error);
+        setIsPreloading(false);
+      });
+    }
+  }, [filterPreferences]);
+
 
   const handleSwipe = async (direction: 'left' | 'right') => {
     if (isAnimating || !currentProfile || !currentUserId) return;
@@ -419,27 +619,26 @@ export default function HomePage({ email }: HomePageProps) {
 
   return (
     <GreenHomeBackground>
-      <div className="max-w-md mx-auto p-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => router.push('/people')}
-            className="btn btn-circle btn-ghost relative"
-          >
-            <Icon icon="mdi:home-account" className="text-2xl text-green-500" />
-          </button>
-          <h1 className="text-3xl font-bold text-gray-800">Roomatinder</h1>
-          <div className="w-12"></div>
-        </div>
-
+      <div className="max-w-2xl mx-auto p-4">
         {/* Card Container */}
         {fetchingProfile ? (
-          <div className="flex flex-col items-center justify-center h-[900px]">
+          <div className="flex flex-col items-center justify-center h-[750px]">
             <span className="loading loading-spinner loading-lg"></span>
             <p className="mt-4 text-gray-600 font-semibold">Fetching profile...</p>
           </div>
         ) : (
-          <div className="relative h-[1000px] mb-6">
+          <div className="relative h-[750px] mb-6">
+            {/* Filter Button - positioned on the left */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFilterPanel(!showFilterPanel);
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-10"
+            >
+              <Icon icon="mdi:filter-variant" className="w-6 h-6" />
+            </button>
+
             <div
               ref={cardRef}
               className={`absolute inset-0 bg-white rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 ${
@@ -561,12 +760,6 @@ export default function HomePage({ email }: HomePageProps) {
 
               {/* Profile Info */}
               <div className="p-6 space-y-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">About</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed break-words">
-                    {currentProfile.bio || "No bio available"}
-                  </p>
-                </div>
 
                 {currentProfile.interests && currentProfile.interests.length > 0 && (
                   <div>
@@ -590,7 +783,7 @@ export default function HomePage({ email }: HomePageProps) {
                   </div>
                 </div>
                   
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm">
                   {/* Sleep Schedule */}
                   {currentProfile.sleepSchedule && (
                     <div className="flex items-center">
@@ -781,6 +974,354 @@ export default function HomePage({ email }: HomePageProps) {
         </div>
       </div>
 
+      {/* Filter Sidebar Panel */}
+      {showFilterPanel && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-start z-50"
+          onClick={() => {
+            setShowFilterPanel(false);
+            setTempFilters(filterPreferences); // Reset temp filters on cancel
+          }}
+        >
+          <div 
+            className="bg-white h-full w-96 shadow-2xl overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Filters</h2>
+              <button
+                onClick={() => {
+                  setShowFilterPanel(false);
+                  setTempFilters(filterPreferences); // Reset temp filters
+                }}
+                className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition"
+              >
+                <Icon icon="mdi:close" className="text-xl" />
+              </button>
+            </div>
+
+            {/* Filter Sections */}
+            <div className="space-y-6">
+              {/* Accommodation Status */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:home" className="mr-2 text-green-600" />
+                  Accommodation Status
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Have Room</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showHaveRoom: !prev.showHaveRoom }))}
+                      className={`btn btn-xs ${tempFilters.showHaveRoom ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showHaveRoom ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Looking for Room</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showLooking: !prev.showLooking }))}
+                      className={`btn btn-xs ${tempFilters.showLooking ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showLooking ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Districts - Only show when Have Room is selected */}
+              {tempFilters.showHaveRoom && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:map-marker" className="mr-2 text-blue-600" />
+                    Districts (Only Show)
+                  </h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                    {HCMC_DISTRICTS.map(district => (
+                      <label key={district} className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempFilters.selectedDistricts.includes(district)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setTempFilters(prev => ({ ...prev, selectedDistricts: [...prev.selectedDistricts, district] }));
+                            } else {
+                              setTempFilters(prev => ({ ...prev, selectedDistricts: prev.selectedDistricts.filter(d => d !== district) }));
+                            }
+                          }}
+                          className="checkbox checkbox-primary checkbox-sm mr-2"
+                        />
+                        <span className="text-sm text-gray-600">{district}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Monthly Fee Range - Only show when Have Room is selected */}
+              {tempFilters.showHaveRoom && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:cash" className="mr-2 text-yellow-600" />
+                    Monthly Fee Range (VND)
+                  </h3>
+                  <div className="space-y-3">
+                    <label className="form-control">
+                      <span className="label text-xs text-gray-600">Minimum Fee</span>
+                      <input
+                        type="number"
+                        placeholder="e.g., 2000000"
+                        value={tempFilters.minFee || ''}
+                        onChange={(e) => setTempFilters(prev => ({ ...prev, minFee: e.target.value ? Number(e.target.value) : null }))}
+                        className="input input-bordered input-sm w-full text-gray-700"
+                      />
+                    </label>
+                    <label className="form-control">
+                      <span className="label text-xs text-gray-600">Maximum Fee</span>
+                      <input
+                        type="number"
+                        placeholder="e.g., 5000000"
+                        value={tempFilters.maxFee || ''}
+                        onChange={(e) => setTempFilters(prev => ({ ...prev, maxFee: e.target.value ? Number(e.target.value) : null }))}
+                        className="input input-bordered input-sm w-full text-gray-700"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Cleanliness Level */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:spray-bottle" className="mr-2 text-cyan-600" />
+                  Cleanliness Level
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Very Clean</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showVeryClean: !prev.showVeryClean }))}
+                      className={`btn btn-xs ${tempFilters.showVeryClean ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showVeryClean ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Clean</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showClean: !prev.showClean }))}
+                      className={`btn btn-xs ${tempFilters.showClean ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showClean ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Moderate</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showModerateClean: !prev.showModerateClean }))}
+                      className={`btn btn-xs ${tempFilters.showModerateClean ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showModerateClean ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Relaxed</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showRelaxed: !prev.showRelaxed }))}
+                      className={`btn btn-xs ${tempFilters.showRelaxed ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showRelaxed ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Smoking Policy */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:smoking" className="mr-2 text-red-600" />
+                  Smoking Policy
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Smokers</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showSmoking: !prev.showSmoking }))}
+                      className={`btn btn-xs ${tempFilters.showSmoking ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showSmoking ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Non-Smokers</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showNonSmoking: !prev.showNonSmoking }))}
+                      className={`btn btn-xs ${tempFilters.showNonSmoking ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showNonSmoking ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sleep Schedule */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:sleep" className="mr-2 text-indigo-600" />
+                  Sleep Schedule
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Early Birds</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showEarlyBird: !prev.showEarlyBird }))}
+                      className={`btn btn-xs ${tempFilters.showEarlyBird ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showEarlyBird ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Night Owls</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showNightOwl: !prev.showNightOwl }))}
+                      className={`btn btn-xs ${tempFilters.showNightOwl ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showNightOwl ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Flexible</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showFlexible: !prev.showFlexible }))}
+                      className={`btn btn-xs ${tempFilters.showFlexible ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showFlexible ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Noise Level */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:volume-high" className="mr-2 text-purple-600" />
+                  Noise Level
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Quiet</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showQuiet: !prev.showQuiet }))}
+                      className={`btn btn-xs ${tempFilters.showQuiet ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showQuiet ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Moderate</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showModerate: !prev.showModerate }))}
+                      className={`btn btn-xs ${tempFilters.showModerate ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showModerate ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Loud</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showLoud: !prev.showLoud }))}
+                      className={`btn btn-xs ${tempFilters.showLoud ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showLoud ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Guest Policy */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:account-group" className="mr-2 text-orange-600" />
+                  Guest Policy
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">No Guests</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showNoGuests: !prev.showNoGuests }))}
+                      className={`btn btn-xs ${tempFilters.showNoGuests ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showNoGuests ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Occasional Guests</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showOccasionalGuests: !prev.showOccasionalGuests }))}
+                      className={`btn btn-xs ${tempFilters.showOccasionalGuests ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showOccasionalGuests ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Frequent Guests</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showFrequentGuests: !prev.showFrequentGuests }))}
+                      className={`btn btn-xs ${tempFilters.showFrequentGuests ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showFrequentGuests ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setTempFilters({
+                      showHaveRoom: true,
+                      showLooking: true,
+                      showSmoking: true,
+                      showNonSmoking: true,
+                      showEarlyBird: true,
+                      showNightOwl: true,
+                      showFlexible: true,
+                      showQuiet: true,
+                      showModerate: true,
+                      showLoud: true,
+                      showNoGuests: true,
+                      showOccasionalGuests: true,
+                      showFrequentGuests: true,
+                      showVeryClean: true,
+                      showClean: true,
+                      showModerateClean: true,
+                      showRelaxed: true,
+                      selectedDistricts: [],
+                      minFee: null,
+                      maxFee: null,
+                    });
+                  }}
+                  className="btn btn-outline btn-error flex-1"
+                >
+                  <Icon icon="mdi:filter-off" className="mr-2" />
+                  Clear
+                </button>
+                <button
+                  onClick={applyFilters}
+                  className="btn btn-primary flex-1"
+                >
+                  <Icon icon="mdi:check" className="mr-2" />
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Detail Modal */}
       {showDetailModal && (
         <div 
@@ -788,7 +1329,7 @@ export default function HomePage({ email }: HomePageProps) {
           onClick={closeDetailModal}
         >
           <div 
-            className="bg-white rounded-3xl max-w-2xl w-full max-h-[95vh] overflow-y-auto shadow-2xl"
+            className="bg-white rounded-3xl max-w-2xl mx-auto w-full max-h-[95vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}

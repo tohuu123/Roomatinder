@@ -192,6 +192,8 @@ export async function queryMatchingProfile(
     // All IDs to exclude
     const allExcluded = [currentUserId, ...excludeUserIds];
     
+    console.log(`[ChromaDB] Excluding ${allExcluded.length} user IDs:`, allExcluded.slice(0, 5), '...');
+    
     // First, get the current user's document to use as query
     const currentUserResult = await collection.get({
       ids: [currentUserId],
@@ -210,11 +212,13 @@ export async function queryMatchingProfile(
       userId: { "$nin": allExcluded }
     } : undefined;
     
+    console.log('[ChromaDB] Where filter:', JSON.stringify(whereFilter));
+    
     // Query with the current user's profile as the search text and where filter
     const results = await collection.query({
       queryTexts: [queryText],
       nResults: 1, // Only get the top match
-      include: ['distances'],
+      include: ['distances', 'metadatas'],
       where: whereFilter,
     });
     
@@ -222,6 +226,13 @@ export async function queryMatchingProfile(
     if (results.ids && results.ids[0] && results.ids[0][0] && results.distances && results.distances[0] && results.distances[0][0] !== null) {
       const id = results.ids[0][0];
       const distance = results.distances[0][0];
+      
+      // Extra safety check: ensure the returned ID is not in the exclude list
+      if (allExcluded.includes(id)) {
+        console.error(`[ChromaDB] WARNING: Returned excluded ID ${id}! Filter not working properly.`);
+        console.log('[ChromaDB] Metadata:', results.metadatas?.[0]?.[0]);
+        return null;
+      }
       
       const similarity = distanceToSimilarity(distance);
       console.log(`[ChromaDB] Match found: ${id} (similarity: ${similarity}%)`);
