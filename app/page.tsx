@@ -95,6 +95,7 @@ export default function HomePage({ email }: HomePageProps) {
   const [initialBatchLoaded, setInitialBatchLoaded] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [profileSimilarities, setProfileSimilarities] = useState<Record<string, number>>({});
   const [filterPreferences, setFilterPreferences] = useState({
     showHaveRoom: true,
     showLooking: true,
@@ -126,13 +127,13 @@ export default function HomePage({ email }: HomePageProps) {
     userId: string,
     excludeIds: string[],
     batchSize = 1 // Always fetch 3 profiles at a time
-  ): Promise<UserProfile[]> => {
+  ): Promise<{ profiles: UserProfile[], queriedIds: string[] }> => {
     const newProfiles: UserProfile[] = [];
     const currentUserProfile = await getProfile(userId);
     
     if (!currentUserProfile) {
       console.warn("[Fetch] Current user profile not found. Cannot fetch profiles.");
-      return [];
+      return { profiles: [], queriedIds: [] };
     }
 
     // Build comprehensive exclude list: self + already seen + liked + passed
@@ -156,11 +157,12 @@ export default function HomePage({ email }: HomePageProps) {
       attempts++;
       
       // Pass current exclude list + all fetched IDs in this batch + all queried IDs
-      const currentExcludeList = [
+      // Deduplicate to avoid issues with ChromaDB $nin filter
+      const currentExcludeList = Array.from(new Set([
         ...uniqueExcludeIds,
         ...newProfiles.map(p => p.userId),
         ...Array.from(queriedIds)
-      ];
+      ]));
       
       const result = await queryMatchingProfile(userId, currentExcludeList);
 
@@ -170,6 +172,12 @@ export default function HomePage({ email }: HomePageProps) {
       }
 
       const matchedId = result.userId;
+      
+      // CRITICAL: Skip if this ID was already queried (ChromaDB $nin filter sometimes fails)
+      if (queriedIds.has(matchedId)) {
+        console.warn(`[Fetch] Skipping already queried ID: ${matchedId}`);
+        continue;
+      }
       
       // Add to queried IDs immediately to prevent re-querying
       queriedIds.add(matchedId);
@@ -187,6 +195,9 @@ export default function HomePage({ email }: HomePageProps) {
         continue;
       }
 
+      // Store similarity score for this profile
+      setProfileSimilarities(prev => ({ ...prev, [matchedId]: result.similarity }));
+
       // Check if this profile is already in the batch (extra safety)
       if (newProfiles.some(p => p.userId === prof.userId)) {
         console.log("[Fetch] Duplicate profile detected, skipping:", matchedId);
@@ -195,7 +206,23 @@ export default function HomePage({ email }: HomePageProps) {
 
       // Check if profile passes filter preferences
       if (!passesFilter(prof)) {
-        console.log("[Fetch] Profile filtered out:", matchedId);
+        console.log(`[Fetch] Profile filtered out: ${matchedId}`, {
+          accommodation: prof.accommodationStatus,
+          districts: prof.districts,
+          fee: prof.accommodationFee,
+          cleanliness: prof.cleanlinessLevel,
+          smoking: prof.smokingPolicy,
+          sleep: prof.sleepSchedule,
+          noise: prof.noiseLevel,
+          guests: prof.guestPolicy
+        });
+        console.log(`[Fetch] Current filter:`, {
+          showHaveRoom: filterPreferences.showHaveRoom,
+          showLooking: filterPreferences.showLooking,
+          selectedDistricts: filterPreferences.selectedDistricts,
+          minFee: filterPreferences.minFee,
+          maxFee: filterPreferences.maxFee
+        });
         continue;
       }
 
@@ -204,7 +231,10 @@ export default function HomePage({ email }: HomePageProps) {
     }
 
     console.log(`[Fetch] Batch complete: ${newProfiles.length} profiles fetched in ${attempts} attempts`);
-    return newProfiles;
+    return {
+      profiles: newProfiles,
+      queriedIds: Array.from(queriedIds)
+    };
   };
 
   // Function to check if profile passes filter preferences
@@ -266,8 +296,15 @@ export default function HomePage({ email }: HomePageProps) {
       const hasMatchingDistrict = profile.districts?.some(profileDistrict => 
         filterPreferences.selectedDistricts.some(filterDistrict => {
           // Normalize both strings for comparison - more precise matching
-          const normalizedProfile = profileDistrict.toLowerCase().trim();
-          const normalizedFilter = filterDistrict.toLowerCase().trim();
+          // Support both "District X" and "Quận X" formats
+          const normalizedProfile = profileDistrict.toLowerCase().trim()
+            .replace(/district\s*/gi, '')
+            .replace(/quận\s*/gi, '')
+            .replace(/qu[aậ]n\s*/gi, '');
+          const normalizedFilter = filterDistrict.toLowerCase().trim()
+            .replace(/district\s*/gi, '')
+            .replace(/quận\s*/gi, '')
+            .replace(/qu[aậ]n\s*/gi, '');
           
           // Extract numbers from district names for numeric comparison
           const profileNum = normalizedProfile.match(/\d+/);
@@ -332,13 +369,23 @@ export default function HomePage({ email }: HomePageProps) {
       // Preload more profiles when queue drops below 2 (and not already preloading)
       if (profileQueue.length - 1 < 2 && currentUserId && !isPreloading) {
         setIsPreloading(true);
-        fetchProfileBatch(currentUserId, seenUserIds, 1).then(batch => {
-          if (batch.length > 0) {
-            console.log(`[Load] Preloaded ${batch.length} profiles`);
-            setProfileQueue(prev => [...prev, ...batch]);
-            setSeenUserIds(prev => [...prev, ...batch.map(p => p.userId)]);
+        fetchProfileBatch(currentUserId, seenUserIds, 1).then(result => {
+          if (result.profiles.length > 0) {
+            console.log(`[Load] Preloaded ${result.profiles.length} profiles`);
+            setProfileQueue(prev => [...prev, ...result.profiles]);
+            setSeenUserIds(prev => {
+              const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
+              return Array.from(new Set(combined));
+            });
           } else {
             console.log("[Load] No more profiles to preload");
+            // Still add queried IDs even if no profiles matched filters
+            if (result.queriedIds.length > 0) {
+              setSeenUserIds(prev => {
+                const combined = [...prev, ...result.queriedIds];
+                return Array.from(new Set(combined));
+              });
+            }
           }
           setIsPreloading(false);
         }).catch(error => {
@@ -358,19 +405,29 @@ export default function HomePage({ email }: HomePageProps) {
       return;
     }
 
-    const batch = await fetchProfileBatch(currentUserId, seenUserIds, 1);
+    const result = await fetchProfileBatch(currentUserId, seenUserIds, 1);
 
-    if (batch.length === 0) {
+    if (result.profiles.length === 0) {
       console.log("[Load] No more profiles available");
       setNoMoreProfiles(true);
       setCurrentProfile(null);
+      // Add queried IDs even if no profiles matched
+      if (result.queriedIds.length > 0) {
+        setSeenUserIds(prev => {
+          const combined = [...prev, ...result.queriedIds];
+          return Array.from(new Set(combined));
+        });
+      }
       return;
     }
 
     // Load first profile, queue the rest
-    setCurrentProfile(batch[0]);
-    setProfileQueue(batch.slice(1));
-    setSeenUserIds(prev => [...prev, ...batch.map(p => p.userId)]);
+    setCurrentProfile(result.profiles[0]);
+    setProfileQueue(result.profiles.slice(1));
+    setSeenUserIds(prev => {
+      const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
+      return Array.from(new Set(combined));
+    });
   };
 
   const Tag = ({
@@ -412,6 +469,8 @@ export default function HomePage({ email }: HomePageProps) {
       if (user) {
         console.log("[Auth] Logged in as:", user.uid);
         setCurrentUserId(user.uid);
+        // Reset initial batch loaded to allow fresh fetch
+        setInitialBatchLoaded(false);
 
         const myProfile = await getProfile(user.uid);
 
@@ -434,21 +493,56 @@ export default function HomePage({ email }: HomePageProps) {
     if (!currentUserId || initialBatchLoaded) return;
 
     const init = async () => {
-      console.log("[Init] Fetching 1 profile once...");
+      console.log("[Init] Resetting filters and fetching fresh profiles...");
 
-      const batch = await fetchProfileBatch(currentUserId, [], 3);
+      // Reset all filters to default (show all)
+      const defaultFilters = {
+        showHaveRoom: true,
+        showLooking: true,
+        showSmoking: true,
+        showNonSmoking: true,
+        showEarlyBird: true,
+        showNightOwl: true,
+        showFlexible: true,
+        showQuiet: true,
+        showModerate: true,
+        showLoud: true,
+        showNoGuests: true,
+        showOccasionalGuests: true,
+        showFrequentGuests: true,
+        showVeryClean: true,
+        showClean: true,
+        showModerateClean: true,
+        showRelaxed: true,
+        selectedDistricts: [] as string[],
+        minFee: null as number | null,
+        maxFee: null as number | null,
+      };
+      setFilterPreferences(defaultFilters);
+      setTempFilters(defaultFilters);
 
-      if (batch.length === 0) {
+      // Clear seen profiles to show all profiles again
+      // Note: Liked and passed profiles are still excluded (fetched from Firebase in fetchProfileBatch)
+      setSeenUserIds([]);
+      setProfileQueue([]);
+      setCurrentProfile(null);
+      setNoMoreProfiles(false);
+      setProfileSimilarities({});
+
+      const result = await fetchProfileBatch(currentUserId, [], 3);
+
+      if (result.profiles.length === 0) {
         setNoMoreProfiles(true);
         setLoading(false);
         return;
       }
 
       // load profile đầu tiên
-      setCurrentProfile(batch[0]);
+      setCurrentProfile(result.profiles[0]);
       // bỏ profile đầu tiên → queue còn 2 profiles
-      setProfileQueue(batch.slice(1));
-      setSeenUserIds(batch.map(p => p.userId));
+      setProfileQueue(result.profiles.slice(1));
+      const combined = [...result.profiles.map(p => p.userId), ...result.queriedIds];
+      setSeenUserIds(Array.from(new Set(combined)));
 
       setInitialBatchLoaded(true);
       setLoading(false);
@@ -467,34 +561,48 @@ export default function HomePage({ email }: HomePageProps) {
   useEffect(() => {
     if (!currentUserId || !initialBatchLoaded) return;
 
-    // Filter current profile if it doesn't pass the new filters
-    if (currentProfile && !passesFilter(currentProfile)) {
-      console.log("[Filter] Current profile filtered out, loading next...");
-      loadNextProfile();
-    }
+    console.log("[Filter] Filter preferences changed, clearing all and reloading...");
 
-    // Filter the queue to remove profiles that don't pass the new filters
-    const filteredQueue = profileQueue.filter(passesFilter);
-    if (filteredQueue.length !== profileQueue.length) {
-      console.log(`[Filter] Removed ${profileQueue.length - filteredQueue.length} profiles from queue`);
-      setProfileQueue(filteredQueue);
-    }
+    // Show loading UI and reset no more profiles flag
+    setLoadingNext(true);
+    setNoMoreProfiles(false);
 
-    // If queue is too small after filtering, preload more
-    if (filteredQueue.length < 2 && !isPreloading) {
-      setIsPreloading(true);
-      fetchProfileBatch(currentUserId, seenUserIds, 3).then(batch => {
-        if (batch.length > 0) {
-          console.log(`[Filter] Preloaded ${batch.length} profiles after filter change`);
-          setProfileQueue(prev => [...prev, ...batch]);
-          setSeenUserIds(prev => [...prev, ...batch.map(p => p.userId)]);
+    // Clear everything - profile queue, current profile, and seen IDs
+    setProfileQueue([]);
+    setCurrentProfile(null);
+    setIsPreloading(false);
+    
+    // Reset seenUserIds to allow re-fetching profiles with new filters
+    // Note: Liked and passed profiles will still be excluded by fetchProfileBatch
+    setSeenUserIds([]);
+
+    // Fetch completely new batch based on new filters
+    fetchProfileBatch(currentUserId, [], 3).then(result => {
+      if (result.profiles.length > 0) {
+        console.log(`[Filter] Loaded ${result.profiles.length} new profiles after filter change`);
+        setCurrentProfile(result.profiles[0]);
+        setProfileQueue(result.profiles.slice(1));
+        setSeenUserIds(prev => {
+          const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
+          return Array.from(new Set(combined));
+        });
+        setNoMoreProfiles(false);
+      } else {
+        console.log("[Filter] No profiles match new filters");
+        setNoMoreProfiles(true);
+        if (result.queriedIds.length > 0) {
+          setSeenUserIds(prev => {
+            const combined = [...prev, ...result.queriedIds];
+            return Array.from(new Set(combined));
+          });
         }
-        setIsPreloading(false);
-      }).catch(error => {
-        console.error("[Filter] Error preloading after filter change:", error);
-        setIsPreloading(false);
-      });
-    }
+      }
+      // Hide loading UI
+      setLoadingNext(false);
+    }).catch(error => {
+      console.error("[Filter] Error loading profiles after filter change:", error);
+      setLoadingNext(false);
+    });
   }, [filterPreferences]);
 
 
@@ -528,6 +636,31 @@ export default function HomePage({ email }: HomePageProps) {
 
       // Load next (instant from queue if available)
       await loadNextProfile();
+      
+      // Trigger preload if queue is low after loading next profile
+      if (profileQueue.length <= 2 && currentUserId && !isPreloading) {
+        setIsPreloading(true);
+        fetchProfileBatch(currentUserId, seenUserIds, 1).then(result => {
+          if (result.profiles.length > 0) {
+            console.log(`[Swipe] Preloaded ${result.profiles.length} profiles after swipe`);
+            setProfileQueue(prev => [...prev, ...result.profiles]);
+            setSeenUserIds(prev => {
+              const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
+              return Array.from(new Set(combined));
+            });
+          } else if (result.queriedIds.length > 0) {
+            // Add queried IDs even if no profiles matched
+            setSeenUserIds(prev => {
+              const combined = [...prev, ...result.queriedIds];
+              return Array.from(new Set(combined));
+            });
+          }
+          setIsPreloading(false);
+        }).catch(error => {
+          console.error("[Swipe] Error preloading profiles:", error);
+          setIsPreloading(false);
+        });
+      }
     }, 300);
   };
 
@@ -598,6 +731,18 @@ export default function HomePage({ email }: HomePageProps) {
           <p className="mt-4 text-gray-700 font-semibold">
             Searching for profiles that match you...
           </p>
+        </div>
+      </GreenHomeBackground>
+    );
+  }
+
+  // Show fetching UI when loading next profile (e.g., after filter change)
+  if (loadingNext) {
+    return (
+      <GreenHomeBackground>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <span className="loading loading-spinner loading-lg text-green-600"></span>
+          <p className="mt-4 text-gray-600 font-semibold">Fetching profile...</p>
         </div>
       </GreenHomeBackground>
     );
@@ -722,6 +867,34 @@ export default function HomePage({ email }: HomePageProps) {
                           color="green"
                           tooltip={`You share interests: ${getSharedInterests(currentProfile, currentUserProfile).join(', ')}`}
                         />
+                      </div>
+                    )}
+
+                    {/* Compatibility Score from ChromaDB */}
+                    {currentProfile && profileSimilarities[currentProfile.userId] !== undefined && (
+                      <div>
+                        {profileSimilarities[currentProfile.userId] >= 90 ? (
+                          <Tag
+                            label="High Compatibility"
+                            icon="mdi:star"
+                            color="green"
+                            tooltip={`Compatibility score: ${profileSimilarities[currentProfile.userId].toFixed(1)}%`}
+                          />
+                        ) : profileSimilarities[currentProfile.userId] >= 70 ? (
+                          <Tag
+                            label="Medium Compatibility"
+                            icon="mdi:star-half-full"
+                            color="yellow"
+                            tooltip={`Compatibility score: ${profileSimilarities[currentProfile.userId].toFixed(1)}%`}
+                          />
+                        ) : (
+                          <Tag
+                            label="Low Compatibility"
+                            icon="mdi:star-outline"
+                            color="gray"
+                            tooltip={`Compatibility score: ${profileSimilarities[currentProfile.userId].toFixed(1)}%`}
+                          />
+                        )}
                       </div>
                     )}
                   </div>
@@ -1013,7 +1186,17 @@ export default function HomePage({ email }: HomePageProps) {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Have Room</span>
                     <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showHaveRoom: !prev.showHaveRoom }))}
+                      onClick={() => {
+                        const newShowHaveRoom = !tempFilters.showHaveRoom;
+                        setTempFilters(prev => ({ 
+                          ...prev, 
+                          showHaveRoom: newShowHaveRoom,
+                          // Clear district and fee filters when disabling have room
+                          selectedDistricts: newShowHaveRoom ? prev.selectedDistricts : [],
+                          minFee: newShowHaveRoom ? prev.minFee : null,
+                          maxFee: newShowHaveRoom ? prev.maxFee : null,
+                        }));
+                      }}
                       className={`btn btn-xs ${tempFilters.showHaveRoom ? 'btn-success' : 'btn-error'}`}
                     >
                       {tempFilters.showHaveRoom ? '✓' : '×'}
