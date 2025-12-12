@@ -95,6 +95,7 @@ export default function HomePage({ email }: HomePageProps) {
   const [initialBatchLoaded, setInitialBatchLoaded] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showMatchingInfo, setShowMatchingInfo] = useState(false);
   const [profileSimilarities, setProfileSimilarities] = useState<Record<string, number>>({});
   const [filterPreferences, setFilterPreferences] = useState({
     showHaveRoom: true,
@@ -239,6 +240,19 @@ export default function HomePage({ email }: HomePageProps) {
 
   // Function to check if profile passes filter preferences
   const passesFilter = (profile: UserProfile): boolean => {
+    // Hard filter: Only allow same gender matches (male-male and female-female)
+    if (currentUserProfile?.gender && profile.gender) {
+      if (currentUserProfile.gender !== profile.gender) {
+        return false;
+      }
+    }
+
+    // Hard filter: Exclude have-room matching with have-room
+    // Only allow: have-room ↔ looking OR looking ↔ have-room OR looking ↔ looking
+    if (currentUserProfile?.accommodationStatus === 'have-room' && profile.accommodationStatus === 'have-room') {
+      return false;
+    }
+
     // Accommodation status filters
     if (!filterPreferences.showHaveRoom && profile.accommodationStatus === 'have-room') {
       return false;
@@ -473,6 +487,7 @@ export default function HomePage({ email }: HomePageProps) {
         setInitialBatchLoaded(false);
 
         const myProfile = await getProfile(user.uid);
+        setCurrentUserProfile(myProfile);
 
         if (!myProfile) {
           console.warn("[Auth] User has no profile in Firebase. Please complete registration.");
@@ -782,6 +797,17 @@ export default function HomePage({ email }: HomePageProps) {
               className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-10"
             >
               <Icon icon="mdi:filter-variant" className="w-6 h-6" />
+            </button>
+
+            {/* Matching Info Button - positioned on the right */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMatchingInfo(!showMatchingInfo);
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-10"
+            >
+              <Icon icon="mdi:information" className="w-6 h-6" />
             </button>
 
             <div
@@ -1501,6 +1527,300 @@ export default function HomePage({ email }: HomePageProps) {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Matching Info Panel */}
+      {showMatchingInfo && currentProfile && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-end z-50"
+          onClick={() => setShowMatchingInfo(false)}
+        >
+          <div 
+            className="bg-white h-full w-96 shadow-2xl overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Matching Info</h2>
+              <button
+                onClick={() => setShowMatchingInfo(false)}
+                className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition"
+              >
+                <Icon icon="mdi:close" className="text-xl" />
+              </button>
+            </div>
+
+            {/* Compatibility Score */}
+            {profileSimilarities[currentProfile.userId] !== undefined && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2 flex items-center">
+                  <Icon icon="mdi:star" className="mr-2 text-yellow-500" />
+                  Compatibility Score
+                </h3>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-green-600 mb-1">
+                    {profileSimilarities[currentProfile.userId].toFixed(1)}%
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {profileSimilarities[currentProfile.userId] >= 90 ? 'High Match!' :
+                     profileSimilarities[currentProfile.userId] >= 70 ? 'Good Match' :
+                     'Potential Match'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Shared Interests */}
+            {currentUserProfile && getSharedInterests(currentProfile, currentUserProfile).length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:heart-multiple" className="mr-2 text-red-500" />
+                  Shared Interests ({getSharedInterests(currentProfile, currentUserProfile).length})
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {getSharedInterests(currentProfile, currentUserProfile).map((interest, index) => (
+                    <span
+                      key={index}
+                      className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium"
+                    >
+                      {interest}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lifestyle Compatibility */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                <Icon icon="mdi:account-check" className="mr-2 text-blue-500" />
+                Lifestyle Comparison
+              </h3>
+              <div className="space-y-3">
+                {/* Sleep Schedule */}
+                {currentProfile.sleepSchedule && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <Icon icon="mdi:sleep" className="mr-2 text-purple-500" />
+                      <span className="text-sm font-semibold text-gray-700">Sleep Schedule</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">You</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          !currentUserProfile?.sleepSchedule ? 'text-gray-400 bg-gray-200' :
+                          currentUserProfile.sleepSchedule === currentProfile.sleepSchedule ? 'text-green-700 bg-green-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {currentUserProfile?.sleepSchedule ? formatLabel(currentUserProfile.sleepSchedule) : 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">Them</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          currentUserProfile?.sleepSchedule === currentProfile.sleepSchedule ? 'text-green-700 bg-green-100' :
+                          !currentUserProfile?.sleepSchedule ? 'text-blue-700 bg-blue-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {formatLabel(currentProfile.sleepSchedule)}
+                        </span>
+                      </div>
+                    </div>
+                    {currentUserProfile?.sleepSchedule === currentProfile.sleepSchedule && (
+                      <div className="mt-2 flex items-center text-green-600 text-xs">
+                        <Icon icon="mdi:check-circle" className="mr-1" />
+                        <span>Perfect Match!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Cleanliness */}
+                {currentProfile.cleanlinessLevel && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <Icon icon="mdi:broom" className="mr-2 text-blue-500" />
+                      <span className="text-sm font-semibold text-gray-700">Cleanliness</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">You</span>
+                        <span className="font-medium text-gray-700">
+                          {currentUserProfile?.cleanlinessLevel ? formatLabel(currentUserProfile.cleanlinessLevel) : 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">Them</span>
+                        <span className="font-medium text-gray-700">{formatLabel(currentProfile.cleanlinessLevel)}</span>
+                      </div>
+                    </div>
+                    {currentUserProfile?.cleanlinessLevel === currentProfile.cleanlinessLevel && (
+                      <div className="mt-2 flex items-center text-green-600 text-xs">
+                        <Icon icon="mdi:check-circle" className="mr-1" />
+                        <span>Perfect Match!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Smoking Policy */}
+                {currentProfile.smokingPolicy && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <Icon icon="mdi:smoking-off" className="mr-2 text-red-500" />
+                      <span className="text-sm font-semibold text-gray-700">Smoking</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">You</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          !currentUserProfile?.smokingPolicy ? 'text-gray-400 bg-gray-200' :
+                          currentUserProfile.smokingPolicy === currentProfile.smokingPolicy ? 'text-green-700 bg-green-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {currentUserProfile?.smokingPolicy ? formatLabel(currentUserProfile.smokingPolicy) : 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">Them</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          currentUserProfile?.smokingPolicy === currentProfile.smokingPolicy ? 'text-green-700 bg-green-100' :
+                          !currentUserProfile?.smokingPolicy ? 'text-blue-700 bg-blue-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {formatLabel(currentProfile.smokingPolicy)}
+                        </span>
+                      </div>
+                    </div>
+                    {currentUserProfile?.smokingPolicy === currentProfile.smokingPolicy && (
+                      <div className="mt-2 flex items-center text-green-600 text-xs">
+                        <Icon icon="mdi:check-circle" className="mr-1" />
+                        <span>Perfect Match!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Noise Level */}
+                {currentProfile.noiseLevel && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <Icon icon="mdi:volume-high" className="mr-2 text-yellow-500" />
+                      <span className="text-sm font-semibold text-gray-700">Noise Level</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">You</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          !currentUserProfile?.noiseLevel ? 'text-gray-400 bg-gray-200' :
+                          currentUserProfile.noiseLevel === currentProfile.noiseLevel ? 'text-green-700 bg-green-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {currentUserProfile?.noiseLevel ? formatLabel(currentUserProfile.noiseLevel) : 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">Them</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          currentUserProfile?.noiseLevel === currentProfile.noiseLevel ? 'text-green-700 bg-green-100' :
+                          !currentUserProfile?.noiseLevel ? 'text-blue-700 bg-blue-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {formatLabel(currentProfile.noiseLevel)}
+                        </span>
+                      </div>
+                    </div>
+                    {currentUserProfile?.noiseLevel === currentProfile.noiseLevel && (
+                      <div className="mt-2 flex items-center text-green-600 text-xs">
+                        <Icon icon="mdi:check-circle" className="mr-1" />
+                        <span>Perfect Match!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Guest Policy */}
+                {currentProfile.guestPolicy && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <Icon icon="mdi:account-multiple" className="mr-2 text-green-500" />
+                      <span className="text-sm font-semibold text-gray-700">Guest Policy</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">You</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          !currentUserProfile?.guestPolicy ? 'text-gray-400 bg-gray-200' :
+                          currentUserProfile.guestPolicy === currentProfile.guestPolicy ? 'text-green-700 bg-green-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {currentUserProfile?.guestPolicy ? formatLabel(currentUserProfile.guestPolicy) : 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">Them</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          currentUserProfile?.guestPolicy === currentProfile.guestPolicy ? 'text-green-700 bg-green-100' :
+                          !currentUserProfile?.guestPolicy ? 'text-blue-700 bg-blue-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {formatLabel(currentProfile.guestPolicy)}
+                        </span>
+                      </div>
+                    </div>
+                    {currentUserProfile?.guestPolicy === currentProfile.guestPolicy && (
+                      <div className="mt-2 flex items-center text-green-600 text-xs">
+                        <Icon icon="mdi:check-circle" className="mr-1" />
+                        <span>Perfect Match!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Cooking Skills */}
+                {currentProfile.cookingSkills && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <Icon icon="mdi:chef-hat" className="mr-2 text-orange-500" />
+                      <span className="text-sm font-semibold text-gray-700">Cooking Skills</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">You</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          !currentUserProfile?.cookingSkills ? 'text-gray-400 bg-gray-200' :
+                          currentUserProfile.cookingSkills === currentProfile.cookingSkills ? 'text-green-700 bg-green-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {currentUserProfile?.cookingSkills ? formatLabel(currentUserProfile.cookingSkills) : 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-500">Them</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          currentUserProfile?.cookingSkills === currentProfile.cookingSkills ? 'text-green-700 bg-green-100' :
+                          !currentUserProfile?.cookingSkills ? 'text-blue-700 bg-blue-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {formatLabel(currentProfile.cookingSkills)}
+                        </span>
+                      </div>
+                    </div>
+                    {currentUserProfile?.cookingSkills === currentProfile.cookingSkills && (
+                      <div className="mt-2 flex items-center text-green-600 text-xs">
+                        <Icon icon="mdi:check-circle" className="mr-1" />
+                        <span>Perfect Match!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Accommodation Match */}
+        
           </div>
         </div>
       )}
