@@ -287,7 +287,6 @@ export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boole
       profile.accommodationFee !== undefined && profile.accommodationFee !== null && profile.accommodationFee >= 0 &&
       profile.accommodationElectricityFee !== undefined && profile.accommodationElectricityFee !== null && profile.accommodationElectricityFee >= 0 &&
       profile.accommodationWaterFee !== undefined && profile.accommodationWaterFee !== null && profile.accommodationWaterFee >= 0 &&
-      profile.accommodationServiceFee !== undefined && profile.accommodationServiceFee !== null && profile.accommodationServiceFee >= 0 &&
       profile.accommodationSize && profile.accommodationSize.length > 0 &&
       profile.accommodationType && profile.accommodationType.length > 0 &&
       profile.numberOfRoomates && profile.numberOfRoomates > 0 &&

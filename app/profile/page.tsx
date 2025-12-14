@@ -18,6 +18,7 @@ import {
   COMMON_INTERESTS,
   GENDER_OPTIONS,
   ACCOMMODATION_STATUS_OPTIONS,
+  HCMC_DISTRICTS,
   ACCOMMODATION_SIZE_OPTIONS,
   ACCOMMODATION_TYPE_OPTIONS,
 } from '@/types/profile';
@@ -252,7 +253,7 @@ export default function ProfilePage() {
         } else if (profile.accommodationStatus === 'have-room') {
           if (!profile.districts || !profile.accommodationFee ||
               !profile.accommodationElectricityFee || !profile.accommodationWaterFee ||
-              !profile.accommodationServiceFee || !profile.accommodationType || profile.accommodationType.length === 0 ||
+              !profile.accommodationType || profile.accommodationType.length === 0 ||
               !profile.accommodationSize || profile.numberOfRoomates === undefined || !profile.liveWithLandlord) {
             alert('Please fill in all required fields for your accommodation!');
             return false;
@@ -885,7 +886,7 @@ export default function ProfilePage() {
                   <span className="label-text font-semibold text-gray-900">Preferred Districts *</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {['District 1', 'District 2', 'District 3', 'District 4', 'District 5', 'District 7', 'District 8', 'District 10', 'Binh Thanh', 'Phu Nhuan', 'Tan Binh', 'Go Vap', 'Thu Duc'].map((district) => (
+                  {HCMC_DISTRICTS.map((district) => (
                     <button
                       key={district}
                       type="button"
@@ -1131,19 +1132,32 @@ export default function ProfilePage() {
                   Your Accommodation Details
                 </h2>
 
-            {/* Accommodation Address */}
+            {/* Accommodation Districts */}
             <div className="form-control mb-4">
               <label className="label">
-                <span className="label-text font-semibold text-gray-900">Accommodation Address *</span>
+                <span className="label-text font-semibold text-gray-900">Accommodation District *</span>
               </label>
-              <input
-                type="text"
-                className="input input-bordered text-gray-900"
-                placeholder="Enter accommodation address  Ex: 123 Nguyen Hue, District 1, HCMC"
-                value={profile.districts ? profile.districts.join(', ') : ''}
-                onChange={(e) => handleInputChange('districts', e.target.value.split(',').map(s => s.trim()))}
-                required
-              />
+              <div className="flex flex-wrap gap-2">
+                {HCMC_DISTRICTS.map((district) => (
+                  <button
+                    key={district}
+                    type="button"
+                    className={`btn btn-sm ${
+                      profile.districts?.includes(district) ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => {
+                      const currentDistricts = profile.districts || [];
+                      if (currentDistricts.includes(district)) {
+                        handleInputChange('districts', currentDistricts.filter(d => d !== district));
+                      } else {
+                        handleInputChange('districts', [...currentDistricts, district]);
+                      }
+                    }}
+                  >
+                    {district}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Monthly Rent */}
@@ -1190,19 +1204,6 @@ export default function ProfilePage() {
                     placeholder="Ex: 20000"
                     value={profile.accommodationWaterFee || ''}
                     onChange={(e) => handleInputChange('accommodationWaterFee', parseFloat(e.target.value) || undefined)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label">
-                    <span className="label-text text-gray-900 text-sm">Service Fee (VND/month)</span>
-                  </label>
-                  <input
-                    type="number"
-                    className="input input-bordered text-gray-900 w-full"
-                    placeholder="Ex: 200000"
-                    value={profile.accommodationServiceFee || ''}
-                    onChange={(e) => handleInputChange('accommodationServiceFee', parseFloat(e.target.value) || undefined)}
                     required
                   />
                 </div>

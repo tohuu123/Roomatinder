@@ -319,37 +319,39 @@ export default function HomePage({ email }: HomePageProps) {
       return false;
     }
 
-    // District filters (only apply when specific districts are selected AND have-room is shown)
-    if (filterPreferences.showHaveRoom && filterPreferences.selectedDistricts.length > 0 && profile.accommodationStatus === 'have-room') {
-      const hasMatchingDistrict = profile.districts?.some(profileDistrict => 
-        filterPreferences.selectedDistricts.some(filterDistrict => {
-          // Normalize both strings for comparison - more precise matching
-          // Support both "District X" and "Quận X" formats
-          const normalizedProfile = profileDistrict.toLowerCase().trim()
-            .replace(/district\s*/gi, '')
-            .replace(/quận\s*/gi, '')
-            .replace(/qu[aậ]n\s*/gi, '');
-          const normalizedFilter = filterDistrict.toLowerCase().trim()
-            .replace(/district\s*/gi, '')
-            .replace(/quận\s*/gi, '')
-            .replace(/qu[aậ]n\s*/gi, '');
+    // District filters (apply when specific districts are selected for either have-room or looking profiles)
+    if (filterPreferences.selectedDistricts.length > 0 && profile.districts && profile.districts.length > 0) {
+      console.log(`[Filter District] Checking profile ${profile.userId} (${profile.accommodationStatus})`);
+      console.log(`[Filter District] Profile districts:`, profile.districts);
+      console.log(`[Filter District] Selected filters:`, filterPreferences.selectedDistricts);
+      
+      // Normalize district name to handle both "District X" and "Quận X" formats
+      const normalizeDistrict = (district: string): string => {
+        return district.toLowerCase().trim()
+          .replace(/^district\s*/i, '')
+          .replace(/^quận\s*/i, '')
+          .replace(/^qu[aậ]n\s*/i, '')
+          .trim();
+      };
+      
+      // Check if any of the profile's districts match any of the selected filters
+      const hasMatchingDistrict = profile.districts.some(profileDistrict => {
+        const normalizedProfile = normalizeDistrict(profileDistrict);
+        
+        return filterPreferences.selectedDistricts.some(filterDistrict => {
+          const normalizedFilter = normalizeDistrict(filterDistrict);
           
-          // Extract numbers from district names for numeric comparison
-          const profileNum = normalizedProfile.match(/\d+/);
-          const filterNum = normalizedFilter.match(/\d+/);
-          
-          // If both have numbers, compare them exactly
-          if (profileNum && filterNum) {
-            return profileNum[0] === filterNum[0];
-          }
-          
-          // For non-numeric districts (like "Binh Thanh"), use exact match or word-based comparison
-          const profileWords = normalizedProfile.replace(/\s+/g, '');
-          const filterWords = normalizedFilter.replace(/\s+/g, '');
-          return profileWords === filterWords;
-        })
-      );
+          // Compare normalized values (e.g., "1" === "1" or "binh thanh" === "binh thanh")
+          const match = normalizedProfile === normalizedFilter;
+          console.log(`[Filter District] Comparing "${profileDistrict}" (normalized: "${normalizedProfile}") === "${filterDistrict}" (normalized: "${normalizedFilter}") = ${match}`);
+          return match;
+        });
+      });
+      
+      console.log(`[Filter District] Has match: ${hasMatchingDistrict}`);
+      
       if (!hasMatchingDistrict) {
+        console.log(`[Filter District] ❌ Filtering out ${profile.userId} - no matching district`);
         return false;
       }
     }
@@ -632,7 +634,45 @@ export default function HomePage({ email }: HomePageProps) {
   useEffect(() => {
     if (!currentUserId || !initialBatchLoaded) return;
 
-    console.log("[Filter] Filter preferences changed, clearing all and reloading...");
+    console.log("[Filter] Filter preferences changed, checking current profile...");
+
+    // Check if current profile still passes the new filters
+    if (currentProfile && passesFilter(currentProfile)) {
+      console.log(`[Filter] ✅ Current profile ${currentProfile.userId} still passes new filters, keeping it`);
+      
+      // Keep current profile, but filter the queue
+      setProfileQueue(prev => {
+        const filtered = prev.filter(p => passesFilter(p));
+        console.log(`[Filter] Filtered queue: ${prev.length} → ${filtered.length} profiles`);
+        return filtered;
+      });
+      
+      // If queue is too small, preload more
+      if (profileQueue.filter(p => passesFilter(p)).length < 2 && !isPreloading) {
+        console.log("[Filter] Queue too small after filtering, preloading more...");
+        setIsPreloading(true);
+        const queueIds = profileQueue.map(p => p.userId);
+        const allExcludeIds = [...seenUserIds, currentProfile.userId, ...queueIds];
+        
+        fetchProfileBatch(currentUserId, allExcludeIds, 2).then(result => {
+          if (result.profiles.length > 0) {
+            setProfileQueue(prev => [...prev, ...result.profiles]);
+            setSeenUserIds(prevSeen => {
+              const combined = [...prevSeen, ...result.profiles.map(p => p.userId), ...result.queriedIds];
+              return Array.from(new Set(combined));
+            });
+          }
+          setIsPreloading(false);
+        }).catch(error => {
+          console.error("[Filter] Error preloading after filter change:", error);
+          setIsPreloading(false);
+        });
+      }
+      
+      return;
+    }
+    
+    console.log("[Filter] ❌ Current profile doesn't pass new filters, clearing and reloading...");
 
     // Show loading UI and reset no more profiles flag
     setLoadingNext(true);
@@ -884,7 +924,7 @@ export default function HomePage({ email }: HomePageProps) {
                           setTempFilters(prev => ({ 
                             ...prev, 
                             showHaveRoom: newShowHaveRoom,
-                            selectedDistricts: newShowHaveRoom ? prev.selectedDistricts : [],
+                            selectedDistricts: (newShowHaveRoom || prev.showLooking) ? prev.selectedDistricts : [],
                             minFee: newShowHaveRoom ? prev.minFee : null,
                             maxFee: newShowHaveRoom ? prev.maxFee : null,
                           }));
@@ -897,7 +937,14 @@ export default function HomePage({ email }: HomePageProps) {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Looking for Room</span>
                       <button
-                        onClick={() => setTempFilters(prev => ({ ...prev, showLooking: !prev.showLooking }))}
+                        onClick={() => {
+                          const newShowLooking = !tempFilters.showLooking;
+                          setTempFilters(prev => ({
+                            ...prev,
+                            showLooking: newShowLooking,
+                            selectedDistricts: (newShowLooking || prev.showHaveRoom) ? prev.selectedDistricts : [],
+                          }));
+                        }}
                         className={`btn btn-xs ${tempFilters.showLooking ? 'btn-success' : 'btn-error'}`}
                       >
                         {tempFilters.showLooking ? '✓' : '×'}
@@ -907,11 +954,14 @@ export default function HomePage({ email }: HomePageProps) {
                 </div>
 
                 {/* Districts */}
-                {tempFilters.showHaveRoom && (
+                {(tempFilters.showHaveRoom || tempFilters.showLooking) && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
                       <Icon icon="mdi:map-marker" className="mr-2 text-blue-600" />
                       Districts (Only Show)
+                      <span className="ml-2 text-xs text-gray-500">
+                        (Have:{tempFilters.showHaveRoom ? 'Y' : 'N'} Looking:{tempFilters.showLooking ? 'Y' : 'N'})
+                      </span>
                     </h3>
                     <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
                       {HCMC_DISTRICTS.map(district => (
@@ -2117,12 +2167,6 @@ export default function HomePage({ email }: HomePageProps) {
                               <span className="text-gray-700"><strong>Water Fee:</strong> {currentProfile.accommodationWaterFee}  VND/month</span>
                             </div>
                           )}
-                          {currentProfile.accommodationServiceFee && (
-                            <div className="flex items-center">
-                              <Icon icon="mdi:account-cash" className="mr-2 text-base text-emerald-500" />
-                              <span className="text-gray-700"><strong>Service Fee:</strong> {currentProfile.accommodationServiceFee}  VND/month</span>
-                            </div>
-                          )}
                       </div>
                       {currentProfile.accommodationOtherFees && (
                         <div className="flex items-center mt-2">
@@ -2499,8 +2543,8 @@ export default function HomePage({ email }: HomePageProps) {
                 </div>
               </div>
 
-              {/* Districts - Only show when Have Room is selected */}
-              {tempFilters.showHaveRoom && (
+              {/* Districts - Show when Have Room or Looking is selected */}
+              {(tempFilters.showHaveRoom || tempFilters.showLooking) && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
                     <Icon icon="mdi:map-marker" className="mr-2 text-blue-600" />
