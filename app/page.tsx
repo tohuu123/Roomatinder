@@ -130,6 +130,7 @@ export default function HomePage({ email }: HomePageProps) {
     excludeIds: string[],
     batchSize = 1 // Always fetch 3 profiles at a time
   ): Promise<{ profiles: UserProfile[], queriedIds: string[] }> => {
+    console.log(`[Fetch] Starting fetchProfileBatch for user ${userId}, batchSize=${batchSize}, excludeIds=${excludeIds.length}`);
     const newProfiles: UserProfile[] = [];
     const currentUserProfile = await getProfile(userId);
     
@@ -137,6 +138,8 @@ export default function HomePage({ email }: HomePageProps) {
       console.warn("[Fetch] Current user profile not found. Cannot fetch profiles.");
       return { profiles: [], queriedIds: [] };
     }
+    
+    console.log("[Fetch] Current user profile loaded:", currentUserProfile.userId);
 
     // Build comprehensive exclude list: self + already seen + liked + passed
     const comprehensiveExcludeIds = [
@@ -597,31 +600,49 @@ export default function HomePage({ email }: HomePageProps) {
 
   // Load initial profile when userId is available
   useEffect(() => {
-    if (!currentUserId || initialBatchLoaded) return;
+    if (!currentUserId || initialBatchLoaded) {
+      console.log("[Init] Skipping init - currentUserId:", !!currentUserId, "initialBatchLoaded:", initialBatchLoaded);
+      return;
+    }
 
-    const init = async () => {
-      console.log("[Init] Fetching initial batch of profiles...");
+    // Add a small delay on first load to ensure Firebase is fully initialized
+    const timeoutId = setTimeout(async () => {
+      const init = async () => {
+        try {
+          console.log("[Init] Fetching initial batch of profiles...");
 
-      const result = await fetchProfileBatch(currentUserId, [], 3);
+          const result = await fetchProfileBatch(currentUserId, [], 3);
 
-      if (result.profiles.length === 0) {
-        setNoMoreProfiles(true);
-        setLoading(false);
-        return;
-      }
+          if (result.profiles.length === 0) {
+            console.log("[Init] No profiles found");
+            setNoMoreProfiles(true);
+            setLoading(false);
+            setInitialBatchLoaded(true);
+            return;
+          }
 
-      // load profile đầu tiên
-      setCurrentProfile(result.profiles[0]);
-      // bỏ profile đầu tiên → queue còn 2 profiles
-      setProfileQueue(result.profiles.slice(1));
-      const combined = [...result.profiles.map(p => p.userId), ...result.queriedIds];
-      setSeenUserIds(Array.from(new Set(combined)));
+          console.log(`[Init] Loaded ${result.profiles.length} initial profiles`);
+          // load profile đầu tiên
+          setCurrentProfile(result.profiles[0]);
+          // bỏ profile đầu tiên → queue còn 2 profiles
+          setProfileQueue(result.profiles.slice(1));
+          const combined = [...result.profiles.map(p => p.userId), ...result.queriedIds];
+          setSeenUserIds(Array.from(new Set(combined)));
 
-      setInitialBatchLoaded(true);
-      setLoading(false);
-    };
+          setInitialBatchLoaded(true);
+          setLoading(false);
+        } catch (error) {
+          console.error("[Init] Error fetching initial profiles:", error);
+          setLoading(false);
+          setInitialBatchLoaded(true);
+          setNoMoreProfiles(true);
+        }
+      };
 
-    init();
+      init();
+    }, 100); // Small delay to ensure everything is ready
+
+    return () => clearTimeout(timeoutId);
   }, [currentUserId, initialBatchLoaded]);
 
   // Apply filters function
@@ -632,44 +653,55 @@ export default function HomePage({ email }: HomePageProps) {
 
   // Reload profiles when filter preferences change
   useEffect(() => {
-    if (!currentUserId || !initialBatchLoaded) return;
+    // Don't run on initial mount or if user not loaded yet
+    if (!currentUserId || !initialBatchLoaded || !currentUserProfile) {
+      console.log("[Filter] Skipping filter effect - not ready yet", {
+        currentUserId: !!currentUserId,
+        initialBatchLoaded,
+        currentUserProfile: !!currentUserProfile
+      });
+      return;
+    }
 
     console.log("[Filter] Filter preferences changed, checking current profile...");
 
     // Check if current profile still passes the new filters
-    if (currentProfile && passesFilter(currentProfile)) {
-      console.log(`[Filter] ✅ Current profile ${currentProfile.userId} still passes new filters, keeping it`);
+    if (currentProfile) {
+      const stillPasses = passesFilter(currentProfile);
+      console.log(`[Filter] Current profile ${currentProfile.userId} passes new filters: ${stillPasses}`);
       
-      // Keep current profile, but filter the queue
-      setProfileQueue(prev => {
-        const filtered = prev.filter(p => passesFilter(p));
-        console.log(`[Filter] Filtered queue: ${prev.length} → ${filtered.length} profiles`);
-        return filtered;
-      });
-      
-      // If queue is too small, preload more
-      if (profileQueue.filter(p => passesFilter(p)).length < 2 && !isPreloading) {
-        console.log("[Filter] Queue too small after filtering, preloading more...");
-        setIsPreloading(true);
-        const queueIds = profileQueue.map(p => p.userId);
-        const allExcludeIds = [...seenUserIds, currentProfile.userId, ...queueIds];
+      if (stillPasses) {
+        console.log(`[Filter] ✅ Current profile ${currentProfile.userId} still passes new filters, keeping it`);
         
-        fetchProfileBatch(currentUserId, allExcludeIds, 2).then(result => {
-          if (result.profiles.length > 0) {
-            setProfileQueue(prev => [...prev, ...result.profiles]);
-            setSeenUserIds(prevSeen => {
-              const combined = [...prevSeen, ...result.profiles.map(p => p.userId), ...result.queriedIds];
-              return Array.from(new Set(combined));
-            });
-          }
-          setIsPreloading(false);
-        }).catch(error => {
-          console.error("[Filter] Error preloading after filter change:", error);
-          setIsPreloading(false);
-        });
+        // Keep current profile, but filter the queue
+        const filteredQueue = profileQueue.filter(p => passesFilter(p));
+        console.log(`[Filter] Filtered queue: ${profileQueue.length} → ${filteredQueue.length} profiles`);
+        setProfileQueue(filteredQueue);
+        
+        // If queue is too small, preload more
+        if (filteredQueue.length < 2 && !isPreloading) {
+          console.log("[Filter] Queue too small after filtering, preloading more...");
+          setIsPreloading(true);
+          const queueIds = filteredQueue.map(p => p.userId);
+          const allExcludeIds = [...seenUserIds, currentProfile.userId, ...queueIds];
+          
+          fetchProfileBatch(currentUserId, allExcludeIds, 2).then(result => {
+            if (result.profiles.length > 0) {
+              setProfileQueue(prev => [...prev, ...result.profiles]);
+              setSeenUserIds(prevSeen => {
+                const combined = [...prevSeen, ...result.profiles.map(p => p.userId), ...result.queriedIds];
+                return Array.from(new Set(combined));
+              });
+            }
+            setIsPreloading(false);
+          }).catch(error => {
+            console.error("[Filter] Error preloading after filter change:", error);
+            setIsPreloading(false);
+          });
+        }
+        
+        return;
       }
-      
-      return;
     }
     
     console.log("[Filter] ❌ Current profile doesn't pass new filters, clearing and reloading...");
@@ -713,8 +745,9 @@ export default function HomePage({ email }: HomePageProps) {
     }).catch(error => {
       console.error("[Filter] Error loading profiles after filter change:", error);
       setLoadingNext(false);
+      setNoMoreProfiles(true);
     });
-  }, [filterPreferences]);
+  }, [filterPreferences, currentUserId, initialBatchLoaded]);
 
 
   const handleSwipe = async (direction: 'left' | 'right') => {
