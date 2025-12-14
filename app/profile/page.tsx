@@ -44,6 +44,9 @@ export default function ProfilePage() {
   const [uploadError, setUploadError] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingRoomImage, setUploadingRoomImage] = useState(false);
+  const [roomImageError, setRoomImageError] = useState('');
+  const roomImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -89,6 +92,83 @@ export default function ProfilePage() {
       setSelectedInterests((prev) => [...prev, customInterest.trim()]);
       setCustomInterest('');
     }
+  };
+
+  const handleRoomImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0 || !user) return;
+
+    setRoomImageError('');
+    setUploadingRoomImage(true);
+
+    try {
+      const uploadedUrls: string[] = [];
+      const currentImages = profile.roomImages || [];
+      const remainingSlots = 5 - currentImages.length;
+
+      if (remainingSlots <= 0) {
+        setRoomImageError('Maximum 5 images allowed');
+        setUploadingRoomImage(false);
+        return;
+      }
+
+      const filesToUpload = Math.min(files.length, remainingSlots);
+
+      for (let i = 0; i < filesToUpload; i++) {
+        const file = files[i];
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          setRoomImageError(`File ${i + 1}: Please upload image files only`);
+          continue;
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          setRoomImageError(`File ${i + 1}: Image size should not exceed 10MB`);
+          continue;
+        }
+
+        // Convert to base64 instead of using Cloudinary
+        try {
+          const base64String = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              resolve(result);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          
+          uploadedUrls.push(base64String);
+        } catch (err) {
+          console.error('Error converting image:', err);
+          setRoomImageError(`Failed to process image ${i + 1}`);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        // Update profile with new room images
+        const updatedImages = [...currentImages, ...uploadedUrls].slice(0, 5);
+        handleInputChange('roomImages', updatedImages);
+      }
+
+    } catch (error) {
+      console.error('Error uploading room images:', error);
+      setRoomImageError('Failed to upload images. Please try again.');
+    } finally {
+      setUploadingRoomImage(false);
+      if (roomImageInputRef.current) {
+        roomImageInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveRoomImage = (index: number) => {
+    const currentImages = profile.roomImages || [];
+    const updatedImages = currentImages.filter((_, i) => i !== index);
+    handleInputChange('roomImages', updatedImages);
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1326,6 +1406,80 @@ export default function ProfilePage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Room Images */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text font-semibold text-gray-900">Room Images</span>
+                <span className="label-text-alt text-gray-600">Upload up to 5 photos</span>
+              </label>
+              
+              {/* Display uploaded images */}
+              {profile.roomImages && profile.roomImages.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  {profile.roomImages.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Room ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRoomImage(index)}
+                        className="absolute top-1 right-1 btn btn-circle btn-xs btn-error opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload button */}
+              {(!profile.roomImages || profile.roomImages.length < 5) && (
+                <div>
+                  <input
+                    ref={roomImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleRoomImageUpload}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => roomImageInputRef.current?.click()}
+                    disabled={uploadingRoomImage}
+                  >
+                    {uploadingRoomImage ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Room Photos
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {roomImageError && (
+                <div className="alert alert-error mt-2">
+                  <span>{roomImageError}</span>
+                </div>
+              )}
+
+              <p className="text-sm text-gray-600 mt-2">
+                Add photos of your room to help potential roommates see the space. JPG, PNG up to 10MB each.
+              </p>
             </div>
               </div>
             )}

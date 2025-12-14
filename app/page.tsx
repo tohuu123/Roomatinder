@@ -92,6 +92,7 @@ export default function HomePage({ email }: HomePageProps) {
   const [fetchingProfile, setFetchingProfile] = useState(false);
   const [profileQueue, setProfileQueue] = useState<UserProfile[]>([]);
   const [showMap, setShowMap] = useState(false);
+  const [showRoomPhotos, setShowRoomPhotos] = useState(false);
   const [initialBatchLoaded, setInitialBatchLoaded] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -149,6 +150,7 @@ export default function HomePage({ email }: HomePageProps) {
     const uniqueExcludeIds = Array.from(new Set(comprehensiveExcludeIds));
     
     console.log(`[Fetch] Fetching ${batchSize} profiles, excluding ${uniqueExcludeIds.length} IDs`);
+    console.log(`[Fetch] Current filters:`, filterPreferences);
     
     let attempts = 0;
     const maxAttempts = batchSize * 10; // Increased for safety
@@ -199,9 +201,15 @@ export default function HomePage({ email }: HomePageProps) {
       // Store similarity score for this profile
       setProfileSimilarities(prev => ({ ...prev, [matchedId]: result.similarity }));
 
-      // Check if this profile is already in the batch (extra safety)
+      // Check if this profile is already in the batch or seen before (extra safety)
       if (newProfiles.some(p => p.userId === prof.userId)) {
-        console.log("[Fetch] Duplicate profile detected, skipping:", matchedId);
+        console.log("[Fetch] Duplicate profile in batch detected, skipping:", matchedId);
+        continue;
+      }
+      
+      // Additional check: verify not already in exclude list or seen IDs
+      if (excludeIds.includes(prof.userId) || uniqueExcludeIds.includes(prof.userId)) {
+        console.log("[Fetch] Profile in exclude list, skipping:", matchedId);
         continue;
       }
 
@@ -232,6 +240,12 @@ export default function HomePage({ email }: HomePageProps) {
     }
 
     console.log(`[Fetch] Batch complete: ${newProfiles.length} profiles fetched in ${attempts} attempts`);
+    
+    // If we hit max attempts and got 0 profiles, log it clearly
+    if (newProfiles.length === 0 && attempts >= maxAttempts) {
+      console.warn(`[Fetch] Exhausted max attempts (${maxAttempts}) without finding matching profiles`);
+    }
+    
     return {
       profiles: newProfiles,
       queriedIds: Array.from(queriedIds)
@@ -377,34 +391,73 @@ export default function HomePage({ email }: HomePageProps) {
     if (profileQueue.length > 0) {
       console.log(`[Load] Using queued profile (${profileQueue.length} remaining)`);
       const next = profileQueue[0];
-      setProfileQueue(prev => prev.slice(1));
+      const remainingQueue = profileQueue.slice(1);
+      
+      setProfileQueue(remainingQueue);
       setCurrentProfile(next);
+      setNoMoreProfiles(false); // Reset no more profiles flag when we have a profile
+      
+      // Update seenUserIds immediately with current profile to prevent it from being fetched again
+      setSeenUserIds(prev => Array.from(new Set([...prev, next.userId])));
       
       // Preload more profiles when queue drops below 2 (and not already preloading)
-      if (profileQueue.length - 1 < 2 && currentUserId && !isPreloading) {
+      if (remainingQueue.length < 2 && currentUserId && !isPreloading) {
         setIsPreloading(true);
-        fetchProfileBatch(currentUserId, seenUserIds, 1).then(result => {
-          if (result.profiles.length > 0) {
-            console.log(`[Load] Preloaded ${result.profiles.length} profiles`);
-            setProfileQueue(prev => [...prev, ...result.profiles]);
-            setSeenUserIds(prev => {
-              const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
-              return Array.from(new Set(combined));
-            });
-          } else {
-            console.log("[Load] No more profiles to preload");
-            // Still add queried IDs even if no profiles matched filters
-            if (result.queriedIds.length > 0) {
-              setSeenUserIds(prev => {
-                const combined = [...prev, ...result.queriedIds];
+        
+        // Build comprehensive exclude list using up-to-date values
+        setSeenUserIds(currentSeenIds => {
+          const queueIds = remainingQueue.map(p => p.userId);
+          const allExcludeIds = Array.from(new Set([...currentSeenIds, next.userId, ...queueIds]));
+          
+          console.log(`[Load] Preloading with ${allExcludeIds.length} excluded IDs (${currentSeenIds.length} seen + ${queueIds.length} queued + 1 current)`);
+          
+          // Trigger preload with complete exclude list
+          fetchProfileBatch(currentUserId, allExcludeIds, 1).then(result => {
+            if (result.profiles.length > 0) {
+              console.log(`[Load] Preloaded ${result.profiles.length} profile(s):`, result.profiles.map(p => p.userId));
+              
+              setProfileQueue(prevQueue => {
+                // Get all existing IDs from current queue
+                const existingIds = new Set([...prevQueue.map(p => p.userId), next.userId]);
+                
+                // Filter out any duplicates
+                const newProfiles = result.profiles.filter(p => {
+                  if (existingIds.has(p.userId)) {
+                    console.warn(`[Load] DUPLICATE DETECTED: ${p.userId} already in queue or current, skipping`);
+                    return false;
+                  }
+                  return true;
+                });
+                
+                if (newProfiles.length < result.profiles.length) {
+                  console.error(`[Load] Filtered out ${result.profiles.length - newProfiles.length} duplicate(s) from preload batch`);
+                }
+                
+                return [...prevQueue, ...newProfiles];
+              });
+              
+              setSeenUserIds(prevSeen => {
+                const combined = [...prevSeen, ...result.profiles.map(p => p.userId), ...result.queriedIds];
                 return Array.from(new Set(combined));
               });
+            } else {
+              console.log("[Load] No more profiles to preload");
+              // Still add queried IDs even if no profiles matched filters
+              if (result.queriedIds.length > 0) {
+                setSeenUserIds(prevSeen => {
+                  const combined = [...prevSeen, ...result.queriedIds];
+                  return Array.from(new Set(combined));
+                });
+              }
             }
-          }
-          setIsPreloading(false);
-        }).catch(error => {
-          console.error("[Load] Error preloading profiles:", error);
-          setIsPreloading(false);
+            setIsPreloading(false);
+          }).catch(error => {
+            console.error("[Load] Error preloading profiles:", error);
+            setIsPreloading(false);
+          });
+          
+          // Return current state (don't modify it here, just use it)
+          return currentSeenIds;
         });
       }
       return;
@@ -416,13 +469,14 @@ export default function HomePage({ email }: HomePageProps) {
     if (!currentUserId) {
       console.log("[Load] No currentUserId");
       setNoMoreProfiles(true);
+      setCurrentProfile(null);
       return;
     }
 
-    const result = await fetchProfileBatch(currentUserId, seenUserIds, 1);
+    const result = await fetchProfileBatch(currentUserId, seenUserIds, 3);
 
     if (result.profiles.length === 0) {
-      console.log("[Load] No more profiles available");
+      console.log("[Load] No more profiles available - setting noMoreProfiles to true");
       setNoMoreProfiles(true);
       setCurrentProfile(null);
       // Add queried IDs even if no profiles matched
@@ -436,8 +490,10 @@ export default function HomePage({ email }: HomePageProps) {
     }
 
     // Load first profile, queue the rest
+    console.log(`[Load] Loaded ${result.profiles.length} new profiles`);
     setCurrentProfile(result.profiles[0]);
     setProfileQueue(result.profiles.slice(1));
+    setNoMoreProfiles(false); // Reset flag when we have profiles
     setSeenUserIds(prev => {
       const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
       return Array.from(new Set(combined));
@@ -483,6 +539,40 @@ export default function HomePage({ email }: HomePageProps) {
       if (user) {
         console.log("[Auth] Logged in as:", user.uid);
         setCurrentUserId(user.uid);
+        
+        // Reset filters to default on every page load
+        const defaultFilters = {
+          showHaveRoom: true,
+          showLooking: true,
+          showSmoking: true,
+          showNonSmoking: true,
+          showEarlyBird: true,
+          showNightOwl: true,
+          showFlexible: true,
+          showQuiet: true,
+          showModerate: true,
+          showLoud: true,
+          showNoGuests: true,
+          showOccasionalGuests: true,
+          showFrequentGuests: true,
+          showVeryClean: true,
+          showClean: true,
+          showModerateClean: true,
+          showRelaxed: true,
+          selectedDistricts: [] as string[],
+          minFee: null as number | null,
+          maxFee: null as number | null,
+        };
+        setFilterPreferences(defaultFilters);
+        setTempFilters(defaultFilters);
+        
+        // Clear all seen profiles on page load
+        setSeenUserIds([]);
+        setProfileQueue([]);
+        setCurrentProfile(null);
+        setNoMoreProfiles(false);
+        setProfileSimilarities({});
+        
         // Reset initial batch loaded to allow fresh fetch
         setInitialBatchLoaded(false);
 
@@ -508,41 +598,7 @@ export default function HomePage({ email }: HomePageProps) {
     if (!currentUserId || initialBatchLoaded) return;
 
     const init = async () => {
-      console.log("[Init] Resetting filters and fetching fresh profiles...");
-
-      // Reset all filters to default (show all)
-      const defaultFilters = {
-        showHaveRoom: true,
-        showLooking: true,
-        showSmoking: true,
-        showNonSmoking: true,
-        showEarlyBird: true,
-        showNightOwl: true,
-        showFlexible: true,
-        showQuiet: true,
-        showModerate: true,
-        showLoud: true,
-        showNoGuests: true,
-        showOccasionalGuests: true,
-        showFrequentGuests: true,
-        showVeryClean: true,
-        showClean: true,
-        showModerateClean: true,
-        showRelaxed: true,
-        selectedDistricts: [] as string[],
-        minFee: null as number | null,
-        maxFee: null as number | null,
-      };
-      setFilterPreferences(defaultFilters);
-      setTempFilters(defaultFilters);
-
-      // Clear seen profiles to show all profiles again
-      // Note: Liked and passed profiles are still excluded (fetched from Firebase in fetchProfileBatch)
-      setSeenUserIds([]);
-      setProfileQueue([]);
-      setCurrentProfile(null);
-      setNoMoreProfiles(false);
-      setProfileSimilarities({});
+      console.log("[Init] Fetching initial batch of profiles...");
 
       const result = await fetchProfileBatch(currentUserId, [], 3);
 
@@ -564,7 +620,7 @@ export default function HomePage({ email }: HomePageProps) {
     };
 
     init();
-  }, [currentUserId]);
+  }, [currentUserId, initialBatchLoaded]);
 
   // Apply filters function
   const applyFilters = () => {
@@ -766,11 +822,380 @@ export default function HomePage({ email }: HomePageProps) {
   if (!currentProfile || noMoreProfiles) {
     return (
       <GreenHomeBackground>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
+        <div className="max-w-2xl mx-auto p-4">
+          <div className="relative flex items-center justify-center min-h-screen">
+            {/* Filter Button - positioned on the left */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFilterPanel(!showFilterPanel);
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-10"
+            >
+              <Icon icon="mdi:filter-variant" className="w-6 h-6" />
+            </button>
+
+            <div className="text-center">
+              <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
+              <p className="text-gray-500 text-sm">Try adjusting your filters to see more profiles</p>
+            </div>
           </div>
         </div>
+
+        {/* Filter Sidebar Panel */}
+        {showFilterPanel && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-start z-50"
+            onClick={() => {
+              setShowFilterPanel(false);
+              setTempFilters(filterPreferences);
+            }}
+          >
+            <div 
+              className="bg-white h-full w-96 shadow-2xl overflow-y-auto p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Filters</h2>
+                <button
+                  onClick={() => {
+                    setShowFilterPanel(false);
+                    setTempFilters(filterPreferences);
+                  }}
+                  className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition"
+                >
+                  <Icon icon="mdi:close" className="text-xl" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Accommodation Status */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:home" className="mr-2 text-green-600" />
+                    Accommodation Status
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Have Room</span>
+                      <button
+                        onClick={() => {
+                          const newShowHaveRoom = !tempFilters.showHaveRoom;
+                          setTempFilters(prev => ({ 
+                            ...prev, 
+                            showHaveRoom: newShowHaveRoom,
+                            selectedDistricts: newShowHaveRoom ? prev.selectedDistricts : [],
+                            minFee: newShowHaveRoom ? prev.minFee : null,
+                            maxFee: newShowHaveRoom ? prev.maxFee : null,
+                          }));
+                        }}
+                        className={`btn btn-xs ${tempFilters.showHaveRoom ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showHaveRoom ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Looking for Room</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showLooking: !prev.showLooking }))}
+                        className={`btn btn-xs ${tempFilters.showLooking ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showLooking ? '✓' : '×'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Districts */}
+                {tempFilters.showHaveRoom && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                      <Icon icon="mdi:map-marker" className="mr-2 text-blue-600" />
+                      Districts (Only Show)
+                    </h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                      {HCMC_DISTRICTS.map(district => (
+                        <label key={district} className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={tempFilters.selectedDistricts.includes(district)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setTempFilters(prev => ({ ...prev, selectedDistricts: [...prev.selectedDistricts, district] }));
+                              } else {
+                                setTempFilters(prev => ({ ...prev, selectedDistricts: prev.selectedDistricts.filter(d => d !== district) }));
+                              }
+                            }}
+                            className="checkbox checkbox-primary checkbox-sm mr-2"
+                          />
+                          <span className="text-sm text-gray-600">{district}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Monthly Fee Range */}
+                {tempFilters.showHaveRoom && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                      <Icon icon="mdi:cash" className="mr-2 text-yellow-600" />
+                      Monthly Fee Range (VND)
+                    </h3>
+                    <div className="space-y-3">
+                      <label className="form-control">
+                        <span className="label text-xs text-gray-600">Minimum Fee</span>
+                        <input
+                          type="number"
+                          placeholder="e.g., 2000000"
+                          value={tempFilters.minFee || ''}
+                          onChange={(e) => setTempFilters(prev => ({ ...prev, minFee: e.target.value ? Number(e.target.value) : null }))}
+                          className="input input-bordered input-sm w-full text-gray-700"
+                        />
+                      </label>
+                      <label className="form-control">
+                        <span className="label text-xs text-gray-600">Maximum Fee</span>
+                        <input
+                          type="number"
+                          placeholder="e.g., 5000000"
+                          value={tempFilters.maxFee || ''}
+                          onChange={(e) => setTempFilters(prev => ({ ...prev, maxFee: e.target.value ? Number(e.target.value) : null }))}
+                          className="input input-bordered input-sm w-full text-gray-700"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cleanliness Level */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:spray-bottle" className="mr-2 text-cyan-600" />
+                    Cleanliness Level
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Very Clean</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showVeryClean: !prev.showVeryClean }))}
+                        className={`btn btn-xs ${tempFilters.showVeryClean ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showVeryClean ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Clean</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showClean: !prev.showClean }))}
+                        className={`btn btn-xs ${tempFilters.showClean ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showClean ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Moderate</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showModerateClean: !prev.showModerateClean }))}
+                        className={`btn btn-xs ${tempFilters.showModerateClean ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showModerateClean ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Relaxed</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showRelaxed: !prev.showRelaxed }))}
+                        className={`btn btn-xs ${tempFilters.showRelaxed ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showRelaxed ? '✓' : '×'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Smoking Policy */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:smoking" className="mr-2 text-red-600" />
+                    Smoking Policy
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Smokers</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showSmoking: !prev.showSmoking }))}
+                        className={`btn btn-xs ${tempFilters.showSmoking ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showSmoking ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Non-Smokers</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showNonSmoking: !prev.showNonSmoking }))}
+                        className={`btn btn-xs ${tempFilters.showNonSmoking ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showNonSmoking ? '✓' : '×'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sleep Schedule */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:sleep" className="mr-2 text-indigo-600" />
+                    Sleep Schedule
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Early Birds</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showEarlyBird: !prev.showEarlyBird }))}
+                        className={`btn btn-xs ${tempFilters.showEarlyBird ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showEarlyBird ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Night Owls</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showNightOwl: !prev.showNightOwl }))}
+                        className={`btn btn-xs ${tempFilters.showNightOwl ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showNightOwl ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Flexible</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showFlexible: !prev.showFlexible }))}
+                        className={`btn btn-xs ${tempFilters.showFlexible ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showFlexible ? '✓' : '×'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Noise Level */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:volume-high" className="mr-2 text-purple-600" />
+                    Noise Level
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Quiet</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showQuiet: !prev.showQuiet }))}
+                        className={`btn btn-xs ${tempFilters.showQuiet ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showQuiet ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Moderate</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showModerate: !prev.showModerate }))}
+                        className={`btn btn-xs ${tempFilters.showModerate ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showModerate ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Loud</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showLoud: !prev.showLoud }))}
+                        className={`btn btn-xs ${tempFilters.showLoud ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showLoud ? '✓' : '×'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Guest Policy */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:account-group" className="mr-2 text-orange-600" />
+                    Guest Policy
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">No Guests</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showNoGuests: !prev.showNoGuests }))}
+                        className={`btn btn-xs ${tempFilters.showNoGuests ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showNoGuests ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Occasional Guests</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showOccasionalGuests: !prev.showOccasionalGuests }))}
+                        className={`btn btn-xs ${tempFilters.showOccasionalGuests ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showOccasionalGuests ? '✓' : '×'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Frequent Guests</span>
+                      <button
+                        onClick={() => setTempFilters(prev => ({ ...prev, showFrequentGuests: !prev.showFrequentGuests }))}
+                        className={`btn btn-xs ${tempFilters.showFrequentGuests ? 'btn-success' : 'btn-error'}`}
+                      >
+                        {tempFilters.showFrequentGuests ? '✓' : '×'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t">
+                  <button
+                    onClick={() => {
+                      setTempFilters({
+                        showHaveRoom: true,
+                        showLooking: true,
+                        showSmoking: true,
+                        showNonSmoking: true,
+                        showEarlyBird: true,
+                        showNightOwl: true,
+                        showFlexible: true,
+                        showQuiet: true,
+                        showModerate: true,
+                        showLoud: true,
+                        showNoGuests: true,
+                        showOccasionalGuests: true,
+                        showFrequentGuests: true,
+                        showVeryClean: true,
+                        showClean: true,
+                        showModerateClean: true,
+                        showRelaxed: true,
+                        selectedDistricts: [],
+                        minFee: null,
+                        maxFee: null,
+                      });
+                    }}
+                    className="btn btn-outline btn-error flex-1"
+                  >
+                    <Icon icon="mdi:filter-off" className="mr-2" />
+                    Clear
+                  </button>
+                  <button
+                    onClick={applyFilters}
+                    className="btn btn-primary flex-1"
+                  >
+                    <Icon icon="mdi:check" className="mr-2" />
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </GreenHomeBackground>
     );
   }
@@ -1034,7 +1459,7 @@ export default function HomePage({ email }: HomePageProps) {
                 </div>
                 
                 {/* Accommodation Details */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-gray-800">Accommodation Status:</h3>
 
                   <p className="rounded-full bg-blue-500 text-white px-3 py-1 text-sm font-semibold shadow-md">
@@ -1044,6 +1469,20 @@ export default function HomePage({ email }: HomePageProps) {
                         : 'Looking'
                     )}
                   </p>
+
+                  {/* Room Photos Button - Next to Accommodation Status */}
+                  {currentProfile.accommodationStatus === 'have-room' && currentProfile.roomImages && currentProfile.roomImages.length > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowRoomPhotos(true);
+                      }}
+                      className="btn btn-sm btn-outline gap-2"
+                    >
+                      <Icon icon="mdi:image-multiple" className="w-5 h-5" />
+                      View Room Photos ({currentProfile.roomImages.length})
+                    </button>
+                  )}
                 </div>
                 
                 {/* Have Room Details*/}
@@ -1172,364 +1611,6 @@ export default function HomePage({ email }: HomePageProps) {
           </button>
         </div>
       </div>
-
-      {/* Filter Sidebar Panel */}
-      {showFilterPanel && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-start z-50"
-          onClick={() => {
-            setShowFilterPanel(false);
-            setTempFilters(filterPreferences); // Reset temp filters on cancel
-          }}
-        >
-          <div 
-            className="bg-white h-full w-96 shadow-2xl overflow-y-auto p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Filters</h2>
-              <button
-                onClick={() => {
-                  setShowFilterPanel(false);
-                  setTempFilters(filterPreferences); // Reset temp filters
-                }}
-                className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition"
-              >
-                <Icon icon="mdi:close" className="text-xl" />
-              </button>
-            </div>
-
-            {/* Filter Sections */}
-            <div className="space-y-6">
-              {/* Accommodation Status */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                  <Icon icon="mdi:home" className="mr-2 text-green-600" />
-                  Accommodation Status
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Have Room</span>
-                    <button
-                      onClick={() => {
-                        const newShowHaveRoom = !tempFilters.showHaveRoom;
-                        setTempFilters(prev => ({ 
-                          ...prev, 
-                          showHaveRoom: newShowHaveRoom,
-                          // Clear district and fee filters when disabling have room
-                          selectedDistricts: newShowHaveRoom ? prev.selectedDistricts : [],
-                          minFee: newShowHaveRoom ? prev.minFee : null,
-                          maxFee: newShowHaveRoom ? prev.maxFee : null,
-                        }));
-                      }}
-                      className={`btn btn-xs ${tempFilters.showHaveRoom ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showHaveRoom ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Looking for Room</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showLooking: !prev.showLooking }))}
-                      className={`btn btn-xs ${tempFilters.showLooking ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showLooking ? '✓' : '×'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Districts - Only show when Have Room is selected */}
-              {tempFilters.showHaveRoom && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                    <Icon icon="mdi:map-marker" className="mr-2 text-blue-600" />
-                    Districts (Only Show)
-                  </h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                    {HCMC_DISTRICTS.map(district => (
-                      <label key={district} className="flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={tempFilters.selectedDistricts.includes(district)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setTempFilters(prev => ({ ...prev, selectedDistricts: [...prev.selectedDistricts, district] }));
-                            } else {
-                              setTempFilters(prev => ({ ...prev, selectedDistricts: prev.selectedDistricts.filter(d => d !== district) }));
-                            }
-                          }}
-                          className="checkbox checkbox-primary checkbox-sm mr-2"
-                        />
-                        <span className="text-sm text-gray-600">{district}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Monthly Fee Range - Only show when Have Room is selected */}
-              {tempFilters.showHaveRoom && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                    <Icon icon="mdi:cash" className="mr-2 text-yellow-600" />
-                    Monthly Fee Range (VND)
-                  </h3>
-                  <div className="space-y-3">
-                    <label className="form-control">
-                      <span className="label text-xs text-gray-600">Minimum Fee</span>
-                      <input
-                        type="number"
-                        placeholder="e.g., 2000000"
-                        value={tempFilters.minFee || ''}
-                        onChange={(e) => setTempFilters(prev => ({ ...prev, minFee: e.target.value ? Number(e.target.value) : null }))}
-                        className="input input-bordered input-sm w-full text-gray-700"
-                      />
-                    </label>
-                    <label className="form-control">
-                      <span className="label text-xs text-gray-600">Maximum Fee</span>
-                      <input
-                        type="number"
-                        placeholder="e.g., 5000000"
-                        value={tempFilters.maxFee || ''}
-                        onChange={(e) => setTempFilters(prev => ({ ...prev, maxFee: e.target.value ? Number(e.target.value) : null }))}
-                        className="input input-bordered input-sm w-full text-gray-700"
-                      />
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {/* Cleanliness Level */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                  <Icon icon="mdi:spray-bottle" className="mr-2 text-cyan-600" />
-                  Cleanliness Level
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Very Clean</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showVeryClean: !prev.showVeryClean }))}
-                      className={`btn btn-xs ${tempFilters.showVeryClean ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showVeryClean ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Clean</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showClean: !prev.showClean }))}
-                      className={`btn btn-xs ${tempFilters.showClean ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showClean ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Moderate</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showModerateClean: !prev.showModerateClean }))}
-                      className={`btn btn-xs ${tempFilters.showModerateClean ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showModerateClean ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Relaxed</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showRelaxed: !prev.showRelaxed }))}
-                      className={`btn btn-xs ${tempFilters.showRelaxed ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showRelaxed ? '✓' : '×'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Smoking Policy */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                  <Icon icon="mdi:smoking" className="mr-2 text-red-600" />
-                  Smoking Policy
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Smokers</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showSmoking: !prev.showSmoking }))}
-                      className={`btn btn-xs ${tempFilters.showSmoking ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showSmoking ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Non-Smokers</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showNonSmoking: !prev.showNonSmoking }))}
-                      className={`btn btn-xs ${tempFilters.showNonSmoking ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showNonSmoking ? '✓' : '×'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sleep Schedule */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                  <Icon icon="mdi:sleep" className="mr-2 text-indigo-600" />
-                  Sleep Schedule
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Early Birds</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showEarlyBird: !prev.showEarlyBird }))}
-                      className={`btn btn-xs ${tempFilters.showEarlyBird ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showEarlyBird ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Night Owls</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showNightOwl: !prev.showNightOwl }))}
-                      className={`btn btn-xs ${tempFilters.showNightOwl ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showNightOwl ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Flexible</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showFlexible: !prev.showFlexible }))}
-                      className={`btn btn-xs ${tempFilters.showFlexible ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showFlexible ? '✓' : '×'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Noise Level */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                  <Icon icon="mdi:volume-high" className="mr-2 text-purple-600" />
-                  Noise Level
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Quiet</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showQuiet: !prev.showQuiet }))}
-                      className={`btn btn-xs ${tempFilters.showQuiet ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showQuiet ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Moderate</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showModerate: !prev.showModerate }))}
-                      className={`btn btn-xs ${tempFilters.showModerate ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showModerate ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Loud</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showLoud: !prev.showLoud }))}
-                      className={`btn btn-xs ${tempFilters.showLoud ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showLoud ? '✓' : '×'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Guest Policy */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                  <Icon icon="mdi:account-group" className="mr-2 text-orange-600" />
-                  Guest Policy
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">No Guests</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showNoGuests: !prev.showNoGuests }))}
-                      className={`btn btn-xs ${tempFilters.showNoGuests ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showNoGuests ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Occasional Guests</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showOccasionalGuests: !prev.showOccasionalGuests }))}
-                      className={`btn btn-xs ${tempFilters.showOccasionalGuests ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showOccasionalGuests ? '✓' : '×'}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Frequent Guests</span>
-                    <button
-                      onClick={() => setTempFilters(prev => ({ ...prev, showFrequentGuests: !prev.showFrequentGuests }))}
-                      className={`btn btn-xs ${tempFilters.showFrequentGuests ? 'btn-success' : 'btn-error'}`}
-                    >
-                      {tempFilters.showFrequentGuests ? '✓' : '×'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t">
-                <button
-                  onClick={() => {
-                    setTempFilters({
-                      showHaveRoom: true,
-                      showLooking: true,
-                      showSmoking: true,
-                      showNonSmoking: true,
-                      showEarlyBird: true,
-                      showNightOwl: true,
-                      showFlexible: true,
-                      showQuiet: true,
-                      showModerate: true,
-                      showLoud: true,
-                      showNoGuests: true,
-                      showOccasionalGuests: true,
-                      showFrequentGuests: true,
-                      showVeryClean: true,
-                      showClean: true,
-                      showModerateClean: true,
-                      showRelaxed: true,
-                      selectedDistricts: [],
-                      minFee: null,
-                      maxFee: null,
-                    });
-                  }}
-                  className="btn btn-outline btn-error flex-1"
-                >
-                  <Icon icon="mdi:filter-off" className="mr-2" />
-                  Clear
-                </button>
-                <button
-                  onClick={applyFilters}
-                  className="btn btn-primary flex-1"
-                >
-                  <Icon icon="mdi:check" className="mr-2" />
-                  Apply Filters
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Matching Info Panel */}
       {showMatchingInfo && currentProfile && (
@@ -2287,21 +2368,18 @@ export default function HomePage({ email }: HomePageProps) {
       {showMap && currentProfile.accommodationStatus == "have-room" && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowMap(false)}   // Bấm bên ngoài → tắt
+          onClick={() => setShowMap(false)}
         >
           <div
             className="bg-white p-4 rounded-xl shadow-xl max-w-5xl w-full relative"
-            onClick={(e) => e.stopPropagation()}   // Bấm vào box → không tắt
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button */}
             <button
               onClick={() => setShowMap(false)}
               className="absolute top-3 right-3 text-gray-600 hover:text-black"
             >
               <Icon icon="mdi:close" className="w-10 h-10" />
             </button>
-
-            {/* Map Component */} 
             <MapEmbed
               location={
                 Array.isArray(currentProfile.districts)
@@ -2309,6 +2387,405 @@ export default function HomePage({ email }: HomePageProps) {
                   : currentProfile.districts || "Ho Chi Minh"
               }
             />
+          </div>
+        </div>
+      )}
+
+      {/* Room Photos Modal */}
+      {showRoomPhotos && currentProfile && currentProfile.roomImages && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+          onClick={() => setShowRoomPhotos(false)}
+        >
+          <div
+            className="bg-white p-6 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowRoomPhotos(false)}
+              className="absolute top-3 right-3 text-gray-600 hover:text-black z-10"
+            >
+              <Icon icon="mdi:close" className="w-8 h-8" />
+            </button>
+            
+            <h2 className="text-2xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+              <Icon icon="mdi:image-multiple" className="w-6 h-6 text-pink-500" />
+              Room Photos
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {currentProfile.roomImages.map((imageUrl, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={imageUrl}
+                    alt={`Room ${index + 1}`}
+                    className="w-full h-64 object-cover rounded-lg shadow-md hover:shadow-xl transition cursor-pointer"
+                    onClick={() => window.open(imageUrl, '_blank')}
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition rounded-lg flex items-center justify-center">
+                    <Icon icon="mdi:magnify-plus" className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Sidebar Panel - Shared across all UI states */}
+      {showFilterPanel && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-start z-50"
+          onClick={() => {
+            setShowFilterPanel(false);
+            setTempFilters(filterPreferences); // Reset temp filters on cancel
+          }}
+        >
+          <div 
+            className="bg-white h-full w-96 shadow-2xl overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Filters</h2>
+              <button
+                onClick={() => {
+                  setShowFilterPanel(false);
+                  setTempFilters(filterPreferences); // Reset temp filters
+                }}
+                className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition"
+              >
+                <Icon icon="mdi:close" className="text-xl" />
+              </button>
+            </div>
+
+            {/* Filter Sections */}
+            <div className="space-y-6">
+              {/* Accommodation Status */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:home" className="mr-2 text-green-600" />
+                  Accommodation Status
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Have Room</span>
+                    <button
+                      onClick={() => {
+                        const newShowHaveRoom = !tempFilters.showHaveRoom;
+                        setTempFilters(prev => ({ 
+                          ...prev, 
+                          showHaveRoom: newShowHaveRoom,
+                          // Clear district and fee filters when disabling have room
+                          selectedDistricts: newShowHaveRoom ? prev.selectedDistricts : [],
+                          minFee: newShowHaveRoom ? prev.minFee : null,
+                          maxFee: newShowHaveRoom ? prev.maxFee : null,
+                        }));
+                      }}
+                      className={`btn btn-xs ${tempFilters.showHaveRoom ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showHaveRoom ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Looking for Room</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showLooking: !prev.showLooking }))}
+                      className={`btn btn-xs ${tempFilters.showLooking ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showLooking ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Districts - Only show when Have Room is selected */}
+              {tempFilters.showHaveRoom && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:map-marker" className="mr-2 text-blue-600" />
+                    Districts (Only Show)
+                  </h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                    {HCMC_DISTRICTS.map(district => (
+                      <label key={district} className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={tempFilters.selectedDistricts.includes(district)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setTempFilters(prev => ({ ...prev, selectedDistricts: [...prev.selectedDistricts, district] }));
+                            } else {
+                              setTempFilters(prev => ({ ...prev, selectedDistricts: prev.selectedDistricts.filter(d => d !== district) }));
+                            }
+                          }}
+                          className="checkbox checkbox-primary checkbox-sm mr-2"
+                        />
+                        <span className="text-sm text-gray-600">{district}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Monthly Fee Range - Only show when Have Room is selected */}
+              {tempFilters.showHaveRoom && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <Icon icon="mdi:cash" className="mr-2 text-yellow-600" />
+                    Monthly Fee Range (VND)
+                  </h3>
+                  <div className="space-y-3">
+                    <label className="form-control">
+                      <span className="label text-xs text-gray-600">Minimum Fee</span>
+                      <input
+                        type="number"
+                        placeholder="e.g., 2000000"
+                        value={tempFilters.minFee || ''}
+                        onChange={(e) => setTempFilters(prev => ({ ...prev, minFee: e.target.value ? Number(e.target.value) : null }))}
+                        className="input input-bordered input-sm w-full text-gray-700"
+                      />
+                    </label>
+                    <label className="form-control">
+                      <span className="label text-xs text-gray-600">Maximum Fee</span>
+                      <input
+                        type="number"
+                        placeholder="e.g., 5000000"
+                        value={tempFilters.maxFee || ''}
+                        onChange={(e) => setTempFilters(prev => ({ ...prev, maxFee: e.target.value ? Number(e.target.value) : null }))}
+                        className="input input-bordered input-sm w-full text-gray-700"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Cleanliness Level */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:spray-bottle" className="mr-2 text-cyan-600" />
+                  Cleanliness Level
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Very Clean</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showVeryClean: !prev.showVeryClean }))}
+                      className={`btn btn-xs ${tempFilters.showVeryClean ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showVeryClean ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Clean</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showClean: !prev.showClean }))}
+                      className={`btn btn-xs ${tempFilters.showClean ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showClean ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Moderate</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showModerateClean: !prev.showModerateClean }))}
+                      className={`btn btn-xs ${tempFilters.showModerateClean ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showModerateClean ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Relaxed</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showRelaxed: !prev.showRelaxed }))}
+                      className={`btn btn-xs ${tempFilters.showRelaxed ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showRelaxed ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Smoking Policy */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:smoking" className="mr-2 text-red-600" />
+                  Smoking Policy
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Smokers</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showSmoking: !prev.showSmoking }))}
+                      className={`btn btn-xs ${tempFilters.showSmoking ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showSmoking ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Non-Smokers</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showNonSmoking: !prev.showNonSmoking }))}
+                      className={`btn btn-xs ${tempFilters.showNonSmoking ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showNonSmoking ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sleep Schedule */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:sleep" className="mr-2 text-indigo-600" />
+                  Sleep Schedule
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Early Birds</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showEarlyBird: !prev.showEarlyBird }))}
+                      className={`btn btn-xs ${tempFilters.showEarlyBird ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showEarlyBird ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Night Owls</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showNightOwl: !prev.showNightOwl }))}
+                      className={`btn btn-xs ${tempFilters.showNightOwl ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showNightOwl ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Flexible</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showFlexible: !prev.showFlexible }))}
+                      className={`btn btn-xs ${tempFilters.showFlexible ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showFlexible ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Noise Level */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:volume-high" className="mr-2 text-purple-600" />
+                  Noise Level
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Quiet</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showQuiet: !prev.showQuiet }))}
+                      className={`btn btn-xs ${tempFilters.showQuiet ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showQuiet ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Moderate</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showModerate: !prev.showModerate }))}
+                      className={`btn btn-xs ${tempFilters.showModerate ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showModerate ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Loud</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showLoud: !prev.showLoud }))}
+                      className={`btn btn-xs ${tempFilters.showLoud ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showLoud ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Guest Policy */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:account-group" className="mr-2 text-orange-600" />
+                  Guest Policy
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">No Guests</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showNoGuests: !prev.showNoGuests }))}
+                      className={`btn btn-xs ${tempFilters.showNoGuests ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showNoGuests ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Occasional Guests</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showOccasionalGuests: !prev.showOccasionalGuests }))}
+                      className={`btn btn-xs ${tempFilters.showOccasionalGuests ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showOccasionalGuests ? '✓' : '×'}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Frequent Guests</span>
+                    <button
+                      onClick={() => setTempFilters(prev => ({ ...prev, showFrequentGuests: !prev.showFrequentGuests }))}
+                      className={`btn btn-xs ${tempFilters.showFrequentGuests ? 'btn-success' : 'btn-error'}`}
+                    >
+                      {tempFilters.showFrequentGuests ? '✓' : '×'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setTempFilters({
+                      showHaveRoom: true,
+                      showLooking: true,
+                      showSmoking: true,
+                      showNonSmoking: true,
+                      showEarlyBird: true,
+                      showNightOwl: true,
+                      showFlexible: true,
+                      showQuiet: true,
+                      showModerate: true,
+                      showLoud: true,
+                      showNoGuests: true,
+                      showOccasionalGuests: true,
+                      showFrequentGuests: true,
+                      showVeryClean: true,
+                      showClean: true,
+                      showModerateClean: true,
+                      showRelaxed: true,
+                      selectedDistricts: [],
+                      minFee: null,
+                      maxFee: null,
+                    });
+                  }}
+                  className="btn btn-outline btn-error flex-1"
+                >
+                  <Icon icon="mdi:filter-off" className="mr-2" />
+                  Clear
+                </button>
+                <button
+                  onClick={applyFilters}
+                  className="btn btn-primary flex-1"
+                >
+                  <Icon icon="mdi:check" className="mr-2" />
+                  Apply Filters
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

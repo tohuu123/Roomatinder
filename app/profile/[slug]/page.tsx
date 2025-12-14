@@ -450,6 +450,28 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         </div>
                       </div>
                     )}
+
+                    {/* Room Images */}
+                    {profile.roomImages && profile.roomImages.length > 0 && (
+                      <div className="col-span-1 md:col-span-2">
+                        <h3 className="text-lg font-bold mb-3 text-gray-900 flex items-center">
+                          <Icon icon="mdi:image-multiple" className="w-5 h-5 mr-2 text-pink-500" />
+                          Room Photos
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {profile.roomImages.map((imageUrl, index) => (
+                            <div key={index} className="aspect-square overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                              <img
+                                src={imageUrl}
+                                alt={`Room ${index + 1}`}
+                                className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                                onClick={() => window.open(imageUrl, '_blank')}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
                 

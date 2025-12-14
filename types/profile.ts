@@ -65,6 +65,7 @@ export interface UserProfile {
   accommodationOtherFees?: string;
 
   accommodationServiceDescription?: string;
+  roomImages?: string[]; // Array of room image URLs
 
   // -------------------- System Values --------------------
 
