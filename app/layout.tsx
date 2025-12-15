@@ -108,6 +108,11 @@ function NavBar() {
               </Link>
             </li>
             <li>
+              <Link href="/post" className="text-base text-gray-900 font-semibold">
+                Posts
+              </Link>
+            </li>
+            <li>
               <Link href="/people" className="text-base text-gray-900 font-semibold">
                 People
               </Link>
@@ -171,6 +176,11 @@ function NavBar() {
           <li>
             <Link href="/chatroom" className="text-base text-gray-900 font-semibold">
               Messages
+            </Link>
+          </li>
+          <li>
+            <Link href="/post" className="text-base text-gray-900 font-semibold">
+              Posts
             </Link>
           </li>
           <li>
