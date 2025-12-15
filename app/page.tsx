@@ -909,8 +909,8 @@ export default function HomePage({ email }: HomePageProps) {
             </button>
 
             <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4 text-gray-600">No more profiles!</h2>
-              <p className="text-gray-500 text-sm">Try adjusting your filters to see more profiles</p>
+              <h2 className="text-2xl font-bold mb-4 text-[#4a6b5a]">No more profiles!</h2>
+              <p className="text-[#6b9b7f] text-sm">Try adjusting your filters to see more profiles</p>
             </div>
           </div>
         </div>
@@ -1292,7 +1292,7 @@ export default function HomePage({ email }: HomePageProps) {
         {fetchingProfile ? (
           <div className="flex flex-col items-center justify-center h-[750px]">
             <span className="loading loading-spinner loading-lg"></span>
-            <p className="mt-4 text-gray-600 font-semibold">Fetching profile...</p>
+            <p className="mt-4 text-[#4a6b5a] font-semibold">Fetching profile...</p>
           </div>
         ) : (
           <div className="relative h-[750px] mb-6">

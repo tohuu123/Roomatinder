@@ -6,6 +6,8 @@ import { getAuth, createUserWithEmailAndPassword, signInWithPopup, signInWithRed
 import { app, auth, googleProvider } from "../../firebase";
 import { useRouter } from "next/navigation";
 import { createProfile, getProfile, hasCompletedRequiredFields } from "@/lib/profileService";
+import { GreenHomeBackground } from "@/components/magicui/green-home-background";
+import { Icon } from '@iconify/react';
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -122,68 +124,111 @@ export default function Register() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-base-200">
-      <div className="w-full bg-base-100 rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0">
-        <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-          <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">Sign In</h1>
-
-          {/* google button */}
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={loadingGoogle}
-            className="w-full text-primary-content bg-primary transform hover:scale-105 transition duration-200 ease-in-out font-medium rounded-lg px-5 py-2.5 flex items-center justify-center gap-2"
-          >
-            {/* logo gg */}
-            <svg width="18" height="18" viewBox="0 0 48 48" className="-ml-1" aria-hidden="true">
-              <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.732 32.291 29.251 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.156 7.961 3.039l5.657-5.657C33.69 6.053 29.104 4 24 4 12.954 4 4 12.954 4 24s8.954 20 20 20c10.493 0 19-8.507 19-19 0-1.341-.138-2.651-.389-3.917z"/>
-              <path fill="#FF3D00" d="M6.306 14.691l6.571 4.818C14.494 16.4 18.879 12 24 12c3.059 0 5.842 1.156 7.961 3.039l5.657-5.657C33.69 6.053 29.104 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
-              <path fill="#4CAF50" d="M24 44c5.166 0 9.818-1.977 13.309-5.191l-6.154-5.208C29.108 35.174 26.671 36 24 36c-5.214 0-9.706-3.726-11.289-8.733l-6.53 5.03C9.479 39.556 16.181 44 24 44z"/>
-              <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-1.018 3.291-3.536 5.988-6.849 7.098l6.154 5.208C36.355 41.038 43 36 43 25c0-1.341-.138-2.651-.389-3.917z"/>
-            </svg>
-            {loadingGoogle ? "Signing in..." : "Sign in with Google"}
-          </button>
-
-          <div className="divider my-2 divider-neutral !text-black before:bg-base-300 after:bg-base-300">
-            or
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6" action="#">
-            <div>
-              <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900">
-                Full Name
-              </label>
-              <input type="name" name="name" value={name} onChange={(e) => setName(e.target.value)} id="name" className="bg-base-200 border border-base-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5" placeholder="John Doe" required />
-            </div>
-            <div>
-              <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900">
-                Email address
-              </label>
-              <input type="email" name="email" value={email} onChange={(e) => setEmail(e.target.value)} id="email" className="bg-base-200 border border-base-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5" placeholder="example@gmail.com" required />
-            </div>
-            <div>
-              <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900">
-                Password
-              </label>
-              <input type="password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} id="password" placeholder="••••••••" className="bg-base-200 border border-base-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5" required />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="block mb-2 text-sm font-medium text-gray-900">
-                Confirm Password
-              </label>
-              <input type="password" name="confirm-password" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} id="confirm-password" placeholder="••••••••" className="bg-base-200 border border-base-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5" required />
-            </div>
-            <button type="submit" className="w-full text-primary-content bg-primary transform hover:scale-105 transition duration-200 ease-in-out font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-              Sign in
-            </button>
-            {error && (
-              <div className="text-red-700 relative text-sm font-bold" role="alert">
-                <span className="block sm:inline">⚠ {error}</span>
-              </div>
-            )}
-          </form>
+    <div className="relative overflow-x-hidden">
+      {/* Hero Section with Background */}
+      <section className="relative min-h-screen">
+        {/* Background */}
+        <div className="absolute inset-0">
+          <GreenHomeBackground />
         </div>
-      </div>
-    </main>
+
+        {/* Centered Content */}
+        <div className="relative flex flex-col items-center justify-center min-h-screen px-4 sm:px-8 z-10">
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 sm:p-12 max-w-md w-full">
+            <h1 className="text-3xl font-bold text-center text-[#4a6b5a] mb-8">Create Account</h1>
+
+            {/* Google Sign In Button */}
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={loadingGoogle}
+              className="btn btn-outline w-full mb-4 hover:scale-105 transition-transform"
+            >
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.732 32.291 29.251 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.156 7.961 3.039l5.657-5.657C33.69 6.053 29.104 4 24 4 12.954 4 4 12.954 4 24s8.954 20 20 20c10.493 0 19-8.507 19-19 0-1.341-.138-2.651-.389-3.917z"/>
+                <path fill="#FF3D00" d="M6.306 14.691l6.571 4.818C14.494 16.4 18.879 12 24 12c3.059 0 5.842 1.156 7.961 3.039l5.657-5.657C33.69 6.053 29.104 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+                <path fill="#4CAF50" d="M24 44c5.166 0 9.818-1.977 13.309-5.191l-6.154-5.208C29.108 35.174 26.671 36 24 36c-5.214 0-9.706-3.726-11.289-8.733l-6.53 5.03C9.479 39.556 16.181 44 24 44z"/>
+                <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-1.018 3.291-3.536 5.988-6.849 7.098l6.154 5.208C36.355 41.038 43 36 43 25c0-1.341-.138-2.651-.389-3.917z"/>
+              </svg>
+              {loadingGoogle ? "Signing in..." : "Continue with Google"}
+            </button>
+
+            <div className="divider">or</div>
+
+            {/* Registration Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <label className="input input-bordered flex items-center gap-2">
+                <Icon icon="mdi:account" />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Full Name"
+                  className="grow"
+                  required
+                />
+              </label>
+
+              <label className="input input-bordered flex items-center gap-2">
+                <Icon icon="mdi:email" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email address"
+                  className="grow"
+                  required
+                />
+              </label>
+
+              <label className="input input-bordered flex items-center gap-2">
+                <Icon icon="mdi:lock" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="grow"
+                  required
+                />
+              </label>
+
+              <label className="input input-bordered flex items-center gap-2">
+                <Icon icon="mdi:lock-check" />
+                <input
+                  type="password"
+                  value={confirmation}
+                  onChange={(e) => setConfirmation(e.target.value)}
+                  placeholder="Confirm Password"
+                  className="grow"
+                  required
+                />
+              </label>
+
+              <button 
+                type="submit" 
+                className="w-full px-8 py-3 text-lg font-bold text-[#4a6b5a] rounded-full shadow-lg hover:scale-105 transition-all duration-300 bg-gradient-to-r from-[#E8FFD7] via-[#d4f5c4] to-[#c0edb0] border-none"
+              >
+                Sign Up
+              </button>
+
+              {error && (
+                <div className="alert alert-error">
+                  <Icon icon="mdi:alert-circle" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <p className="text-sm text-center text-gray-600">
+                Already have an account?{" "}
+                <Link href="/login" className="text-[#4a6b5a] font-semibold hover:underline">
+                  Sign in here
+                </Link>
+              </p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

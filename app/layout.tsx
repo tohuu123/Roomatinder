@@ -6,7 +6,7 @@ import "./globals.css";
 import { auth } from "@/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { getProfile } from "@/lib/profileService";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Icon } from '@iconify/react';
 
 function NavBar() {
@@ -252,6 +252,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/login';
+  const isRegisterPage = pathname === '/register';
+  const hideNavBar = isLoginPage || isRegisterPage;
+
   return (
     <html lang="en">
       <head>
@@ -259,7 +264,7 @@ export default function RootLayout({
         <meta name="description" content="Roommate Matching App" />
       </head>
       <body>
-        <NavBar />
+        {!hideNavBar && <NavBar />}
         {children}
       </body>
     </html>

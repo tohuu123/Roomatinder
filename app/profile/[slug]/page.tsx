@@ -9,6 +9,7 @@ import { getProfileBySlug } from '@/lib/profileService';
 import { getUserAvatar } from '@/lib/avatarHelper';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
+import { GreenHomeBackground } from '@/components/magicui/green-home-background';
 
 export default function ProfileViewPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
@@ -44,31 +45,36 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
+      <GreenHomeBackground>
+        <div className="flex justify-center items-center min-h-screen">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      </GreenHomeBackground>
     );
   }
 
   if (!profile) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen bg-base-200">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4 text-gray-900">404</h1>
-          <p className="text-xl mb-6 text-gray-700">User not found</p>
-          <Link href="/" className="btn btn-primary">
-            Back to Home
-          </Link>
+      <GreenHomeBackground>
+        <div className="flex flex-col justify-center items-center min-h-screen">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4 text-gray-900">404</h1>
+            <p className="text-xl mb-6 text-gray-700">User not found</p>
+            <Link href="/" className="btn btn-primary">
+              Back to Home
+            </Link>
+          </div>
         </div>
-      </div>
+      </GreenHomeBackground>
     );
   }
 
   return (
-    <div className="min-h-screen bg-base-200 py-8">
-      <div className="container mx-auto max-w-4xl px-4">
-        {/* Header */}
-        <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+    <GreenHomeBackground>
+      <div className="min-h-screen py-8">
+        <div className="container mx-auto max-w-4xl px-4">
+          {/* Header */}
+          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-4">
               <div className="avatar">
@@ -601,6 +607,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
           </Link>
         </div>
       </div>
-    </div>
+      </div>
+    </GreenHomeBackground>
   );
 }

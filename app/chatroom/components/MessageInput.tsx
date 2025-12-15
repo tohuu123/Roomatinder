@@ -109,7 +109,7 @@ export default function MessageInput({
   const commonEmojis = ['😊', '😂', '❤️', '👍', '🎉', '😍', '🔥', '✨', '💯', '👏'];
 
   return (
-    <div className="p-4 border-t border-base-300 bg-base-100">
+    <div className="p-4 border-t border-base-300 bg-base-100 flex-shrink-0">
       {/* File Preview */}
       {selectedFile && (
         <div className="mb-3 p-3 bg-base-200 rounded-lg">

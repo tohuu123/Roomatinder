@@ -23,6 +23,7 @@ import ChatListItemComponent from './components/ChatListItem';
 import MessageInput from './components/MessageInput';
 import { MessageType } from '@/types/chat';
 import { UserProfile } from '@/types/profile';
+import { GreenHomeBackground } from '@/components/magicui/green-home-background';
 
 export default function ChatroomPage() {
   const router = useRouter();
@@ -101,6 +102,10 @@ export default function ChatroomPage() {
     if (currentUser?.uid) {
       markChatRead(chatId, currentUser.uid);
     }
+    // Scroll to bottom immediately when chat is selected
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }, 100);
   };
 
   // Group messages by date
@@ -108,8 +113,10 @@ export default function ChatroomPage() {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages.length]);
 
   // Send message handler
   const handleSendMessage = async (
@@ -157,17 +164,20 @@ export default function ChatroomPage() {
 
   if (!currentUser) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
-      </div>
+      <GreenHomeBackground>
+        <div className="h-screen flex items-center justify-center">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+      </GreenHomeBackground>
     );
   }
 
   return (
-    <div className="h-screen bg-base-100 overflow-hidden">
-      <div className="flex h-full">
-        {/* Sidebar - Chat List */}
-        <div className="w-full md:w-1/3 border-r border-base-300 bg-base-100 flex flex-col">
+    <GreenHomeBackground>
+      <div className="h-screen max-h-screen overflow-hidden">
+        <div className="flex h-full max-h-full">
+          {/* Sidebar - Chat List */}
+          <div className="w-full md:w-1/3 border-r border-base-300 bg-base-100 flex flex-col">
           {/* Header */}
           <div className="p-4 border-b border-base-300">
             <div className="flex justify-between items-center mb-3">
@@ -247,11 +257,11 @@ export default function ChatroomPage() {
         </div>
 
         {/* Main Chat Area */}
-        <div className="hidden md:flex flex-1 flex-col">
+        <div className="hidden md:flex flex-1 flex-col max-h-screen overflow-hidden">
           {selectedChat ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-base-300 bg-base-100">
+              <div className="p-4 border-b border-base-300 bg-base-100 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="avatar">
@@ -321,7 +331,7 @@ export default function ChatroomPage() {
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-4 bg-base-200/30">
+              <div className="flex-1 overflow-y-auto p-4 pb-2 min-h-0">
                 {messagesLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <span className="loading loading-spinner loading-md text-primary"></span>
@@ -331,7 +341,7 @@ export default function ChatroomPage() {
                     <p className="text-gray-500">Chưa có tin nhắn nào</p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-6 pb-4">
                     {messageGroups.map((group) => (
                       <div key={group.date}>
                         {/* Date Separator */}
@@ -382,7 +392,7 @@ export default function ChatroomPage() {
             </>
           ) : (
             /* No Chat Selected */
-            <div className="flex-1 flex items-center justify-center bg-base-200/30">
+            <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <Icon
                   icon="mdi:chat-outline"
@@ -399,6 +409,7 @@ export default function ChatroomPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </GreenHomeBackground>
   );
 }

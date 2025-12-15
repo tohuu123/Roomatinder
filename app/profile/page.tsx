@@ -29,6 +29,7 @@ import {
   hasCompletedRequiredFields,
   calculateProfileCompletion,
 } from '@/lib/profileService';
+import { GreenHomeBackground } from '@/components/magicui/green-home-background';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -359,9 +360,11 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
+      <GreenHomeBackground>
+        <div className="flex justify-center items-center min-h-screen">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      </GreenHomeBackground>
     );
   }
 
@@ -381,10 +384,11 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 py-8">
-      <div className="container mx-auto max-w-4xl px-4">
-        {/* Header */}
-        <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+    <GreenHomeBackground>
+      <div className="min-h-screen py-8">
+        <div className="container mx-auto max-w-4xl px-4">
+          {/* Header */}
+          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-center gap-2 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">Edit Profile</h1>
             <span className="badge badge-info">Edit Mode</span>
@@ -1600,7 +1604,8 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </GreenHomeBackground>
   );
 }
 
