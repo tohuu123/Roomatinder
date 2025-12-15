@@ -129,7 +129,7 @@ export default function Register() {
       <section className="relative min-h-screen">
         {/* Background */}
         <div className="absolute inset-0">
-          <GreenHomeBackground />
+          <GreenHomeBackground><></></GreenHomeBackground>
         </div>
 
         {/* Centered Content */}

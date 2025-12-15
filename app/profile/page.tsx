@@ -883,7 +883,7 @@ export default function ProfilePage() {
                 <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-900">
                   <span className="mr-2">🔍</span>
                   <span className="badge badge-primary mr-2">Looking</span>
-                  What You're Looking For
+                  What You&apos;re Looking For
                 </h2>
 
               {/* Preferred Districts */}

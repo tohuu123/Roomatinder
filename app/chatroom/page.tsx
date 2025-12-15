@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { Icon } from '@iconify/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getAuth } from 'firebase/auth';
@@ -25,7 +25,7 @@ import { MessageType } from '@/types/chat';
 import { UserProfile } from '@/types/profile';
 import { GreenHomeBackground } from '@/components/magicui/green-home-background';
 
-export default function ChatroomPage() {
+function ChatroomContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const auth = getAuth();
@@ -411,5 +411,13 @@ export default function ChatroomPage() {
       </div>
       </div>
     </GreenHomeBackground>
+  );
+}
+
+export default function ChatroomPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-base-200"><span className="loading loading-spinner loading-lg"></span></div>}>
+      <ChatroomContent />
+    </Suspense>
   );
 }

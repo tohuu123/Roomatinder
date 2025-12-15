@@ -67,11 +67,7 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
-interface HomePageProps {
-  email?: string;
-}
-
-export default function HomePage({ email }: HomePageProps) {
+export default function HomePage() {
   const router = useRouter();
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
@@ -1465,7 +1461,7 @@ export default function HomePage({ email }: HomePageProps) {
                     </h2>
                     {currentProfile.nickname && (
                       <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-400/80 backdrop-blur-sm border border-purple-300/50">
-                        "{currentProfile.nickname}"
+                        &quot;{currentProfile.nickname}&quot;
                       </span>
                     )}
                     
@@ -2424,7 +2420,7 @@ export default function HomePage({ email }: HomePageProps) {
 
             {/* Match Title */}
             <h2 className="text-4xl font-bold text-gray-800 mb-4">
-              It's a Match!
+              It&apos;s a Match!
             </h2>
             <p className="text-gray-600 mb-6">
               You and <span className="font-bold text-green-600">{matchedProfile.displayName || matchedProfile.email}</span> have liked each other!

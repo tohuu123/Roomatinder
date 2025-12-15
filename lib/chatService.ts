@@ -100,7 +100,7 @@ async function findExistingChat(participants: string[]): Promise<Chat | null> {
         data.participants.length === participants.length &&
         participants.every((p) => data.participants.includes(p))
       ) {
-        return { id: docSnapshot.id, ...data } as Chat;
+        return { ...data, id: docSnapshot.id } as Chat;
       }
     }
     
@@ -121,7 +121,7 @@ export async function getChat(chatId: string): Promise<Chat | null> {
     const chatDoc = await getDoc(chatRef);
 
     if (chatDoc.exists()) {
-      return { id: chatDoc.id, ...chatDoc.data() } as Chat;
+      return { ...chatDoc.data(), id: chatDoc.id } as Chat;
     }
     return null;
   } catch (error) {
@@ -144,7 +144,7 @@ export async function getUserChats(userId: string): Promise<Chat[]> {
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as Chat)
+      (doc) => ({ ...doc.data(), id: doc.id } as Chat)
     );
   } catch (error) {
     console.error('Error getting user chats:', error);
@@ -168,7 +168,7 @@ export function subscribeToUserChats(
 
   return onSnapshot(q, (snapshot) => {
     const chats = snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as Chat)
+      (doc) => ({ ...doc.data(), id: doc.id } as Chat)
     );
     callback(chats);
   });
@@ -377,7 +377,7 @@ export async function getChatMessages(
 
     const snapshot = await getDocs(q);
     const messages = snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as Message)
+      (doc) => ({ ...doc.data(), id: doc.id } as Message)
     );
 
     return {
@@ -403,7 +403,7 @@ export function subscribeToChatMessages(
 
   return onSnapshot(q, (snapshot) => {
     const messages = snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as Message)
+      (doc) => ({ ...doc.data(), id: doc.id } as Message)
     );
     callback(messages);
   });
@@ -557,7 +557,7 @@ export function subscribeToUserStatus(
   
   return onSnapshot(statusRef, (doc) => {
     if (doc.exists()) {
-      callback({ id: doc.id, ...doc.data() } as UserStatus);
+      callback(doc.data() as UserStatus);
     } else {
       callback(null);
     }
@@ -651,7 +651,7 @@ export async function getUserNotifications(
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as ChatNotification)
+      (doc) => ({ ...doc.data(), id: doc.id } as ChatNotification)
     );
   } catch (error) {
     console.error('Error getting notifications:', error);
@@ -676,7 +676,7 @@ export function subscribeToUserNotifications(
 
   return onSnapshot(q, (snapshot) => {
     const notifications = snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as ChatNotification)
+      (doc) => ({ ...doc.data(), id: doc.id } as ChatNotification)
     );
     callback(notifications);
   });

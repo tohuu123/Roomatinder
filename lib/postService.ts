@@ -244,6 +244,7 @@ export const addComment = async (
   userId: string,
   userName: string,
   userPhoto: string | undefined,
+  userSlug: string | undefined,
   content: string
 ): Promise<string | null> => {
   try {

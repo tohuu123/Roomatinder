@@ -36,8 +36,6 @@ export default function Login() {
           // Initialize with default/empty required fields
           budgetMin: 0,
           budgetMax: 0,
-          location: "",
-          moveInDate: new Date(),
           sleepSchedule: "flexible",
           cleanlinessLevel: "moderate",
           smokingPolicy: "no-smoking",
@@ -130,7 +128,7 @@ export default function Login() {
       <section className="relative min-h-screen">
         {/* Background */}
         <div className="absolute inset-0">
-          <GreenHomeBackground />
+          <GreenHomeBackground><></></GreenHomeBackground>
         </div>
 
         {/* Navigation Menu */}
@@ -501,7 +499,7 @@ export default function Login() {
             )}
 
             <p className="text-sm text-center text-[#6b9b7f]">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="/register" className="text-[#4a6b5a] font-semibold hover:underline">
                 Sign up here
               </Link>
