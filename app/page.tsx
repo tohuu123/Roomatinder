@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { getProfile, likeUser, passUser } from "@/lib/profileService";
+import { getProfile, likeUser, passUser, hasCompletedRequiredFields } from "@/lib/profileService";
 import { queryMatchingProfile } from "@/lib/chromaService";
 import { UserProfile, HCMC_DISTRICTS } from "@/types/profile";
 import { auth } from "@/firebase";
@@ -197,7 +197,19 @@ export default function HomePage({ email }: HomePageProps) {
       // Load profile details from Firebase
       const prof = await getProfile(matchedId);
       if (!prof) {
-        console.log("[Fetch] Profile not found in Firebase:", matchedId);
+        console.log("[Fetch] ❌ Profile not found in Firebase:", matchedId);
+        continue;
+      }
+
+      // Skip profiles that haven't completed required fields
+      const isComplete = hasCompletedRequiredFields(prof);
+      if (!isComplete) {
+        console.log("[Fetch] ❌ Profile incomplete, skipping:", matchedId, {
+          hasGender: !!prof.gender,
+          hasAccommodationStatus: !!prof.accommodationStatus,
+          hasDistricts: !!(prof.districts && prof.districts.length > 0),
+          displayName: prof.displayName || prof.nickname
+        });
         continue;
       }
 
@@ -243,10 +255,13 @@ export default function HomePage({ email }: HomePageProps) {
     }
 
     console.log(`[Fetch] Batch complete: ${newProfiles.length} profiles fetched in ${attempts} attempts`);
+    console.log(`[Fetch] Queried ${queriedIds.size} profiles total, ${newProfiles.length} passed filters`);
+    console.log(`[Fetch] Filtered out: ${queriedIds.size - newProfiles.length} profiles`);
     
     // If we hit max attempts and got 0 profiles, log it clearly
     if (newProfiles.length === 0 && attempts >= maxAttempts) {
       console.warn(`[Fetch] Exhausted max attempts (${maxAttempts}) without finding matching profiles`);
+      console.warn(`[Fetch] All ${queriedIds.size} queried profiles were filtered out`);
     }
     
     return {
@@ -257,9 +272,17 @@ export default function HomePage({ email }: HomePageProps) {
 
   // Function to check if profile passes filter preferences
   const passesFilter = (profile: UserProfile): boolean => {
+    console.log(`[Filter] Checking profile ${profile.userId}:`, {
+      profileGender: profile.gender,
+      currentGender: currentUserProfile?.gender,
+      profileAccommodation: profile.accommodationStatus,
+      currentAccommodation: currentUserProfile?.accommodationStatus
+    });
+
     // Hard filter: Only allow same gender matches (male-male and female-female)
     if (currentUserProfile?.gender && profile.gender) {
       if (currentUserProfile.gender !== profile.gender) {
+        console.log(`[Filter] ❌ REJECTED: Gender mismatch (${currentUserProfile.gender} != ${profile.gender})`);
         return false;
       }
     }
@@ -267,6 +290,7 @@ export default function HomePage({ email }: HomePageProps) {
     // Hard filter: Exclude have-room matching with have-room
     // Only allow: have-room ↔ looking OR looking ↔ have-room OR looking ↔ looking
     if (currentUserProfile?.accommodationStatus === 'have-room' && profile.accommodationStatus === 'have-room') {
+      console.log(`[Filter] ❌ REJECTED: Both have-room`);
       return false;
     }
 
@@ -1811,13 +1835,23 @@ export default function HomePage({ email }: HomePageProps) {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="flex flex-col">
                         <span className="text-gray-500">You</span>
-                        <span className="font-medium text-gray-700">
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          !currentUserProfile?.cleanlinessLevel ? 'text-gray-400 bg-gray-200' :
+                          currentUserProfile.cleanlinessLevel === currentProfile.cleanlinessLevel ? 'text-green-700 bg-green-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
                           {currentUserProfile?.cleanlinessLevel ? formatLabel(currentUserProfile.cleanlinessLevel) : 'Not set'}
                         </span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-gray-500">Them</span>
-                        <span className="font-medium text-gray-700">{formatLabel(currentProfile.cleanlinessLevel)}</span>
+                        <span className={`font-medium px-2 py-1 rounded ${
+                          currentUserProfile?.cleanlinessLevel === currentProfile.cleanlinessLevel ? 'text-green-700 bg-green-100' :
+                          !currentUserProfile?.cleanlinessLevel ? 'text-blue-700 bg-blue-100' :
+                          'text-orange-700 bg-orange-100'
+                        }`}>
+                          {formatLabel(currentProfile.cleanlinessLevel)}
+                        </span>
                       </div>
                     </div>
                     {currentUserProfile?.cleanlinessLevel === currentProfile.cleanlinessLevel && (

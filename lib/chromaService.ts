@@ -189,10 +189,10 @@ export async function queryMatchingProfile(
       return null;
     }
     
-    // All IDs to exclude
-    const allExcluded = [currentUserId, ...excludeUserIds];
+    // All IDs to exclude - deduplicate to avoid duplicate entries in $nin filter
+    const allExcluded = Array.from(new Set([currentUserId, ...excludeUserIds]));
     
-    console.log(`[ChromaDB] Excluding ${allExcluded.length} user IDs:`, allExcluded.slice(0, 5), '...');
+    console.log(`[ChromaDB] Excluding ${allExcluded.length} user IDs (${excludeUserIds.length + 1} before dedup):`, allExcluded.slice(0, 5), '...');
     
     // First, get the current user's document to use as query
     const currentUserResult = await collection.get({

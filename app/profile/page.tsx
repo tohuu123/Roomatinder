@@ -49,6 +49,7 @@ export default function ProfilePage() {
   const [uploadingRoomImage, setUploadingRoomImage] = useState(false);
   const [roomImageError, setRoomImageError] = useState('');
   const roomImageInputRef = useRef<HTMLInputElement>(null);
+  const [districtInput, setDistrictInput] = useState<string>('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -65,6 +66,7 @@ export default function ProfilePage() {
         setProfile(existingProfile);
         setSelectedInterests(existingProfile.interests || []);
         setShowOptionalFields(hasCompletedRequiredFields(existingProfile));
+        setDistrictInput(existingProfile.districts?.join(', ') || '');
       }
 
       setLoading(false);
@@ -1139,29 +1141,26 @@ export default function ProfilePage() {
             {/* Accommodation Districts */}
             <div className="form-control mb-4">
               <label className="label">
-                <span className="label-text font-semibold text-gray-900">Accommodation District *</span>
+                <span className="label-text font-semibold text-gray-900">Accommodation Address *</span>
               </label>
-              <div className="flex flex-wrap gap-2">
-                {HCMC_DISTRICTS.map((district) => (
-                  <button
-                    key={district}
-                    type="button"
-                    className={`btn btn-sm ${
-                      profile.districts?.includes(district) ? 'btn-primary' : 'btn-outline'
-                    }`}
-                    onClick={() => {
-                      const currentDistricts = profile.districts || [];
-                      if (currentDistricts.includes(district)) {
-                        handleInputChange('districts', currentDistricts.filter(d => d !== district));
-                      } else {
-                        handleInputChange('districts', [...currentDistricts, district]);
-                      }
-                    }}
-                  >
-                    {district}
-                  </button>
-                ))}
-              </div>
+              <input
+                type="text"
+                className="input input-bordered text-gray-900"
+                placeholder="Enter district or address (e.g., District 1, Quận 3, Binh Thanh)"
+                value={districtInput}
+                onChange={(e) => {
+                  setDistrictInput(e.target.value);
+                }}
+                onBlur={() => {
+                  // Only split and update profile on blur
+                  const parts = districtInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                  setProfile(prev => ({
+                    ...prev,
+                    districts: parts
+                  }));
+                }}
+                required
+              />
             </div>
 
             {/* Monthly Rent */}
