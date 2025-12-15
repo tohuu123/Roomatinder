@@ -9,6 +9,7 @@ import { getLikedProfiles, getMatches, unlikeUser, likeUser, getPassedProfiles, 
 import { UserProfile } from "@/types/profile";
 import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
+import { GreenHomeBackground } from "@/components/magicui/green-home-background";
 
 export default function LikedPage() {
   const router = useRouter();
@@ -148,19 +149,22 @@ export default function LikedPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-emerald-100">
-        <div className="text-center">
-          <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <GreenHomeBackground>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
         </div>
-      </div>
+      </GreenHomeBackground>
     );
   }
 
   const displayProfiles = activeTab === 'liked' ? likedProfiles : activeTab === 'passed' ? passedProfiles : matches;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-100 to-emerald-100 p-4">
+    <GreenHomeBackground>
+    <div className="min-h-screen p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -392,5 +396,6 @@ export default function LikedPage() {
           )}
         </div>
     </div>
+    </GreenHomeBackground>
   );
 }

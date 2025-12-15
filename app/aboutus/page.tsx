@@ -1,9 +1,11 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
+import { GreenHomeBackground } from '@/components/magicui/green-home-background';
 
 export default function AboutUsPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-pink-50">
+    <GreenHomeBackground>
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-12">
         
         {/* Hero Section */}
@@ -244,5 +246,6 @@ export default function AboutUsPage() {
 
       </div>
     </div>
+    </GreenHomeBackground>
   );
 }

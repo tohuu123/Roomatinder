@@ -17,6 +17,7 @@ import {
 } from "@/lib/postService";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
+import { GreenHomeBackground } from "@/components/magicui/green-home-background";
 
 // Helper function to convert name to URL-friendly slug
 const nameToSlug = (name: string): string => {
@@ -229,14 +230,17 @@ export default function PostPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
+      <GreenHomeBackground>
+        <div className="min-h-screen flex items-center justify-center">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      </GreenHomeBackground>
     );
   }
 
   return (
-    <div className="min-h-screen bg-base-200">
+    <GreenHomeBackground>
+    <div className="min-h-screen">
       <div className="max-w-4xl mx-auto p-4">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
@@ -675,5 +679,6 @@ export default function PostPage() {
         </div>
       )}
     </div>
+    </GreenHomeBackground>
   );
 }
