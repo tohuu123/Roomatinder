@@ -301,8 +301,8 @@ export const addComment = async (
       postId,
       authorId: userId,
       authorName: userName,
-      authorPhoto: userPhoto,
-      authorSlug: userSlug,
+      authorPhoto: userPhoto || null, // Convert undefined to null
+      authorSlug: userSlug || null, // Convert undefined to null
       content,
       likes: [],
       createdAt: serverTimestamp(),
