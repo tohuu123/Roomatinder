@@ -40,11 +40,13 @@ function NavBar() {
     console.log('[Layout] 📊 Current notifications:', notifications);
   }, [notifications]);
 
+  // Force light theme immediately
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", "light");
+  }, []);
+
   // Get user's profile slug for navigation and monitor likedBy changes
   useEffect(() => {
-    // Set light theme
-    document.documentElement.setAttribute("data-theme", "light");
-
     let unsubscribeProfile: (() => void) | null = null;
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
