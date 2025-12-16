@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, Suspense } from 'react';
+import Image from 'next/image';
 import { Icon } from '@iconify/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getAuth } from 'firebase/auth';
@@ -268,7 +269,7 @@ function ChatroomContent() {
                       <div className="w-10 h-10 rounded-full">
                         {selectedChat.type === 'group' ? (
                           selectedChat.avatar ? (
-                            <img src={selectedChat.avatar} alt={selectedChat.name} />
+                            <Image src={selectedChat.avatar} alt={selectedChat.name || 'Group'} width={40} height={40} className="rounded-full" unoptimized />
                           ) : (
                             <div className="bg-primary text-primary-content flex items-center justify-center w-full h-full">
                               <Icon icon="mdi:account-group" className="text-xl" />
@@ -279,12 +280,16 @@ function ChatroomContent() {
                             {chatListItems
                               .find((c) => c.id === selectedChat.id)
                               ?.otherUserAvatar ? (
-                              <img
+                              <Image
                                 src={
                                   chatListItems.find((c) => c.id === selectedChat.id)
-                                    ?.otherUserAvatar
+                                    ?.otherUserAvatar!
                                 }
                                 alt="Avatar"
+                                width={40}
+                                height={40}
+                                className="rounded-full"
+                                unoptimized
                               />
                             ) : (
                               <div className="bg-primary text-primary-content flex items-center justify-center w-full h-full">

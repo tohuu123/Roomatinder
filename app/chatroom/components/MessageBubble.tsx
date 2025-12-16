@@ -2,6 +2,7 @@
 
 'use client';
 
+import Image from 'next/image';
 import { Message } from '@/types/chat';
 import { Icon } from '@iconify/react';
 import { formatShortTime } from '@/lib/utils/chatUtils';
@@ -35,11 +36,14 @@ export default function MessageBubble({
       case 'image':
         return (
           <div className="max-w-sm">
-            <img
-              src={message.mediaUrl}
+            <Image
+              src={message.mediaUrl!}
               alt={message.mediaName || 'Image'}
+              width={384}
+              height={256}
               className="rounded-lg w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => window.open(message.mediaUrl, '_blank')}
+              unoptimized
             />
             {message.content && (
               <p className="mt-2 whitespace-pre-wrap break-words">
@@ -136,7 +140,7 @@ export default function MessageBubble({
         <div className="avatar">
           <div className="w-8 h-8 rounded-full">
             {message.senderAvatar ? (
-              <img src={message.senderAvatar} alt={message.senderName} />
+              <Image src={message.senderAvatar} alt={message.senderName} width={32} height={32} className="rounded-full" unoptimized />
             ) : (
               <div className="bg-primary text-primary-content flex items-center justify-center w-full h-full">
                 <span className="text-xs font-bold">

@@ -72,6 +72,7 @@ export default function Login() {
         setError(e?.message ?? "Google sign-in failed.");
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   async function handleSubmit(event: FormEvent) {

@@ -2,6 +2,7 @@
 
 'use client';
 
+import Image from 'next/image';
 import { ChatListItem } from '@/types/chat';
 import { Icon } from '@iconify/react';
 import {
@@ -40,7 +41,7 @@ export default function ChatListItemComponent({
       <div className="avatar">
         <div className="w-12 h-12 rounded-full relative">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={displayName} />
+            <Image src={avatarUrl} alt={displayName} width={48} height={48} className="rounded-full" unoptimized />
           ) : (
             <div className="bg-primary text-primary-content flex items-center justify-center w-full h-full">
               <span className="text-lg font-bold">

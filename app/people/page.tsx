@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Icon } from "@iconify/react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase";
@@ -48,9 +49,17 @@ export default function LikedPage() {
         getMatches(userId),
         getPassedProfiles(userId)
       ]);
-      setLikedProfiles(liked);
-      setMatches(matched);
-      setPassedProfiles(passed);
+      
+      // Filter out ADMIN profiles
+      const filterAdmin = (profiles: UserProfile[]) => 
+        profiles.filter(p => 
+          p.displayName?.toUpperCase() !== "ADMIN" && 
+          p.nickname?.toUpperCase() !== "ADMIN"
+        );
+      
+      setLikedProfiles(filterAdmin(liked));
+      setMatches(filterAdmin(matched));
+      setPassedProfiles(filterAdmin(passed));
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -238,10 +247,12 @@ export default function LikedPage() {
                 className="card card-border bg-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
               >
                 <figure className="h-64 relative">
-                  <img
+                  <Image
                     src={profile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.userId}`}
                     alt={profile.displayName || 'User'}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                   {activeTab === 'matches' && (
                     <div className="absolute top-4 right-4 badge badge-success badge-lg shadow-lg">
@@ -380,7 +391,7 @@ export default function LikedPage() {
           {activeTab === 'passed' && passedProfiles.length > 0 && (
             <div className="text-center mt-8">
               <button
-                className="btn btn-outline btn-error bg-red-100 hover:bg-red-200"
+                className="btn btn-outline bg-[#a0d4a0] hover:bg-[#6b9b7f] border-[#6b9b7f] hover:border-[#4a6b5a] text-[#4a6b5a] hover:text-white"
                 onClick={async () => {
                   if (!currentUserId) return;
 

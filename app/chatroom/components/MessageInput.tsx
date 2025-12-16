@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useRef, KeyboardEvent } from 'react';
+import Image from 'next/image';
 import { Icon } from '@iconify/react';
 import { MessageType } from '@/types/chat';
 import { isSupportedFileType, getFileTypeCategory } from '@/lib/utils/chatUtils';
@@ -116,10 +117,13 @@ export default function MessageInput({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               {filePreview && selectedFile.type.startsWith('image/') ? (
-                <img
+                <Image
                   src={filePreview}
                   alt="Preview"
+                  width={64}
+                  height={64}
                   className="w-16 h-16 object-cover rounded"
+                  unoptimized
                 />
               ) : filePreview && selectedFile.type.startsWith('video/') ? (
                 <video

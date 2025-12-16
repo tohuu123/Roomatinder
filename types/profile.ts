@@ -72,6 +72,9 @@ export interface UserProfile {
   // Profile Completion Percentage
   profileCompletion: number;
   
+  // Visibility setting - whether user can be found by others
+  isVisible?: boolean; // Default true if not set
+  
   // List of user IDs that this user has liked
   likedUsers?: string[];
 

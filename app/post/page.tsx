@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getProfile } from "@/lib/profileService";
@@ -61,6 +62,8 @@ export default function PostPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showComments, setShowComments] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
+  const [sortBy, setSortBy] = useState<"time" | "likes">("time");
+  const [searchUsername, setSearchUsername] = useState("");
 
   // Create post form state
   const [newPost, setNewPost] = useState<CreatePostData>({
@@ -83,6 +86,7 @@ export default function PostPage() {
     });
 
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Reload posts when category filter changes
@@ -270,15 +274,86 @@ export default function PostPage() {
           ))}
         </div>
 
+        {/* Sort and Search Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex gap-2">
+            <button
+              className={`btn btn-sm ${
+                sortBy === "time" ? "bg-gray-300 text-gray-700" : "btn-ghost text-gray-500"
+              }`}
+              onClick={() => setSortBy("time")}
+            >
+              <Icon icon="mdi:clock-outline" className="h-4 w-4" />
+              Newest
+            </button>
+            <button
+              className={`btn btn-sm ${
+                sortBy === "likes" ? "bg-gray-300 text-gray-700" : "btn-ghost text-gray-500"
+              }`}
+              onClick={() => setSortBy("likes")}
+            >
+              <Icon icon="mdi:heart" className="h-4 w-4" />
+              Most Liked
+            </button>
+          </div>
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search by username..."
+              className="input input-bordered w-full text-gray-700 placeholder-gray-400"
+              value={searchUsername}
+              onChange={(e) => setSearchUsername(e.target.value)}
+            />
+          </div>
+        </div>
+
         {/* Posts Feed */}
         <div className="space-y-4">
-          {posts.length === 0 ? (
+          {posts
+            .filter((post) => {
+              if (!searchUsername) return true;
+              return post.authorName
+                .toLowerCase()
+                .includes(searchUsername.toLowerCase());
+            })
+            .sort((a, b) => {
+              if (sortBy === "likes") {
+                return b.likes.length - a.likes.length;
+              }
+              // Sort by time (newest first)
+              const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 
+                           (a.createdAt as any).toDate ? (a.createdAt as any).toDate().getTime() : 0;
+              const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 
+                           (b.createdAt as any).toDate ? (b.createdAt as any).toDate().getTime() : 0;
+              return bTime - aTime;
+            })
+            .length === 0 ? (
             <div className="card bg-base-100 shadow-xl p-8 text-center">
               <Icon icon="mdi:post-outline" className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-              <p className="text-gray-600">No posts yet. Be the first to post!</p>
+              <p className="text-gray-600">
+                {searchUsername ? `No posts found from "${searchUsername}"` : "No posts yet. Be the first to post!"}
+              </p>
             </div>
           ) : (
-            posts.map((post) => (
+            posts
+              .filter((post) => {
+                if (!searchUsername) return true;
+                return post.authorName
+                  .toLowerCase()
+                  .includes(searchUsername.toLowerCase());
+              })
+              .sort((a, b) => {
+                if (sortBy === "likes") {
+                  return b.likes.length - a.likes.length;
+                }
+                // Sort by time (newest first)
+                const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 
+                             (a.createdAt as any).toDate ? (a.createdAt as any).toDate().getTime() : 0;
+                const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 
+                             (b.createdAt as any).toDate ? (b.createdAt as any).toDate().getTime() : 0;
+                return bTime - aTime;
+              })
+              .map((post) => (
               <div
                 key={post.postId}
                 className="card bg-base-100 shadow-xl"
@@ -297,7 +372,7 @@ export default function PostPage() {
                           <div className="avatar">
                             <div className="w-12 h-12 rounded-full">
                               {post.authorPhoto ? (
-                                <img src={post.authorPhoto} alt={post.authorName} />
+                                <Image src={post.authorPhoto} alt={post.authorName} width={48} height={48} className="rounded-full" unoptimized />
                               ) : (
                                 <div className="bg-neutral text-neutral-content flex items-center justify-center h-full">
                                   {post.authorName.charAt(0).toUpperCase()}
@@ -325,7 +400,7 @@ export default function PostPage() {
                           <div className="avatar">
                             <div className="w-12 h-12 rounded-full">
                               {post.authorPhoto ? (
-                                <img src={post.authorPhoto} alt={post.authorName} />
+                                <Image src={post.authorPhoto} alt={post.authorName} width={48} height={48} className="rounded-full" unoptimized />
                               ) : (
                                 <div className="bg-neutral text-neutral-content flex items-center justify-center h-full">
                                   {post.authorName.charAt(0).toUpperCase()}
@@ -377,11 +452,14 @@ export default function PostPage() {
                   {post.images && post.images.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 mt-4">
                       {post.images.map((img, idx) => (
-                        <img
+                        <Image
                           key={idx}
                           src={img}
                           alt={`Post image ${idx + 1}`}
+                          width={300}
+                          height={192}
                           className="rounded-lg w-full h-48 object-cover"
+                          unoptimized
                         />
                       ))}
                     </div>
@@ -434,7 +512,7 @@ export default function PostPage() {
                           }
                           className={`h-5 w-5 ${
                             currentUser && post.likes.includes(currentUser.userId)
-                              ? "text-red-500"
+                              ? "text-[#6b9b7f]"
                               : "text-gray-700"
                           }`}
                         />
@@ -452,10 +530,6 @@ export default function PostPage() {
                         <Icon icon="mdi:comment-outline" className="h-5 w-5 text-gray-700" />
                         <span className="text-gray-700">{post.comments.length}</span>
                       </button>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Icon icon="mdi:eye" className="h-5 w-5" />
-                        <span>{post.views}</span>
-                      </div>
                     </div>
 
                     {/* Source Link */}
@@ -506,9 +580,13 @@ export default function PostPage() {
                               <div className="avatar">
                                 <div className="w-8 h-8 rounded-full">
                                   {comment.authorPhoto ? (
-                                    <img
+                                    <Image
                                       src={comment.authorPhoto}
                                       alt={comment.authorName}
+                                      width={32}
+                                      height={32}
+                                      className="rounded-full"
+                                      unoptimized
                                     />
                                   ) : (
                                     <div className="bg-neutral text-neutral-content flex items-center justify-center h-full text-sm">
@@ -522,9 +600,13 @@ export default function PostPage() {
                             <div className="avatar">
                               <div className="w-8 h-8 rounded-full">
                                 {comment.authorPhoto ? (
-                                  <img
+                                  <Image
                                     src={comment.authorPhoto}
                                     alt={comment.authorName}
+                                    width={32}
+                                    height={32}
+                                    className="rounded-full"
+                                    unoptimized
                                   />
                                 ) : (
                                   <div className="bg-neutral text-neutral-content flex items-center justify-center h-full text-sm">
@@ -609,56 +691,91 @@ export default function PostPage() {
               />
             </div>
 
-            {/* Accommodation specific fields */}
-            {newPost.category === "accommodation" && (
-              <>
-                <div className="form-control mb-4">
-                  <label className="label">
-                    <span className="label-text">Price (VND)</span>
-                  </label>
-                  <input
-                    type="number"
-                    className="input input-bordered text-gray-700"
-                    placeholder="e.g., 3000000"
-                    value={newPost.price || ""}
-                    onChange={(e) =>
-                      setNewPost({ ...newPost, price: parseInt(e.target.value) })
-                    }
-                  />
-                </div>
+            {/* Image Upload */}
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Upload Images (optional, max 5)</span>
+              </label>
+              <input
+                id="image-upload-input"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  const maxImages = 5;
+                  const currentImages = newPost.images || [];
+                  
+                  if (currentImages.length + files.length > maxImages) {
+                    alert(`You can only have up to ${maxImages} images total. You currently have ${currentImages.length} image(s).`);
+                    e.target.value = ''; // Reset file input
+                    return;
+                  }
+                  
+                  // Convert all images to base64
+                  const promises = files.map(file => {
+                    return new Promise<string>((resolve) => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        resolve(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                  });
+                  
+                  Promise.all(promises).then(base64Images => {
+                    setNewPost({ 
+                      ...newPost, 
+                      images: [...currentImages, ...base64Images]
+                    });
+                    e.target.value = ''; // Reset file input for next upload
+                  });
+                }}
+              />
+              <label htmlFor="image-upload-input" className="btn btn-outline w-full">
+                Add Files
+              </label>
+              <label className="label">
+                <span className="label-text-alt text-gray-500">
+                  Upload up to 5 images from your device ({newPost.images?.length || 0}/5)
+                </span>
+              </label>
+            </div>
 
-                <div className="form-control mb-4">
-                  <label className="label">
-                    <span className="label-text">Districts (comma separated)</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered text-gray-700"
-                    placeholder="e.g., District 1, District 3"
-                    onChange={(e) =>
-                      setNewPost({
-                        ...newPost,
-                        districts: e.target.value.split(",").map((d) => d.trim()),
-                      })
-                    }
-                  />
+            {/* Image Preview */}
+            {newPost.images && newPost.images.length > 0 && (
+              <div className="mb-4">
+                <label className="label">
+                  <span className="label-text">Image Preview ({newPost.images.length})</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {newPost.images.map((img, idx) => (
+                    <div key={idx} className="relative">
+                      <Image
+                        src={img}
+                        alt={`Preview ${idx + 1}`}
+                        width={300}
+                        height={192}
+                        className="rounded-lg w-full h-48 object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        unoptimized
+                      />
+                      <button
+                        className="btn btn-sm btn-circle btn-error absolute top-2 right-2"
+                        onClick={() => {
+                          const updatedImages = newPost.images?.filter((_, i) => i !== idx) || [];
+                          setNewPost({ ...newPost, images: updatedImages });
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="form-control mb-4">
-                  <label className="label">
-                    <span className="label-text">Contact Info</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered text-gray-700"
-                    placeholder="Phone or email"
-                    value={newPost.contactInfo || ""}
-                    onChange={(e) =>
-                      setNewPost({ ...newPost, contactInfo: e.target.value })
-                    }
-                  />
-                </div>
-              </>
+              </div>
             )}
 
             {/* Modal Actions */}

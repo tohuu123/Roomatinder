@@ -379,6 +379,12 @@ export async function likeUser(
     // --- MATCH happens if likedUser previously liked currentUser ---
     const isMatch = (likedProfile.likedUsers || []).includes(currentUserId);
 
+    console.log('[ProfileService] 🔍 Checking for match...');
+    console.log('[ProfileService] Current user:', currentUserId);
+    console.log('[ProfileService] Liked user:', likedUserId);
+    console.log('[ProfileService] Liked user\'s likedUsers:', likedProfile.likedUsers);
+    console.log('[ProfileService] Is match?', isMatch);
+
     // Update current user
     await updateDoc(currentRef, {
       likedUsers: Array.from(newLikedUsers),
@@ -389,6 +395,11 @@ export async function likeUser(
       updatedAt: serverTimestamp(),
     });
 
+    console.log('[ProfileService] ✅ Updated current user:', currentUserId);
+    if (isMatch) {
+      console.log('[ProfileService] ✅ Added', likedUserId, 'to current user\'s matches');
+    }
+
     // Update liked user
     await updateDoc(likedRef, {
       likedBy: Array.from(newLikedBy),
@@ -397,6 +408,12 @@ export async function likeUser(
       }),
       updatedAt: serverTimestamp(),
     });
+
+    console.log('[ProfileService] ✅ Updated liked user:', likedUserId);
+    if (isMatch) {
+      console.log('[ProfileService] ✅ Added', currentUserId, 'to liked user\'s matches');
+      console.log('[ProfileService] 🎉 MATCH COMPLETE! Both users\' profiles updated');
+    }
 
     return { success: true, isMatch };
   } catch (error) {

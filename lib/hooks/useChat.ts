@@ -210,6 +210,7 @@ export function useMultipleOnlineStatus(userIds: string[]) {
     });
 
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(userIds)]);
 
   return { statuses, loading };

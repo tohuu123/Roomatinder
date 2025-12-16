@@ -168,11 +168,13 @@ function distanceToSimilarity(distance: number): number {
  * 
  * @param currentUserId - The current user's ID (to exclude from results)
  * @param excludeUserIds - Array of user IDs to exclude (already seen profiles)
+ * @param metadataFilter - ChromaDB where filter for metadata (optional)
  * @returns Object with userId and similarity percentage, or null if none found
  */
 export async function queryMatchingProfile(
   currentUserId: string,
-  excludeUserIds: string[] = []
+  excludeUserIds: string[] = [],
+  metadataFilter?: Record<string, any>
 ): Promise<{ userId: string; similarity: number } | null> {
   try {
     const client = getChromaClient();
@@ -207,12 +209,32 @@ export async function queryMatchingProfile(
     
     const queryText = currentUserResult.documents[0];
     
-    // Build where filter to exclude IDs using $nin (not in)
-    const whereFilter = allExcluded.length > 0 ? {
-      userId: { "$nin": allExcluded }
-    } : undefined;
+    // Build where filter - combine user exclusion with metadata filters
+    let whereFilter: Record<string, any> | undefined = undefined;
     
-    console.log('[ChromaDB] Where filter:', JSON.stringify(whereFilter));
+    // Start with user exclusion
+    if (allExcluded.length > 0) {
+      whereFilter = {
+        userId: { "$nin": allExcluded }
+      };
+    }
+    
+    // Merge with metadata filters using $and
+    if (metadataFilter && Object.keys(metadataFilter).length > 0) {
+      if (whereFilter) {
+        // Combine both filters using $and
+        whereFilter = {
+          "$and": [
+            whereFilter,
+            metadataFilter
+          ]
+        };
+      } else {
+        whereFilter = metadataFilter;
+      }
+    }
+    
+    console.log('[ChromaDB] Where filter:', JSON.stringify(whereFilter, null, 2));
     
     // Query with the current user's profile as the search text and where filter
     const results = await collection.query({

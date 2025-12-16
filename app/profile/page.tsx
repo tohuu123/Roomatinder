@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { auth } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getUserAvatar } from '@/lib/avatarHelper';
@@ -29,7 +30,6 @@ import {
   hasCompletedRequiredFields,
   calculateProfileCompletion,
 } from '@/lib/profileService';
-import { GreenHomeBackground } from '@/components/magicui/green-home-background';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -49,7 +49,6 @@ export default function ProfilePage() {
   const [uploadingRoomImage, setUploadingRoomImage] = useState(false);
   const [roomImageError, setRoomImageError] = useState('');
   const roomImageInputRef = useRef<HTMLInputElement>(null);
-  const [districtInput, setDistrictInput] = useState<string>('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -66,7 +65,6 @@ export default function ProfilePage() {
         setProfile(existingProfile);
         setSelectedInterests(existingProfile.interests || []);
         setShowOptionalFields(hasCompletedRequiredFields(existingProfile));
-        setDistrictInput(existingProfile.districts?.join(', ') || '');
       }
 
       setLoading(false);
@@ -362,11 +360,9 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <GreenHomeBackground>
-        <div className="flex justify-center items-center min-h-screen">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      </GreenHomeBackground>
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
     );
   }
 
@@ -386,11 +382,10 @@ export default function ProfilePage() {
   };
 
   return (
-    <GreenHomeBackground>
-      <div className="min-h-screen py-8">
-        <div className="container mx-auto max-w-4xl px-4">
-          {/* Header */}
-          <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
+    <div className="min-h-screen bg-base-200 py-8">
+      <div className="container mx-auto max-w-4xl px-4">
+        {/* Header */}
+        <div className="bg-base-100 rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-center gap-2 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">Edit Profile</h1>
             <span className="badge badge-info">Edit Mode</span>
@@ -413,9 +408,13 @@ export default function ProfilePage() {
           <div className="flex flex-col items-center mb-6">
             <div className="avatar mb-4">
               <div className="w-32 h-32 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-                <img 
+                <Image 
                   src={imagePreview || getUserAvatar(profile.photoURL || user?.photoURL, user?.email || user?.uid)} 
-                  alt="Profile" 
+                  alt="Profile"
+                  width={128}
+                  height={128}
+                  className="rounded-full"
+                  unoptimized
                 />
               </div>
             </div>
@@ -1147,13 +1146,10 @@ export default function ProfilePage() {
                 type="text"
                 className="input input-bordered text-gray-900"
                 placeholder="Enter district or address (e.g., District 1, Quận 3, Binh Thanh)"
-                value={districtInput}
+                value={profile.districts?.join(', ') || ''}
                 onChange={(e) => {
-                  setDistrictInput(e.target.value);
-                }}
-                onBlur={() => {
-                  // Only split and update profile on blur
-                  const parts = districtInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                  // Store the raw string value, split by comma
+                  const parts = e.target.value.split(',').map(s => s.trim());
                   setProfile(prev => ({
                     ...prev,
                     districts: parts
@@ -1424,10 +1420,13 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                   {profile.roomImages.map((url, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={url}
                         alt={`Room ${index + 1}`}
+                        width={200}
+                        height={128}
                         className="w-full h-32 object-cover rounded-lg"
+                        unoptimized
                       />
                       <button
                         type="button"
@@ -1492,12 +1491,7 @@ export default function ProfilePage() {
 
           {/* Step 4: Verification */}
           {currentStep === 4 && user && (
-            <div className="bg-base-100 rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-bold mb-6 text-gray-900">
-                Identity Verification
-                <span className="badge badge-ghost ml-2">Optional</span>
-              </h2>
-              
+            <div className="bg-blue-50 rounded-lg shadow-lg p-6 border-2 border-blue-200">
               {/* Success message when profile is saved */}
               <div className="alert alert-success mb-4">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1516,20 +1510,6 @@ export default function ProfilePage() {
                 onVerificationComplete={handleVerificationComplete}
               />
 
-              <div className="alert alert-info mt-6">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <h3 className="font-bold">Why verify?</h3>
-                  <ul className="list-disc list-inside text-sm">
-                    <li>Build trust with potential roommates</li>
-                    <li>Get verified badge on your profile</li>
-                    <li>Increase your chances of finding matches</li>
-                    <li>Access premium features</li>
-                  </ul>
-                </div>
-              </div>
             </div>
           )}
 
@@ -1556,20 +1536,6 @@ export default function ProfilePage() {
           {/* Step 4: Show both Skip and Save buttons */}
           {currentStep === 4 && (
             <>
-              <button
-                className="btn btn-ghost flex-1"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <>
-                    <span className="loading loading-spinner"></span>
-                    Saving...
-                  </>
-                ) : (
-                  '⏭️ Skip Verification'
-                )}
-              </button>
               <button
                 className="btn btn-primary flex-1"
                 onClick={handleSave}
@@ -1603,8 +1569,7 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
-      </div>
-    </GreenHomeBackground>
+    </div>
   );
 }
 

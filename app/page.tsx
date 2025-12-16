@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { Icon } from "@iconify/react";
 import { getProfile, likeUser, passUser, hasCompletedRequiredFields } from "@/lib/profileService";
 import { queryMatchingProfile } from "@/lib/chromaService";
+import { createChat } from "@/lib/chatService";
 import { UserProfile, HCMC_DISTRICTS } from "@/types/profile";
 import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -13,6 +15,7 @@ import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
 import { GreenHomeBackground } from "@/components/magicui/green-home-background";
 import MapEmbed from "@/app/components/MapEmbed";
+
 
 // Helper function to format field labels in English
 function formatLabel(value: string): string {
@@ -121,6 +124,128 @@ export default function HomePage() {
   // Get user's chats to check existing conversations
   const { chats } = useUserChats(currentUserId);
 
+  // Build ChromaDB metadata filter from filter preferences
+  const buildChromaFilter = (userProfile?: UserProfile | null): Record<string, any> | undefined => {
+    const profile = userProfile || currentUserProfile;
+    const conditions: any[] = [];
+
+    // Hard filter: Same gender only (CRITICAL - must have profile)
+    if (profile?.gender) {
+      conditions.push({ gender: { "$eq": profile.gender } });
+      console.log('[ChromaFilter] Adding gender filter:', profile.gender);
+    } else {
+      console.warn('[ChromaFilter] ⚠️ WARNING: No profile.gender - gender filter NOT applied!');
+    }
+
+    // Hard filter: Exclude have-room + have-room matches (CRITICAL)
+    if (profile?.accommodationStatus === 'have-room') {
+      conditions.push({ accommodationStatus: { "$ne": 'have-room' } });
+      console.log('[ChromaFilter] Adding have-room exclusion filter');
+    } else if (profile?.accommodationStatus) {
+      console.log('[ChromaFilter] User is looking, no have-room exclusion needed');
+    } else {
+      console.warn('[ChromaFilter] ⚠️ WARNING: No accommodationStatus - have-room filter NOT applied!');
+    }
+
+    // Accommodation status filters
+    const accommodationStatuses: string[] = [];
+    if (filterPreferences.showHaveRoom) accommodationStatuses.push('have-room');
+    if (filterPreferences.showLooking) accommodationStatuses.push('looking');
+    
+    console.log('[ChromaFilter] Accommodation filter preferences:', {
+      showHaveRoom: filterPreferences.showHaveRoom,
+      showLooking: filterPreferences.showLooking,
+      statuses: accommodationStatuses
+    });
+    
+    if (accommodationStatuses.length > 0 && accommodationStatuses.length < 2) {
+      conditions.push({ accommodationStatus: { "$in": accommodationStatuses } });
+      console.log('[ChromaFilter] Adding accommodation status filter:', accommodationStatuses);
+    } else if (accommodationStatuses.length === 2) {
+      console.log('[ChromaFilter] Both accommodation statuses selected, no filter added (show all)');
+    } else {
+      console.log('[ChromaFilter] No accommodation status selected - no results will match!');
+    }
+
+    // Smoking policy filters
+    const smokingPolicies: string[] = [];
+    if (filterPreferences.showSmoking) smokingPolicies.push('smoking-ok');
+    if (filterPreferences.showNonSmoking) smokingPolicies.push('no-smoking', 'outdoor-only');
+    if (smokingPolicies.length > 0 && smokingPolicies.length < 3) {
+      conditions.push({ smokingPolicy: { "$in": smokingPolicies } });
+    }
+
+    // Sleep schedule filters
+    const sleepSchedules: string[] = [];
+    if (filterPreferences.showEarlyBird) sleepSchedules.push('early-bird');
+    if (filterPreferences.showNightOwl) sleepSchedules.push('night-owl');
+    if (filterPreferences.showFlexible) sleepSchedules.push('flexible');
+    if (sleepSchedules.length > 0 && sleepSchedules.length < 3) {
+      conditions.push({ sleepSchedule: { "$in": sleepSchedules } });
+    }
+
+    // Noise level filters
+    const noiseLevels: string[] = [];
+    if (filterPreferences.showQuiet) noiseLevels.push('quiet', 'very-quiet');
+    if (filterPreferences.showModerate) noiseLevels.push('moderate');
+    if (filterPreferences.showLoud) noiseLevels.push('lively');
+    if (noiseLevels.length > 0 && noiseLevels.length < 4) {
+      conditions.push({ noiseLevel: { "$in": noiseLevels } });
+    }
+
+    // Cleanliness level filters
+    const cleanlinessLevels: string[] = [];
+    if (filterPreferences.showVeryClean) cleanlinessLevels.push('very-clean');
+    if (filterPreferences.showClean) cleanlinessLevels.push('clean');
+    if (filterPreferences.showModerateClean) cleanlinessLevels.push('moderate');
+    if (filterPreferences.showRelaxed) cleanlinessLevels.push('relaxed');
+    
+    console.log('[ChromaFilter] Cleanliness filter preferences:', {
+      showVeryClean: filterPreferences.showVeryClean,
+      showClean: filterPreferences.showClean,
+      showModerateClean: filterPreferences.showModerateClean,
+      showRelaxed: filterPreferences.showRelaxed,
+      levels: cleanlinessLevels
+    });
+    
+    if (cleanlinessLevels.length > 0 && cleanlinessLevels.length < 4) {
+      conditions.push({ cleanlinessLevel: { "$in": cleanlinessLevels } });
+      console.log('[ChromaFilter] Adding cleanliness filter:', cleanlinessLevels);
+    } else if (cleanlinessLevels.length === 4) {
+      console.log('[ChromaFilter] All cleanliness levels selected, no filter added (show all)');
+    } else {
+      console.log('[ChromaFilter] No cleanliness level selected - no results will match!');
+    }
+
+    // Guest policy filters
+    const guestPolicies: string[] = [];
+    if (filterPreferences.showNoGuests) guestPolicies.push('never', 'rarely');
+    if (filterPreferences.showOccasionalGuests) guestPolicies.push('sometimes');
+    if (filterPreferences.showFrequentGuests) guestPolicies.push('often', 'very-flexible');
+    if (guestPolicies.length > 0 && guestPolicies.length < 5) {
+      conditions.push({ guestPolicy: { "$in": guestPolicies } });
+    }
+
+    // Return combined filter or undefined if no conditions
+    console.log('[ChromaFilter] ========== FINAL FILTER ==========');
+    console.log('[ChromaFilter] Total conditions:', conditions.length);
+    console.log('[ChromaFilter] Conditions:', JSON.stringify(conditions, null, 2));
+    
+    if (conditions.length === 0) {
+      console.log('[ChromaFilter] No conditions - returning undefined (show all)');
+      return undefined;
+    }
+    if (conditions.length === 1) {
+      console.log('[ChromaFilter] Single condition - returning:', JSON.stringify(conditions[0]));
+      return conditions[0];
+    }
+    
+    const finalFilter = { "$and": conditions };
+    console.log('[ChromaFilter] Multiple conditions - returning $and:', JSON.stringify(finalFilter, null, 2));
+    console.log('[ChromaFilter] ====================================');
+    return finalFilter;
+  };
+
   const fetchProfileBatch = async (
     userId: string,
     excludeIds: string[],
@@ -135,7 +260,19 @@ export default function HomePage() {
       return { profiles: [], queriedIds: [] };
     }
     
-    console.log("[Fetch] Current user profile loaded:", currentUserProfile.userId);
+    // CRITICAL: Verify user profile has required fields for hard filters
+    if (!currentUserProfile.gender) {
+      console.error("[Fetch] ❌ CRITICAL: Current user has no gender! Hard filter will fail!");
+    }
+    if (!currentUserProfile.accommodationStatus) {
+      console.error("[Fetch] ❌ CRITICAL: Current user has no accommodationStatus! Hard filter will fail!");
+    }
+    
+    console.log("[Fetch] Current user profile loaded:", {
+      userId: currentUserProfile.userId,
+      gender: currentUserProfile.gender,
+      accommodationStatus: currentUserProfile.accommodationStatus
+    });
 
     // Build comprehensive exclude list: self + already seen + liked + passed
     const comprehensiveExcludeIds = [
@@ -149,7 +286,14 @@ export default function HomePage() {
     const uniqueExcludeIds = Array.from(new Set(comprehensiveExcludeIds));
     
     console.log(`[Fetch] Fetching ${batchSize} profiles, excluding ${uniqueExcludeIds.length} IDs`);
+    console.log(`[Fetch] Liked users:`, currentUserProfile.likedUsers?.length || 0);
+    console.log(`[Fetch] Passed users:`, currentUserProfile.passedUsers?.length || 0);
+    console.log(`[Fetch] First 10 excluded IDs:`, uniqueExcludeIds.slice(0, 10));
     console.log(`[Fetch] Current filters:`, filterPreferences);
+    
+    // Build ChromaDB metadata filter using the fetched currentUserProfile (not state)
+    const chromaFilter = buildChromaFilter(currentUserProfile);
+    console.log('[Fetch] ChromaDB filter:', JSON.stringify(chromaFilter, null, 2));
     
     let attempts = 0;
     const maxAttempts = batchSize * 10; // Increased for safety
@@ -166,7 +310,7 @@ export default function HomePage() {
         ...Array.from(queriedIds)
       ]));
       
-      const result = await queryMatchingProfile(userId, currentExcludeList);
+      const result = await queryMatchingProfile(userId, currentExcludeList, chromaFilter);
 
       if (!result?.userId) {
         console.log("[Fetch] No more profiles from ChromaDB");
@@ -186,7 +330,18 @@ export default function HomePage() {
       
       // Safety check: Verify ID is not in exclude list (ChromaDB filter should have handled this)
       if (currentExcludeList.includes(matchedId)) {
-        console.error(`[Fetch] ERROR: ChromaDB returned excluded ID ${matchedId}. Skipping.`);
+        console.error(`[Fetch] ❌ ERROR: ChromaDB returned excluded ID ${matchedId}.`);
+        console.error(`[Fetch] Is in likedUsers:`, currentUserProfile.likedUsers?.includes(matchedId));
+        console.error(`[Fetch] Is in passedUsers:`, currentUserProfile.passedUsers?.includes(matchedId));
+        console.error(`[Fetch] Skipping this profile.`);
+        continue;
+      }
+      
+      // Additional safety check: Verify not in liked or passed arrays
+      if (currentUserProfile.likedUsers?.includes(matchedId) || currentUserProfile.passedUsers?.includes(matchedId)) {
+        console.error(`[Fetch] ❌ CRITICAL: Profile ${matchedId} is in liked/passed but ChromaDB returned it!`);
+        console.error(`[Fetch] In likedUsers:`, currentUserProfile.likedUsers?.includes(matchedId));
+        console.error(`[Fetch] In passedUsers:`, currentUserProfile.passedUsers?.includes(matchedId));
         continue;
       }
 
@@ -194,6 +349,18 @@ export default function HomePage() {
       const prof = await getProfile(matchedId);
       if (!prof) {
         console.log("[Fetch] ❌ Profile not found in Firebase:", matchedId);
+        continue;
+      }
+
+      // Skip ADMIN profiles
+      if (prof.displayName?.toUpperCase() === "ADMIN" || prof.nickname?.toUpperCase() === "ADMIN") {
+        console.log("[Fetch] ❌ Skipping ADMIN profile:", matchedId);
+        continue;
+      }
+
+      // Skip invisible profiles (users who don't want to be found)
+      if (prof.isVisible === false) {
+        console.log("[Fetch] ❌ Skipping invisible profile:", matchedId);
         continue;
       }
 
@@ -224,21 +391,11 @@ export default function HomePage() {
         continue;
       }
 
-      // Check if profile passes filter preferences
-      if (!passesFilter(prof)) {
-        console.log(`[Fetch] Profile filtered out: ${matchedId}`, {
-          accommodation: prof.accommodationStatus,
+      // Check if profile passes district and fee filter (complex checks not handled by ChromaDB)
+      if (!passesDistrictAndFeeFilter(prof)) {
+        console.log(`[Fetch] Profile filtered out by district/fee: ${matchedId}`, {
           districts: prof.districts,
           fee: prof.accommodationFee,
-          cleanliness: prof.cleanlinessLevel,
-          smoking: prof.smokingPolicy,
-          sleep: prof.sleepSchedule,
-          noise: prof.noiseLevel,
-          guests: prof.guestPolicy
-        });
-        console.log(`[Fetch] Current filter:`, {
-          showHaveRoom: filterPreferences.showHaveRoom,
-          showLooking: filterPreferences.showLooking,
           selectedDistricts: filterPreferences.selectedDistricts,
           minFee: filterPreferences.minFee,
           maxFee: filterPreferences.maxFee
@@ -266,87 +423,29 @@ export default function HomePage() {
     };
   };
 
-  // Function to check if profile passes filter preferences
-  const passesFilter = (profile: UserProfile): boolean => {
-    console.log(`[Filter] Checking profile ${profile.userId}:`, {
-      profileGender: profile.gender,
-      currentGender: currentUserProfile?.gender,
-      profileAccommodation: profile.accommodationStatus,
-      currentAccommodation: currentUserProfile?.accommodationStatus
-    });
-
-    // Hard filter: Only allow same gender matches (male-male and female-female)
-    if (currentUserProfile?.gender && profile.gender) {
-      if (currentUserProfile.gender !== profile.gender) {
-        console.log(`[Filter] ❌ REJECTED: Gender mismatch (${currentUserProfile.gender} != ${profile.gender})`);
-        return false;
+  // Simplified filter for district and fee (complex array/range checks not supported by ChromaDB)
+  const passesDistrictAndFeeFilter = (profile: UserProfile, filtersToUse = filterPreferences): boolean => {
+    
+    // Accommodation status filter
+    if (profile.accommodationStatus) {
+      const allowedStatuses: string[] = [];
+      if (filtersToUse.showHaveRoom) allowedStatuses.push('have-room');
+      if (filtersToUse.showLooking) allowedStatuses.push('looking');
+      
+      // If at least one status is selected (not both), check if profile matches
+      if (allowedStatuses.length > 0 && allowedStatuses.length < 2) {
+        if (!allowedStatuses.includes(profile.accommodationStatus)) {
+          console.log(`[Filter Accommodation] ❌ Filtering out ${profile.userId} - accommodation status "${profile.accommodationStatus}" not in allowed: ${allowedStatuses.join(', ')}`);
+          return false;
+        }
       }
     }
 
-    // Hard filter: Exclude have-room matching with have-room
-    // Only allow: have-room ↔ looking OR looking ↔ have-room OR looking ↔ looking
-    if (currentUserProfile?.accommodationStatus === 'have-room' && profile.accommodationStatus === 'have-room') {
-      console.log(`[Filter] ❌ REJECTED: Both have-room`);
-      return false;
-    }
-
-    // Accommodation status filters
-    if (!filterPreferences.showHaveRoom && profile.accommodationStatus === 'have-room') {
-      return false;
-    }
-    if (!filterPreferences.showLooking && profile.accommodationStatus === 'looking') {
-      return false;
-    }
-
-    // Smoking policy filters
-    if (!filterPreferences.showSmoking && profile.smokingPolicy === 'smoking-ok') {
-      return false;
-    }
-    if (!filterPreferences.showNonSmoking && profile.smokingPolicy === 'no-smoking') {
-      return false;
-    }
-
-    // Sleep schedule filters
-    if (!filterPreferences.showEarlyBird && profile.sleepSchedule === 'early-bird') {
-      return false;
-    }
-    if (!filterPreferences.showNightOwl && profile.sleepSchedule === 'night-owl') {
-      return false;
-    }
-    if (!filterPreferences.showFlexible && profile.sleepSchedule === 'flexible') {
-      return false;
-    }
-
-    // Noise level filters
-    if (!filterPreferences.showQuiet && (profile.noiseLevel === 'quiet' || profile.noiseLevel === 'very-quiet')) {
-      return false;
-    }
-    if (!filterPreferences.showModerate && profile.noiseLevel === 'moderate') {
-      return false;
-    }
-    if (!filterPreferences.showLoud && profile.noiseLevel === 'lively') {
-      return false;
-    }
-
-    // Cleanliness level filters
-    if (!filterPreferences.showVeryClean && profile.cleanlinessLevel === 'very-clean') {
-      return false;
-    }
-    if (!filterPreferences.showClean && profile.cleanlinessLevel === 'clean') {
-      return false;
-    }
-    if (!filterPreferences.showModerateClean && profile.cleanlinessLevel === 'moderate') {
-      return false;
-    }
-    if (!filterPreferences.showRelaxed && profile.cleanlinessLevel === 'relaxed') {
-      return false;
-    }
-
     // District filters (apply when specific districts are selected for either have-room or looking profiles)
-    if (filterPreferences.selectedDistricts.length > 0 && profile.districts && profile.districts.length > 0) {
+    if (filtersToUse.selectedDistricts.length > 0 && profile.districts && profile.districts.length > 0) {
       console.log(`[Filter District] Checking profile ${profile.userId} (${profile.accommodationStatus})`);
       console.log(`[Filter District] Profile districts:`, profile.districts);
-      console.log(`[Filter District] Selected filters:`, filterPreferences.selectedDistricts);
+      console.log(`[Filter District] Selected filters:`, filtersToUse.selectedDistricts);
       
       // Normalize district name to handle both "District X" and "Quận X" formats
       const normalizeDistrict = (district: string): string => {
@@ -361,7 +460,7 @@ export default function HomePage() {
       const hasMatchingDistrict = profile.districts.some(profileDistrict => {
         const normalizedProfile = normalizeDistrict(profileDistrict);
         
-        return filterPreferences.selectedDistricts.some(filterDistrict => {
+        return filtersToUse.selectedDistricts.some(filterDistrict => {
           const normalizedFilter = normalizeDistrict(filterDistrict);
           
           // Compare normalized values (e.g., "1" === "1" or "binh thanh" === "binh thanh")
@@ -380,30 +479,91 @@ export default function HomePage() {
     }
 
     // Fee range filters (only when have-room filter is active AND fee range is set)
-    if (filterPreferences.showHaveRoom && profile.accommodationStatus === 'have-room') {
+    if (filtersToUse.showHaveRoom && profile.accommodationStatus === 'have-room') {
       if (profile.accommodationFee) {
-        if (filterPreferences.minFee !== null && profile.accommodationFee < filterPreferences.minFee) {
+        if (filtersToUse.minFee !== null && profile.accommodationFee < filtersToUse.minFee) {
           return false;
         }
-        if (filterPreferences.maxFee !== null && profile.accommodationFee > filterPreferences.maxFee) {
+        if (filtersToUse.maxFee !== null && profile.accommodationFee > filtersToUse.maxFee) {
           return false;
         }
       } else {
         // If fee filters are set but profile has no fee, exclude it
-        if (filterPreferences.minFee !== null || filterPreferences.maxFee !== null) {
+        if (filtersToUse.minFee !== null || filtersToUse.maxFee !== null) {
+          return false;
+        }
+      }
+    }
+
+    // Cleanliness level filters
+    if (profile.cleanlinessLevel) {
+      const allowedLevels: string[] = [];
+      if (filtersToUse.showVeryClean) allowedLevels.push('very-clean');
+      if (filtersToUse.showClean) allowedLevels.push('clean');
+      if (filtersToUse.showModerateClean) allowedLevels.push('moderate');
+      if (filtersToUse.showRelaxed) allowedLevels.push('relaxed');
+      
+      // If at least one cleanliness level is selected (not all), check if profile matches
+      if (allowedLevels.length > 0 && allowedLevels.length < 4) {
+        if (!allowedLevels.includes(profile.cleanlinessLevel)) {
+          console.log(`[Filter Cleanliness] ❌ Filtering out ${profile.userId} - cleanliness "${profile.cleanlinessLevel}" not in allowed: ${allowedLevels.join(', ')}`);
+          return false;
+        }
+      }
+    }
+
+    // Smoking policy filters
+    if (profile.smokingPolicy) {
+      const allowedPolicies: string[] = [];
+      if (filtersToUse.showSmoking) allowedPolicies.push('smoking-ok');
+      if (filtersToUse.showNonSmoking) allowedPolicies.push('no-smoking', 'outdoor-only');
+      
+      if (allowedPolicies.length > 0 && allowedPolicies.length < 3) {
+        if (!allowedPolicies.includes(profile.smokingPolicy)) {
+          console.log(`[Filter Smoking] ❌ Filtering out ${profile.userId} - smoking policy "${profile.smokingPolicy}" not in allowed: ${allowedPolicies.join(', ')}`);
+          return false;
+        }
+      }
+    }
+
+    // Sleep schedule filters
+    if (profile.sleepSchedule) {
+      const allowedSleep: string[] = [];
+      if (filtersToUse.showEarlyBird) allowedSleep.push('early-bird');
+      if (filtersToUse.showNightOwl) allowedSleep.push('night-owl');
+      if (filtersToUse.showFlexible) allowedSleep.push('flexible');
+      
+      if (allowedSleep.length > 0 && allowedSleep.length < 3) {
+        if (!allowedSleep.includes(profile.sleepSchedule)) {
+          console.log(`[Filter Sleep] ❌ Filtering out ${profile.userId} - sleep "${profile.sleepSchedule}" not in allowed: ${allowedSleep.join(', ')}`);
+          return false;
+        }
+      }
+    }
+
+    // Noise level filters
+    if (profile.noiseLevel) {
+      const allowedNoise: string[] = [];
+      if (filtersToUse.showQuiet) allowedNoise.push('quiet', 'very-quiet');
+      if (filtersToUse.showModerate) allowedNoise.push('moderate');
+      if (filtersToUse.showLoud) allowedNoise.push('lively');
+      
+      if (allowedNoise.length > 0 && allowedNoise.length < 4) {
+        if (!allowedNoise.includes(profile.noiseLevel)) {
+          console.log(`[Filter Noise] ❌ Filtering out ${profile.userId} - noise "${profile.noiseLevel}" not in allowed: ${allowedNoise.join(', ')}`);
           return false;
         }
       }
     }
 
     // Guest policy filters
-    if (!filterPreferences.showNoGuests && (profile.guestPolicy === 'never' || profile.guestPolicy === 'rarely')) {
+    if (!filtersToUse.showNoGuests && (profile.guestPolicy === 'never' || profile.guestPolicy === 'rarely')) {
       return false;
     }
-    if (!filterPreferences.showOccasionalGuests && (profile.guestPolicy === 'sometimes')) {
+    if (!filtersToUse.showOccasionalGuests && (profile.guestPolicy === 'sometimes')) {
       return false;
     }
-    if (!filterPreferences.showFrequentGuests && (profile.guestPolicy === 'often' || profile.guestPolicy === 'very-flexible')) {
+    if (!filtersToUse.showFrequentGuests && (profile.guestPolicy === 'often' || profile.guestPolicy === 'very-flexible')) {
       return false;
     }
 
@@ -412,12 +572,22 @@ export default function HomePage() {
 
   // Function to load the next matching profile
   const loadNextProfile = async () => {    
-    // Nếu còn trong queue → lấy ra
-    if (profileQueue.length > 0) {
+    // Use a loop to avoid stack overflow from recursion
+    while (profileQueue.length > 0) {
       console.log(`[Load] Using queued profile (${profileQueue.length} remaining)`);
       const next = profileQueue[0];
       const remainingQueue = profileQueue.slice(1);
       
+      // Validate profile against current filters before showing
+      if (!passesDistrictAndFeeFilter(next)) {
+        console.log(`[Load] ❌ Profile ${next.userId} doesn't pass district/fee filters, skipping...`);
+        setProfileQueue(remainingQueue);
+        setSeenUserIds(prev => Array.from(new Set([...prev, next.userId])));
+        // Continue to next profile in queue
+        continue;
+      }
+      
+      // Found a valid profile!
       setProfileQueue(remainingQueue);
       setCurrentProfile(next);
       setNoMoreProfiles(false); // Reset no more profiles flag when we have a profile
@@ -485,11 +655,12 @@ export default function HomePage() {
           return currentSeenIds;
         });
       }
-      return;
+      return; // Exit after successfully loading a profile
     }
+    
+    // If we get here, the while loop exhausted the queue without finding a valid profile
+    console.log("[Load] All queued profiles were filtered out, fetching new batch...");
 
-    // Queue empty, fetch new batch of 3
-    console.log("[Load] Queue empty, fetching new batch of 3 profiles...");
     
     if (!currentUserId) {
       console.log("[Load] No currentUserId");
@@ -514,11 +685,29 @@ export default function HomePage() {
       return;
     }
 
-    // Load first profile, queue the rest
+    // Load first profile, queue the rest (filter validation already done in fetchProfileBatch)
     console.log(`[Load] Loaded ${result.profiles.length} new profiles`);
-    setCurrentProfile(result.profiles[0]);
-    setProfileQueue(result.profiles.slice(1));
-    setNoMoreProfiles(false); // Reset flag when we have profiles
+    
+    // Filter all profiles through validation before queueing
+    const validProfiles = result.profiles.filter(p => {
+      const passes = passesDistrictAndFeeFilter(p);
+      if (!passes) {
+        console.log(`[Load] ❌ Profile ${p.userId} doesn't pass client-side filters, excluding from batch`);
+        setSeenUserIds(prev => Array.from(new Set([...prev, p.userId])));
+      }
+      return passes;
+    });
+    
+    if (validProfiles.length > 0) {
+      setCurrentProfile(validProfiles[0]);
+      setProfileQueue(validProfiles.slice(1));
+      setNoMoreProfiles(false); // Reset flag when we have profiles
+    } else {
+      console.log(`[Load] ⚠️ All ${result.profiles.length} profiles filtered out, no valid profiles to show`);
+      setNoMoreProfiles(true);
+      setCurrentProfile(null);
+    }
+    
     setSeenUserIds(prev => {
       const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
       return Array.from(new Set(combined));
@@ -642,10 +831,25 @@ export default function HomePage() {
           }
 
           console.log(`[Init] Loaded ${result.profiles.length} initial profiles`);
-          // load profile đầu tiên
-          setCurrentProfile(result.profiles[0]);
-          // bỏ profile đầu tiên → queue còn 2 profiles
-          setProfileQueue(result.profiles.slice(1));
+          
+          // Filter all profiles through validation before queueing
+          const validProfiles = result.profiles.filter(p => {
+            const passes = passesDistrictAndFeeFilter(p);
+            if (!passes) {
+              console.log(`[Init] ❌ Profile ${p.userId} doesn't pass client-side filters, excluding from batch`);
+            }
+            return passes;
+          });
+          
+          if (validProfiles.length > 0) {
+            setCurrentProfile(validProfiles[0]);
+            setProfileQueue(validProfiles.slice(1));
+          } else {
+            console.log(`[Init] ⚠️ All ${result.profiles.length} profiles filtered out, no valid profiles to show`);
+            setNoMoreProfiles(true);
+            setCurrentProfile(null);
+          }
+          
           const combined = [...result.profiles.map(p => p.userId), ...result.queriedIds];
           setSeenUserIds(Array.from(new Set(combined)));
 
@@ -663,12 +867,72 @@ export default function HomePage() {
     }, 100); // Small delay to ensure everything is ready
 
     return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, initialBatchLoaded]);
 
   // Apply filters function
   const applyFilters = () => {
+    console.log('[Filter] 🎯 Applying new filters...');
+    console.log('[Filter] 📝 New filter preferences:', tempFilters);
+    
+    // Immediately reset everything
+    console.log('[Filter] 🔄 Resetting profile queue and current profile...');
+    setCurrentProfile(null);
+    setProfileQueue([]);
+    setSeenUserIds([]); // Reset to allow re-seeing profiles with new filters
+    setNoMoreProfiles(false);
+    setLoadingNext(true);
+    
+    // Apply the new filters (this will trigger the useEffect)
     setFilterPreferences(tempFilters);
     setShowFilterPanel(false);
+    
+    // Force fetch new profiles with new filters
+    if (currentUserId) {
+      console.log('[Filter] 📥 Fetching new profiles with updated filters...');
+      fetchProfileBatch(currentUserId, [], 3).then(result => {
+        if (result.profiles.length > 0) {
+          console.log(`[Filter] ✅ Loaded ${result.profiles.length} new profiles`);
+          
+          // Filter all profiles through validation before queueing (use tempFilters since state hasn't updated yet)
+          const validProfiles = result.profiles.filter(p => {
+            const passes = passesDistrictAndFeeFilter(p, tempFilters);
+            if (!passes) {
+              console.log(`[Filter] ❌ Profile ${p.userId} doesn't pass client-side filters, excluding from batch`);
+            }
+            return passes;
+          });
+          
+          if (validProfiles.length > 0) {
+            setCurrentProfile(validProfiles[0]);
+            setProfileQueue(validProfiles.slice(1));
+          } else {
+            console.log(`[Filter] ⚠️ All ${result.profiles.length} profiles filtered out, no valid profiles to show`);
+            setNoMoreProfiles(true);
+            setCurrentProfile(null);
+          }
+          setSeenUserIds(prev => {
+            const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
+            return Array.from(new Set(combined));
+          });
+          setNoMoreProfiles(false);
+        } else {
+          console.log('[Filter] ⚠️ No profiles match new filters');
+          setNoMoreProfiles(true);
+          if (result.queriedIds.length > 0) {
+            setSeenUserIds(prev => {
+              const combined = [...prev, ...result.queriedIds];
+              return Array.from(new Set(combined));
+            });
+          }
+        }
+        setLoadingNext(false);
+      }).catch(error => {
+        console.error('[Filter] ❌ Error loading profiles:', error);
+        setLoadingNext(false);
+        setNoMoreProfiles(true);
+      });
+    }
   };
 
   // Reload profiles when filter preferences change
@@ -685,16 +949,16 @@ export default function HomePage() {
 
     console.log("[Filter] Filter preferences changed, checking current profile...");
 
-    // Check if current profile still passes the new filters
+    // Check if current profile still passes the new filters (district and fee only, rest handled by ChromaDB)
     if (currentProfile) {
-      const stillPasses = passesFilter(currentProfile);
+      const stillPasses = passesDistrictAndFeeFilter(currentProfile);
       console.log(`[Filter] Current profile ${currentProfile.userId} passes new filters: ${stillPasses}`);
       
       if (stillPasses) {
         console.log(`[Filter] ✅ Current profile ${currentProfile.userId} still passes new filters, keeping it`);
         
         // Keep current profile, but filter the queue
-        const filteredQueue = profileQueue.filter(p => passesFilter(p));
+        const filteredQueue = profileQueue.filter(p => passesDistrictAndFeeFilter(p));
         console.log(`[Filter] Filtered queue: ${profileQueue.length} → ${filteredQueue.length} profiles`);
         setProfileQueue(filteredQueue);
         
@@ -743,8 +1007,24 @@ export default function HomePage() {
     fetchProfileBatch(currentUserId, [], 3).then(result => {
       if (result.profiles.length > 0) {
         console.log(`[Filter] Loaded ${result.profiles.length} new profiles after filter change`);
-        setCurrentProfile(result.profiles[0]);
-        setProfileQueue(result.profiles.slice(1));
+        
+        // Filter all profiles through validation before queueing
+        const validProfiles = result.profiles.filter(p => {
+          const passes = passesDistrictAndFeeFilter(p);
+          if (!passes) {
+            console.log(`[Filter] ❌ Profile ${p.userId} doesn't pass client-side filters, excluding from batch`);
+          }
+          return passes;
+        });
+        
+        if (validProfiles.length > 0) {
+          setCurrentProfile(validProfiles[0]);
+          setProfileQueue(validProfiles.slice(1));
+        } else {
+          console.log(`[Filter] ⚠️ All ${result.profiles.length} profiles filtered out, no valid profiles to show`);
+          setNoMoreProfiles(true);
+          setCurrentProfile(null);
+        }
         setSeenUserIds(prev => {
           const combined = [...prev, ...result.profiles.map(p => p.userId), ...result.queriedIds];
           return Array.from(new Set(combined));
@@ -767,6 +1047,7 @@ export default function HomePage() {
       setLoadingNext(false);
       setNoMoreProfiles(true);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterPreferences, currentUserId, initialBatchLoaded]);
 
 
@@ -781,12 +1062,25 @@ export default function HomePage() {
     // Background: Save interaction (non-blocking)
     if (direction === 'right') {
       console.log('[Swipe] ❤️ Liking:', swipedUserId);
-      likeUser(currentUserId, swipedUserId).then(result => {
+      likeUser(currentUserId, swipedUserId).then(async result => {
         if (result?.success && result?.isMatch) {
           console.log('[Swipe] 🎉 Match!');
           setMatchedProfile(currentProfile);
           setShowMatchModal(true);
+          
+          // Automatically create chat for the match
+          try {
+            const chatId = await createChat(currentUserId, {
+              type: 'individual',
+              participants: [currentUserId, swipedUserId]
+            });
+            console.log('[Swipe] ✅ Chat created automatically:', chatId);
+          } catch (error) {
+            console.error('[Swipe] Error creating chat:', error);
+          }
         }
+      }).catch(error => {
+        console.error('[Swipe] Error in likeUser:', error);
       });
     } else {
       console.log('[Swipe] 👎 Passing:', swipedUserId);
@@ -797,9 +1091,11 @@ export default function HomePage() {
     setTimeout(async () => {
       setSwipeDirection(null);
       setIsAnimating(false);
+      setLoadingNext(true);
 
       // Load next (instant from queue if available)
       await loadNextProfile();
+      setLoadingNext(false);
       
       // Trigger preload if queue is low after loading next profile
       if (profileQueue.length <= 2 && currentUserId && !isPreloading) {
@@ -900,8 +1196,8 @@ export default function HomePage() {
     );
   }
 
-  // Show fetching UI when loading next profile (e.g., after filter change)
-  if (loadingNext) {
+  // Show fetching UI when loading next profile (after swipe, filter change, etc.)
+  if (loadingNext || (isAnimating && !currentProfile)) {
     return (
       <GreenHomeBackground>
         <div className="flex flex-col items-center justify-center min-h-screen">
@@ -912,7 +1208,8 @@ export default function HomePage() {
     );
   }
 
-  if (!currentProfile || noMoreProfiles) {
+  // Show "no more profiles" only when not loading and truly no profiles
+  if (noMoreProfiles && !loading && !loadingNext && !isPreloading) {
     return (
       <GreenHomeBackground>
         <div className="max-w-2xl mx-auto p-4">
@@ -930,7 +1227,25 @@ export default function HomePage() {
 
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-4 text-[#4a6b5a]">No more profiles!</h2>
-              <p className="text-[#6b9b7f] text-sm">Try adjusting your filters to see more profiles</p>
+              <p className="text-[#6b9b7f] text-sm mb-6">Try adjusting your filters or explore other ways to connect</p>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 mt-6">
+                <button
+                  onClick={() => router.push('/people')}
+                  className="btn btn-primary gap-2"
+                >
+                  <Icon icon="mdi:account-group" className="w-5 h-5" />
+                  View People you liked/passed
+                </button>
+                <button
+                  onClick={() => router.push('/post')}
+                  className="btn btn-outline btn-primary gap-2"
+                >
+                  <Icon icon="mdi:post" className="w-5 h-5" />
+                  Try Creating a Post
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1010,7 +1325,7 @@ export default function HomePage() {
                 {(tempFilters.showHaveRoom || tempFilters.showLooking) && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                      <Icon icon="mdi:map-marker" className="mr-2 text-blue-600" />
+                      <Icon icon="mdi:map-marker" className="mr-2 text-[#6b9b7f]" />
                       Districts (Only Show)
                       <span className="ml-2 text-xs text-gray-500">
                         (Have:{tempFilters.showHaveRoom ? 'Y' : 'N'} Looking:{tempFilters.showLooking ? 'Y' : 'N'})
@@ -1119,7 +1434,7 @@ export default function HomePage() {
                 {/* Smoking Policy */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                    <Icon icon="mdi:smoking" className="mr-2 text-red-600" />
+                    <Icon icon="mdi:smoking" className="mr-2 text-[#6b9b7f]" />
                     Smoking Policy
                   </h3>
                   <div className="space-y-2">
@@ -1184,7 +1499,7 @@ export default function HomePage() {
                 {/* Noise Level */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                    <Icon icon="mdi:volume-high" className="mr-2 text-purple-600" />
+                    <Icon icon="mdi:volume-high" className="mr-2 text-[#6b9b7f]" />
                     Noise Level
                   </h3>
                   <div className="space-y-2">
@@ -1221,7 +1536,7 @@ export default function HomePage() {
                 {/* Guest Policy */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                    <Icon icon="mdi:account-group" className="mr-2 text-orange-600" />
+                    <Icon icon="mdi:account-group" className="mr-2 text-[#6b9b7f]" />
                     Guest Policy
                   </h3>
                   <div className="space-y-2">
@@ -1303,6 +1618,18 @@ export default function HomePage() {
     );
   }
 
+  // If no currentProfile at this point, show loading
+  if (!currentProfile) {
+    return (
+      <GreenHomeBackground>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <span className="loading loading-spinner loading-lg text-green-600"></span>
+          <p className="mt-4 text-gray-600 font-semibold">Loading...</p>
+        </div>
+      </GreenHomeBackground>
+    );
+  }
+
   const profileImage = getUserAvatar(currentProfile.photoURL, currentProfile.email || currentProfile.userId);
 
   return (
@@ -1340,7 +1667,7 @@ export default function HomePage() {
 
             <div
               ref={cardRef}
-              className={`absolute inset-0 bg-white rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 ${
+              className={`absolute left-0 right-0 top-0 bg-white rounded-3xl shadow-2xl overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 ${
                 swipeDirection === 'left' ? 'transform -translate-x-full rotate-12' :
                 swipeDirection === 'right' ? 'transform translate-x-full -rotate-12' : ''
               }`}
@@ -1351,10 +1678,12 @@ export default function HomePage() {
             >
               {/* Profile Image */}
               <div className="h-72 relative">
-                <img
+                <Image
                   src={profileImage}
                   alt={currentProfile.displayName || currentProfile.email}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  unoptimized
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
@@ -1427,14 +1756,14 @@ export default function HomePage() {
                     {/* Compatibility Score from ChromaDB */}
                     {currentProfile && profileSimilarities[currentProfile.userId] !== undefined && (
                       <div>
-                        {profileSimilarities[currentProfile.userId] >= 90 ? (
+                        {profileSimilarities[currentProfile.userId] >= 80 ? (
                           <Tag
                             label="High Compatibility"
                             icon="mdi:star"
                             color="green"
                             tooltip={`Compatibility score: ${profileSimilarities[currentProfile.userId].toFixed(1)}%`}
                           />
-                        ) : profileSimilarities[currentProfile.userId] >= 70 ? (
+                        ) : profileSimilarities[currentProfile.userId] >= 50 ? (
                           <Tag
                             label="Medium Compatibility"
                             icon="mdi:star-half-full"
@@ -1460,7 +1789,7 @@ export default function HomePage() {
                       {currentProfile.displayName}
                     </h2>
                     {currentProfile.nickname && (
-                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-400/80 backdrop-blur-sm border border-purple-300/50">
+                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-[#a0d4a0]/80 backdrop-blur-sm border border-[#6b9b7f]/50">
                         &quot;{currentProfile.nickname}&quot;
                       </span>
                     )}
@@ -1514,7 +1843,7 @@ export default function HomePage() {
                   {/* Sleep Schedule */}
                   {currentProfile.sleepSchedule && (
                     <div className="flex items-center">
-                      <Icon icon="mdi:sleep" className="mr-2 text-base text-purple-500" />
+                      <Icon icon="mdi:sleep" className="mr-2 text-base text-[#6b9b7f]" />
                       <span className="text-gray-700"><strong>Sleep:</strong> {formatLabel(currentProfile.sleepSchedule)}</span>
                     </div>
                   )}
@@ -1522,7 +1851,7 @@ export default function HomePage() {
                   {/* Cleanliness Level */}
                   {currentProfile.cleanlinessLevel && (
                     <div className="flex items-center">
-                      <Icon icon="mdi:broom" className="mr-2 text-base text-blue-500" />
+                      <Icon icon="mdi:broom" className="mr-2 text-base text-[#6b9b7f]" />
                       <span className="text-gray-700"><strong>Cleanliness:</strong> {formatLabel(currentProfile.cleanlinessLevel)}</span>
                     </div>
                   )}
@@ -1538,7 +1867,7 @@ export default function HomePage() {
                   {/* Smoking Policy */}
                   {currentProfile.smokingPolicy && (
                     <div className="flex items-center">
-                      <Icon icon="mdi:smoking-off" className="mr-2 text-base text-red-500" />
+                      <Icon icon="mdi:smoking-off" className="mr-2 text-base text-[#6b9b7f]" />
                       <span className="text-gray-700"><strong>Smoking:</strong> {formatLabel(currentProfile.smokingPolicy)}</span>
                     </div>
                   )}
@@ -1546,7 +1875,7 @@ export default function HomePage() {
                   {/* Cooking Skills */}
                   {currentProfile.cookingSkills && (
                     <div className="flex items-center">
-                      <Icon icon="mdi:chef-hat" className="mr-2 text-base text-orange-500" />
+                      <Icon icon="mdi:chef-hat" className="mr-2 text-base text-[#6b9b7f]" />
                       <span className="text-gray-700"><strong>Cooking Skills:</strong> {formatLabel(currentProfile.cookingSkills)}</span>
                     </div>
                   )}
@@ -1565,7 +1894,7 @@ export default function HomePage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-gray-800">Accommodation Status:</h3>
 
-                  <p className="rounded-full bg-blue-500 text-white px-3 py-1 text-sm font-semibold shadow-md">
+                  <p className="rounded-full bg-[#6b9b7f] text-white px-3 py-1 text-sm font-semibold shadow-md">
                     {formatLabel(
                       currentProfile.accommodationStatus === 'have-room'
                         ? 'Has Room'
@@ -1594,7 +1923,7 @@ export default function HomePage() {
                     <div className={`mt-2 space-y-2`}>
                       {(currentProfile.districts) && (
                         <div className="flex items-center">
-                          <Icon icon="mdi:map-marker" className="mr-2 text-base text-blue-500" />
+                          <Icon icon="mdi:map-marker" className="mr-2 text-base text-[#6b9b7f]" />
                           <span className="text-gray-700">
                             <strong>Address:</strong>{" "}
                             {Array.isArray(currentProfile.districts)
@@ -1606,7 +1935,7 @@ export default function HomePage() {
 
                       {currentProfile.accommodationFee && (
                         <div className="flex items-center">
-                          <Icon icon="mdi:currency-usd" className="mr-2 text-base text-blue-500" />
+                          <Icon icon="mdi:currency-usd" className="mr-2 text-base text-[#6b9b7f]" />
                           <span className="text-gray-700"><strong>Monthly Fee:</strong> {currentProfile.accommodationFee} Million VND/month</span>
                         </div>
                       )}
@@ -1616,7 +1945,7 @@ export default function HomePage() {
                     currentProfile.accommodationServices.length > 0 && (
                       <div className="mt-2">
                         <div className="flex items-center mb-1">
-                          <Icon icon="mdi:tools" className="mr-2 text-base text-blue-500" />
+                          <Icon icon="mdi:tools" className="mr-2 text-base text-[#6b9b7f]" />
                           <span className="text-gray-700">
                             <strong>Services:</strong>
                           </span>
@@ -1685,7 +2014,7 @@ export default function HomePage() {
                 <div className={`absolute top-20 left-4 p-4 rounded-full ${currentX > 50 ? 'bg-green-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
                   <Icon icon="mdi:like" className="text-white text-2xl" />
                 </div>
-                <div className={`absolute top-20 right-4 p-4 rounded-full ${currentX < -50 ? 'bg-red-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
+                <div className={`absolute top-20 right-4 p-4 rounded-full ${currentX < -50 ? 'bg-[#6b9b7f] opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
                   <Icon icon="mdi:close" className="text-white text-2xl" />
                 </div>
               </>
@@ -1748,8 +2077,8 @@ export default function HomePage() {
                     {profileSimilarities[currentProfile.userId].toFixed(1)}%
                   </div>
                   <div className="text-sm text-gray-600">
-                    {profileSimilarities[currentProfile.userId] >= 90 ? 'High Match!' :
-                     profileSimilarities[currentProfile.userId] >= 70 ? 'Good Match' :
+                    {profileSimilarities[currentProfile.userId] >= 80 ? 'High Match!' :
+                     profileSimilarities[currentProfile.userId] >= 50 ? 'Good Match' :
                      'Potential Match'}
                   </div>
                 </div>
@@ -1760,7 +2089,7 @@ export default function HomePage() {
             {currentUserProfile && getSharedInterests(currentProfile, currentUserProfile).length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                  <Icon icon="mdi:heart-multiple" className="mr-2 text-red-500" />
+                  <Icon icon="mdi:heart-multiple" className="mr-2 text-[#6b9b7f]" />
                   Shared Interests ({getSharedInterests(currentProfile, currentUserProfile).length})
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -1779,7 +2108,7 @@ export default function HomePage() {
             {/* Lifestyle Compatibility */}
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                <Icon icon="mdi:account-check" className="mr-2 text-blue-500" />
+                <Icon icon="mdi:account-check" className="mr-2 text-[#6b9b7f]" />
                 Lifestyle Comparison
               </h3>
               <div className="space-y-3">
@@ -2031,10 +2360,13 @@ export default function HomePage() {
           >
             {/* Modal Header */}
             <div className="p-6 space-y-6">
-              <img
+              <Image
                 src={profileImage}
                 alt={currentProfile.displayName || currentProfile.email}
-                className="w-128 h-128 object-top rounded-t-2xl block mx-auto"
+                width={512}
+                height={512}
+                className="object-top rounded-t-2xl block mx-auto"
+                unoptimized
               />
               <button
                 onClick={closeDetailModal}
@@ -2429,10 +2761,13 @@ export default function HomePage() {
             {/* Profile Preview */}
             <div className="flex justify-center gap-4 mb-6">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-green-500 shadow-lg">
-                <img
+                <Image
                   src={getUserAvatar(matchedProfile.photoURL, matchedProfile.email || matchedProfile.userId)}
                   alt={matchedProfile.displayName || 'User'}
-                  className="w-full h-full object-cover"
+                  width={96}
+                  height={96}
+                  className="object-cover"
+                  unoptimized
                 />
               </div>
             </div>
@@ -2523,11 +2858,14 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentProfile.roomImages.map((imageUrl, index) => (
                 <div key={index} className="relative group">
-                  <img
+                  <Image
                     src={imageUrl}
                     alt={`Room ${index + 1}`}
+                    width={600}
+                    height={256}
                     className="w-full h-64 object-cover rounded-lg shadow-md hover:shadow-xl transition cursor-pointer"
                     onClick={() => window.open(imageUrl, '_blank')}
+                    unoptimized
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition rounded-lg flex items-center justify-center">
                     <Icon icon="mdi:magnify-plus" className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition" />

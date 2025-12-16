@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { auth } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { UserProfile } from '@/types/profile';
@@ -10,6 +11,10 @@ import { getUserAvatar } from '@/lib/avatarHelper';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import { GreenHomeBackground } from '@/components/magicui/green-home-background';
+import { createChat } from '@/lib/chatService';
+import { useUserChats } from '@/lib/hooks/useChat';
+import { checkChatExists } from '@/lib/utils/matchHelper';
+import MapEmbed from '@/app/components/MapEmbed';
 
 export default function ProfileViewPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
@@ -17,6 +22,11 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [creatingChat, setCreatingChat] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
+  // Get user's chats to check existing conversations
+  const { chats } = useUserChats(currentUser?.uid);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -42,6 +52,38 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
 
     return () => unsubscribe();
   }, [params.slug, router]);
+
+  const handleStartChat = async () => {
+    if (!currentUser || !profile || isOwnProfile) return;
+
+    setCreatingChat(true);
+
+    try {
+      // Check if chat already exists
+      const existingChatId = checkChatExists(currentUser.uid, profile.userId, chats);
+      
+      if (existingChatId) {
+        // Navigate to existing chat
+        router.push(`/chatroom?chatId=${existingChatId}`);
+        return;
+      }
+      
+      // Create new chat
+      const chatId = await createChat(currentUser.uid, {
+        type: 'individual',
+        participants: [currentUser.uid, profile.userId]
+      });
+      
+      if (chatId) {
+        router.push(`/chatroom?chatId=${chatId}`);
+      }
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      alert('Failed to start chat. Please try again.');
+    } finally {
+      setCreatingChat(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -79,7 +121,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
             <div className="flex items-center gap-4">
               <div className="avatar">
                 <div className="w-20 h-20 rounded-full">
-                  <img src={getUserAvatar(profile.photoURL, profile.email || profile.userId)} alt={profile.displayName || 'Profile'} />
+                  <Image src={getUserAvatar(profile.photoURL, profile.email || profile.userId)} alt={profile.displayName || 'Profile'} width={80} height={80} className="rounded-full" unoptimized />
                 </div>
               </div>
               <div>
@@ -123,11 +165,34 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
               </div>
             </div>
             
-            {isOwnProfile && (
-              <Link href="/profile" className="btn btn-primary">
-                Edit Profile
-              </Link>
-            )}
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              {!isOwnProfile && (
+                <button
+                  className="btn btn-primary gap-2"
+                  onClick={handleStartChat}
+                  disabled={creatingChat}
+                >
+                  {creatingChat ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Icon icon="mdi:message-text" className="w-5 h-5" />
+                      Start Chat
+                    </>
+                  )}
+                </button>
+              )}
+              
+              {isOwnProfile && (
+                <Link href="/profile" className="btn btn-primary">
+                  Edit Profile
+                </Link>
+              )}
+            </div>
           </div>
         </div>
             
@@ -333,7 +398,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                     </div>
 
                     {profile.districts && (
-                      <div className="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+                      <div className="flex items-center gap-3 p-3 bg-base-200 rounded-lg relative">
                         <Icon icon="mdi:map-marker" className="w-5 h-5 text-red-500" />
                         <div>
                           <p className="text-xs text-gray-900">Address</p>
@@ -345,6 +410,13 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                                 "No address provided"}                        
                           </p>
                         </div>
+                        <button
+                          onClick={() => setShowMap(true)}
+                          className="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg px-3 py-2 rounded-lg transition flex items-center gap-2"
+                        >
+                          <Icon icon="mdi:map" className="w-4 h-4" />
+                          <span className="text-xs font-medium">View</span>
+                        </button>
                       </div>
                     )}
                     {profile.accommodationType && (
@@ -460,11 +532,14 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                           {profile.roomImages.map((imageUrl, index) => (
                             <div key={index} className="aspect-square overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow">
-                              <img
+                              <Image
                                 src={imageUrl}
                                 alt={`Room ${index + 1}`}
+                                width={200}
+                                height={200}
                                 className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                                 onClick={() => window.open(imageUrl, '_blank')}
+                                unoptimized
                               />
                             </div>
                           ))}
@@ -563,7 +638,7 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
                           <p className="text-xs text-gray-900 mb-1">Desired Services</p>
                           <div className="flex flex-wrap gap-2">
                             {profile.accommodationServices.map((service: string, index: number) => (
-                              <span key={index} className="badge badge-primary badge-outline text-xs">
+                              <span key={index} className="badge badge-outline text-xs text-gray-900">
                                 {service}
                               </span>
                             ))}
@@ -608,6 +683,33 @@ export default function ProfileViewPage({ params }: { params: { slug: string } }
         </div>
       </div>
       </div>
+
+      {/* Map Modal */}
+      {showMap && profile && profile.accommodationStatus === "have-room" && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowMap(false)}
+        >
+          <div
+            className="bg-white p-4 rounded-xl shadow-xl max-w-5xl w-full relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowMap(false)}
+              className="absolute top-3 right-3 text-gray-600 hover:text-black"
+            >
+              <Icon icon="mdi:close" className="w-10 h-10" />
+            </button>
+            <MapEmbed
+              location={
+                Array.isArray(profile.districts)
+                  ? profile.districts.join(", ")
+                  : profile.districts || "Ho Chi Minh"
+              }
+            />
+          </div>
+        </div>
+      )}
     </GreenHomeBackground>
   );
 }
