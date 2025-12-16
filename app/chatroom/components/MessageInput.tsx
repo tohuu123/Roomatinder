@@ -51,13 +51,13 @@ export default function MessageInput({
 
     // Validate file type
     if (!isSupportedFileType(file.type)) {
-      alert('Loại tệp không được hỗ trợ');
+      alert('File type not supported');
       return;
     }
 
     // Validate file size (50MB max)
     if (file.size > 50 * 1024 * 1024) {
-      alert('Kích thước tệp vượt quá 50MB');
+      alert('File size exceeds 50MB');
       return;
     }
 
@@ -176,7 +176,7 @@ export default function MessageInput({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
-          className="btn btn-ghost btn-sm btn-circle"
+          className="btn btn-ghost btn-sm btn-circle bg-gray-600 text-white hover:bg-gray-800 transition-colors duration-200"
           title="Đính kèm tệp"
         >
           <Icon icon="mdi:paperclip" className="text-xl" />
@@ -196,9 +196,9 @@ export default function MessageInput({
             value={message}
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Nhập tin nhắn..."
+            placeholder="Type a message..."
             disabled={disabled}
-            className="input input-bordered w-full pr-12"
+            className="input input-bordered w-full pr-12 text-gray-700"
           />
           <button
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -215,7 +215,7 @@ export default function MessageInput({
           onClick={handleSend}
           disabled={disabled || (!message.trim() && !selectedFile)}
           className="btn btn-primary btn-circle"
-          title="Gửi"
+          title="Send"
         >
           <Icon icon="mdi:send" className="text-xl" />
         </button>

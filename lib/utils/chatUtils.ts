@@ -250,10 +250,10 @@ export function getChatDisplayName(
   // For individual chats
   const otherUserId = chat.participants?.find((id: string) => id !== currentUserId);
   if (otherUserId && chat.participantDetails?.[otherUserId]) {
-    return chat.participantDetails[otherUserId].name || 'Người dùng';
+    return chat.participantDetails[otherUserId].name || 'User';
   }
 
-  return 'Người dùng';
+  return 'User';
 }
 
 /**

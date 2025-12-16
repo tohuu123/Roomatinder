@@ -224,19 +224,19 @@ export default function Login() {
               <ul className="space-y-3">
                 <li className="flex items-center p-3 bg-red-50 rounded-xl">
                   <Icon icon="mdi:close-circle" className="text-2xl text-red-500 mr-3 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">Difficulty finding compatible roommates</span>
+                  <span className="text-gray-700 font-medium">Hard to find the right roommate</span>
                 </li>
                 <li className="flex items-center p-3 bg-red-50 rounded-xl">
                   <Icon icon="mdi:close-circle" className="text-2xl text-red-500 mr-3 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">Lack of information about lifestyle and preferences</span>
+                  <span className="text-gray-700 font-medium">Not enough information about lifestyle and habits</span>
                 </li>
                 <li className="flex items-center p-3 bg-red-50 rounded-xl">
                   <Icon icon="mdi:close-circle" className="text-2xl text-red-500 mr-3 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">Complex and time-consuming search process</span>
+                  <span className="text-gray-700 font-medium">Searching takes too much time</span>
                 </li>
                 <li className="flex items-center p-3 bg-red-50 rounded-xl">
                   <Icon icon="mdi:close-circle" className="text-2xl text-red-500 mr-3 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">No compatibility assessment tools available</span>
+                  <span className="text-gray-700 font-medium">No clear way to know if two people are compatible</span>
                 </li>
               </ul>
             </div>
@@ -251,19 +251,19 @@ export default function Login() {
               <ul className="space-y-3">
                 <li className="flex items-center p-3 bg-green-50 rounded-xl">
                   <Icon icon="mdi:check-circle" className="text-2xl text-[#6b9b7f] mr-3 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">Smart Tinder-like swipe interface for easy searching</span>
+                  <span className="text-gray-700 font-medium">Tinder-like swipe to find roommates easily</span>
                 </li>
                 <li className="flex items-center p-3 bg-green-50 rounded-xl">
                   <Icon icon="mdi:check-circle" className="text-2xl text-[#6b9b7f] mr-3 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">Detailed profiles with lifestyle and preference information</span>
+                  <span className="text-gray-700 font-medium">Clear profiles with essential lifestyle information</span>
                 </li>
                 <li className="flex items-center p-3 bg-green-50 rounded-xl">
                   <Icon icon="mdi:check-circle" className="text-2xl text-[#6b9b7f] mr-3 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">Compatibility-based matching system</span>
+                  <span className="text-gray-700 font-medium">Matching based on compatibility, not randomnes</span>
                 </li>
                 <li className="flex items-center p-3 bg-green-50 rounded-xl">
                   <Icon icon="mdi:check-circle" className="text-2xl text-[#6b9b7f] mr-3 flex-shrink-0" />
-                  <span className="text-gray-700 font-medium">Integrated chat feature for easy connection</span>
+                  <span className="text-gray-700 font-medium">Built-in chat to connect instantly</span>
                 </li>
               </ul>
             </div>
@@ -278,7 +278,7 @@ export default function Login() {
                   <Icon icon="mdi:swap-horizontal" className="text-3xl text-white" />
                 </div>
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Smart Swipe</h4>
-                <p className="text-gray-600 text-sm">Swipe right to like, swipe left to pass - simple and intuitive</p>
+                <p className="text-gray-600 text-sm">Swipe right to like, swipe left to skip. Simple and fast</p>
               </div>
 
               <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
@@ -294,7 +294,7 @@ export default function Login() {
                   <Icon icon="mdi:chat-processing" className="text-3xl text-white" />
                 </div>
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Integrated Chat</h4>
-                <p className="text-gray-600 text-sm">Direct messaging after successful matches</p>
+                <p className="text-gray-600 text-sm">Start chatting immediately after a successful match</p>
               </div>
 
               <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
@@ -302,7 +302,7 @@ export default function Login() {
                   <Icon icon="mdi:shield-check" className="text-3xl text-white" />
                 </div>
                 <h4 className="text-lg font-bold text-gray-800 mb-2">Safe & Secure</h4>
-                <p className="text-gray-600 text-sm">Identity verification and personal information protection</p>
+                <p className="text-gray-600 text-sm">Verified users and protected personal information</p>
               </div>
             </div>
           </div>
@@ -381,15 +381,37 @@ export default function Login() {
                   <h4 className="text-2xl font-bold mb-2">Team devebugger</h4>
                 </div>
                 
-                <div className="grid md:grid-cols-1 gap-6 text-left">
-                  <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm">
-                    <h5 className="font-semibold mb-3">Our Goals</h5>
-                    <ul className="space-y-2 text-sm">
-                      <li>• Solve real-world problems</li>
-                      <li>• Apply cutting-edge technology</li>
-                      <li>• Create products with social value</li>
-                      <li>• Learn and develop skills</li>
-                    </ul>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm hover:bg-white/20 transition">
+                    <div className="text-center">
+                      <Icon icon="mdi:account-circle" className="text-5xl mb-3 mx-auto" />
+                      <h5 className="font-bold text-lg mb-2">Châu Vũ Trung</h5>
+                      <p className="text-sm text-white/80">24127256</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm hover:bg-white/20 transition">
+                    <div className="text-center">
+                      <Icon icon="mdi:account-circle" className="text-5xl mb-3 mx-auto" />
+                      <h5 className="font-bold text-lg mb-2">Võ Nguyên Khoa</h5>
+                      <p className="text-sm text-white/80">24127191</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm hover:bg-white/20 transition">
+                    <div className="text-center">
+                      <Icon icon="mdi:account-circle" className="text-5xl mb-3 mx-auto" />
+                      <h5 className="font-bold text-lg mb-2">Huỳnh Thái Hoàng</h5>
+                      <p className="text-sm text-white/80">24127171</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm hover:bg-white/20 transition">
+                    <div className="text-center">
+                      <Icon icon="mdi:account-circle" className="text-5xl mb-3 mx-auto" />
+                      <h5 className="font-bold text-lg mb-2">Tôn Thất Nhật Minh</h5>
+                      <p className="text-sm text-white/80">24127083</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -412,7 +434,7 @@ export default function Login() {
                       <Icon icon="mdi:email" className="text-2xl text-[#4a6b5a]" />
                     </div>
                     <h4 className="text-lg font-bold text-gray-800 mb-2">Email</h4>
-                    <p className="text-[#6b9b7f] font-semibold mb-2">devebugger@gmail.com</p>
+                    <p className="text-[#6b9b7f] font-semibold mb-2">devebugger.app@gmail.com</p>
                   </div>
                 </div>
                 <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">

@@ -27,7 +27,7 @@ export default function MessageBubble({
       return (
         <div className="italic text-gray-500">
           <Icon icon="mdi:delete" className="inline mr-1" />
-          Tin nhắn đã bị xóa
+          Message deleted
         </div>
       );
     }
@@ -61,7 +61,7 @@ export default function MessageBubble({
               controls
               className="rounded-lg w-full h-auto"
             >
-              Trình duyệt của bạn không hỗ trợ video.
+              Your browser does not support video.
             </video>
             {message.content && (
               <p className="mt-2 whitespace-pre-wrap break-words">
@@ -167,7 +167,7 @@ export default function MessageBubble({
           className={`px-4 py-2 rounded-2xl ${
             isOwn
               ? 'bg-primary text-primary-content rounded-br-sm'
-              : 'bg-base-200 text-base-content rounded-bl-sm'
+              : 'bg-white text-gray-700 rounded-bl-sm shadow-sm'
           }`}
         >
           {renderMessageContent()}

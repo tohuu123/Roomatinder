@@ -1649,7 +1649,7 @@ export default function HomePage() {
                 e.stopPropagation();
                 setShowFilterPanel(!showFilterPanel);
               }}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-10"
+              className="absolute -left-20 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-20"
             >
               <Icon icon="mdi:filter-variant" className="w-6 h-6" />
             </button>
@@ -1660,7 +1660,7 @@ export default function HomePage() {
                 e.stopPropagation();
                 setShowMatchingInfo(!showMatchingInfo);
               }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-10"
+              className="absolute -right-20 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-20"
             >
               <Icon icon="mdi:information" className="w-6 h-6" />
             </button>
@@ -2019,30 +2019,37 @@ export default function HomePage() {
                 </div>
               </>
             )}
+
+            {/* Action Buttons - Positioned below card */}
+            {/* Pass Button - Left Side */}
+            <button
+              onClick={() => handleSwipe('left')}
+              disabled={isAnimating}
+              className="absolute -left-20 bottom-8 bg-red-500 hover:bg-red-600 text-white shadow-lg p-4 rounded-full transition disabled:opacity-50 z-20"
+            >
+              <Icon icon="mdi:close" className="w-6 h-6" />
+            </button>
+            
+            {/* Like Button - Right Side */}
+            <button
+              onClick={() => handleSwipe('right')}
+              disabled={isAnimating}
+              className="absolute -right-20 bottom-8 bg-green-500 hover:bg-green-600 text-white shadow-lg p-4 rounded-full transition disabled:opacity-50 z-20"
+            >
+              <Icon icon="mdi:like" className="w-6 h-6" />
+            </button>
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-8 mb-6">
-          {/* Dislike Button */}
-          <button
-            onClick={() => handleSwipe('left')}
-            disabled={isAnimating}
-            className="w-20 h-20 bg-red-500 hover:bg-red-600 rounded-full border-none text-white disabled:opacity-50 flex flex-col justify-center items-center shadow-lg transition-all duration-200"
-          >
-            <Icon icon="mdi:close" className="text-4xl" />
-          </button>
-          
-          {/* Like Button */}
-          <button
-            onClick={() => handleSwipe('right')}
-            disabled={isAnimating}
-            className="w-20 h-20 bg-green-500 hover:bg-green-600 rounded-full border-none text-white disabled:opacity-50 flex flex-col justify-center items-center shadow-lg transition-all duration-200"
-          >
-            <Icon icon="mdi:like" className="text-4xl" />
-          </button>
+        {/* Powered by text below profile card */}
+        <div className="text-center mt-4">
+          <p className="text-base text-gray-700 font-semibold">
+            Powered by Smart Matching & Search
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Using AI-driven compatibility analysis
+          </p>
         </div>
-      </div>
 
       {/* Matching Info Panel */}
       {showMatchingInfo && currentProfile && (
@@ -2343,6 +2350,16 @@ export default function HomePage() {
             </div>
 
             {/* Accommodation Match */}
+
+            {/* Footer */}
+            <div className="mt-8 pt-6 pb-4 border-t border-gray-300 text-center">
+              <p className="text-base text-gray-700 font-semibold">
+                Powered by Smart Matching & Search
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                Using AI-driven compatibility analysis
+              </p>
+            </div>
         
           </div>
         </div>
@@ -3234,6 +3251,7 @@ export default function HomePage() {
           </div>
         </div>
       )}
+      </div>
     </GreenHomeBackground>
   );
 }
