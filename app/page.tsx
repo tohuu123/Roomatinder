@@ -15,6 +15,7 @@ import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
 import { GreenHomeBackground } from "@/components/magicui/green-home-background";
 import MapEmbed from "@/app/components/MapEmbed";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
 // Helper function to format field labels in English
@@ -70,6 +71,65 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
+// Helper function to generate compatibility analysis using Gemini
+async function generateCompatibilityAnalysis(
+  currentUser: UserProfile,
+  otherUser: UserProfile
+): Promise<string> {
+  try {
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('Gemini API key not found');
+      return 'AI analysis unavailable. Please configure API key.';
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+
+    const prompt = `You are a roommate compatibility analyzer. Analyze the compatibility between you (the user) and this potential roommate.
+
+Your Profile:
+- Sleep Schedule: ${currentUser.sleepSchedule || 'Not specified'}
+- Cleanliness: ${currentUser.cleanlinessLevel || 'Not specified'}
+- Noise Level: ${currentUser.noiseLevel || 'Not specified'}
+- Smoking Policy: ${currentUser.smokingPolicy || 'Not specified'}
+- Guest Policy: ${currentUser.guestPolicy || 'Not specified'}
+- Cooking Skills: ${currentUser.cookingSkills || 'Not specified'}
+- Interests: ${currentUser.interests?.join(', ') || 'Not specified'}
+- Accommodation: ${currentUser.accommodationStatus || 'Not specified'}
+
+Their Profile:
+- Sleep Schedule: ${otherUser.sleepSchedule || 'Not specified'}
+- Cleanliness: ${otherUser.cleanlinessLevel || 'Not specified'}
+- Noise Level: ${otherUser.noiseLevel || 'Not specified'}
+- Smoking Policy: ${otherUser.smokingPolicy || 'Not specified'}
+- Guest Policy: ${otherUser.guestPolicy || 'Not specified'}
+- Cooking Skills: ${otherUser.cookingSkills || 'Not specified'}
+- Interests: ${otherUser.interests?.join(', ') || 'Not specified'}
+- Accommodation: ${otherUser.accommodationStatus || 'Not specified'}
+
+Must ALWAYS put "**asterisks**" around important keywords and compatibility points to highlight them. 
+Write short paragraphs for easy reading and easy understanding (simple words), avoid long sentences.
+
+Write a structured analysis in 3 paragraphs (Write in no more than 3 sentences each) addressing "you and him/her":
+
+**Paragraph 1 - Compatibility Strengths**: Describe what matches well between you two - the positive aspects that would make living together harmonious.
+
+**Paragraph 2 - Potential Challenges**: Address what might cause trouble or conflict - areas where your preferences don't align.
+
+**Paragraph 3 - Conclusion**: Provide an overall compatibility assessment and recommendation.
+
+Only talk about important parts that impact living together.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error('Error generating Gemini analysis:', error);
+    return 'Unable to generate AI analysis at this time. Please try again later.';
+  }
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
@@ -97,6 +157,8 @@ export default function HomePage() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showMatchingInfo, setShowMatchingInfo] = useState(false);
   const [profileSimilarities, setProfileSimilarities] = useState<Record<string, number>>({});
+  const [geminiAnalysis, setGeminiAnalysis] = useState<Record<string, string>>({});
+  const [loadingGeminiAnalysis, setLoadingGeminiAnalysis] = useState<Record<string, boolean>>({});
   const [filterPreferences, setFilterPreferences] = useState({
     showHaveRoom: true,
     showLooking: true,
@@ -1655,15 +1717,20 @@ export default function HomePage() {
             </button>
 
             {/* Matching Info Button - positioned on the right */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMatchingInfo(!showMatchingInfo);
-              }}
-              className="absolute -right-20 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-20"
-            >
-              <Icon icon="mdi:information" className="w-6 h-6" />
-            </button>
+            <div className="absolute -right-20 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMatchingInfo(!showMatchingInfo);
+                }}
+                className="bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition"
+              >
+                <Icon icon="mdi:information" className="w-6 h-6" />
+              </button>
+              <span className="text-xs text-gray-600 font-medium text-center whitespace-nowrap">
+                Try AI Preview
+              </span>
+            </div>
 
             <div
               ref={cardRef}
@@ -2041,16 +2108,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Powered by text below profile card */}
-        <div className="text-center mt-4">
-          <p className="text-base text-gray-700 font-semibold">
-            Powered by Smart Matching & Search
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Using AI-driven compatibility analysis
-          </p>
-        </div>
-
       {/* Matching Info Panel */}
       {showMatchingInfo && currentProfile && (
         <div 
@@ -2089,6 +2146,48 @@ export default function HomePage() {
                      'Potential Match'}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* AI Compatibility Analysis */}
+            {currentUserProfile && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                  <Icon icon="mdi:brain" className="mr-2 text-purple-500" />
+                  AI Compatibility Analysis
+                </h3>
+                {loadingGeminiAnalysis[currentProfile.userId] ? (
+                  <div className="flex items-center justify-center py-4">
+                    <span className="loading loading-spinner loading-sm mr-2"></span>
+                    <span className="text-sm text-gray-600">Analyzing compatibility...</span>
+                  </div>
+                ) : geminiAnalysis[currentProfile.userId] ? (
+                  <div className="max-h-96 overflow-y-auto pr-2 text-sm text-gray-700 leading-relaxed space-y-3">
+                    {geminiAnalysis[currentProfile.userId].split('\n\n').map((paragraph, index) => (
+                      <p key={index} className="whitespace-pre-wrap">
+                        {paragraph.split(/(\*\*.*?\*\*)/).map((part, i) => {
+                          if (part.startsWith('**') && part.endsWith('**')) {
+                            return <strong key={i} className="text-purple-700 font-semibold">{part.slice(2, -2)}</strong>;
+                          }
+                          return part;
+                        })}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      setLoadingGeminiAnalysis(prev => ({ ...prev, [currentProfile.userId]: true }));
+                      const analysis = await generateCompatibilityAnalysis(currentUserProfile, currentProfile);
+                      setGeminiAnalysis(prev => ({ ...prev, [currentProfile.userId]: analysis }));
+                      setLoadingGeminiAnalysis(prev => ({ ...prev, [currentProfile.userId]: false }));
+                    }}
+                    className="btn btn-sm btn-outline btn-primary w-full"
+                  >
+                    <Icon icon="mdi:sparkles" className="mr-2" />
+                    Generate AI Analysis
+                  </button>
+                )}
               </div>
             )}
 
@@ -2347,20 +2446,7 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Accommodation Match */}
-
-            {/* Footer */}
-            <div className="mt-8 pt-6 pb-4 border-t border-gray-300 text-center">
-              <p className="text-base text-gray-700 font-semibold">
-                Powered by Smart Matching & Search
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                Using AI-driven compatibility analysis
-              </p>
-            </div>
-        
+            </div>        
           </div>
         </div>
       )}
