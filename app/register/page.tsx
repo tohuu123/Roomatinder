@@ -154,11 +154,11 @@ export default function Register() {
               {loadingGoogle ? "Signing in..." : "Continue with Google"}
             </button>
 
-            <div className="divider">or</div>
+            <div className="divider text-gray-700">or</div>
 
             {/* Registration Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 text-gray-700">
                 <Icon icon="mdi:account" />
                 <input
                   type="text"
@@ -170,7 +170,7 @@ export default function Register() {
                 />
               </label>
 
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 text-gray-700">
                 <Icon icon="mdi:email" />
                 <input
                   type="email"
@@ -182,7 +182,7 @@ export default function Register() {
                 />
               </label>
 
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 text-gray-700">
                 <Icon icon="mdi:lock" />
                 <input
                   type="password"
@@ -194,7 +194,7 @@ export default function Register() {
                 />
               </label>
 
-              <label className="input input-bordered flex items-center gap-2">
+              <label className="input input-bordered flex items-center gap-2 text-gray-700">
                 <Icon icon="mdi:lock-check" />
                 <input
                   type="password"

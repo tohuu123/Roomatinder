@@ -16,6 +16,7 @@ import {
   arrayRemove,
   serverTimestamp,
 } from 'firebase/firestore';
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Post, Comment, CreatePostData, PostCategory } from '@/types/post';
 
 const POSTS_COLLECTION = 'posts';
@@ -132,6 +133,26 @@ export const getPost = async (postId: string): Promise<Post | null> => {
   }
 };
 
+// Upload images to Firebase Storage and return URLs
+const uploadImages = async (base64Images: string[], userId: string): Promise<string[]> => {
+  const storage = getStorage();
+  const uploadPromises = base64Images.map(async (base64, index) => {
+    try {
+      const timestamp = Date.now();
+      const storageRef = ref(storage, `posts/${userId}/${timestamp}_${index}.jpg`);
+      await uploadString(storageRef, base64, 'data_url');
+      const downloadURL = await getDownloadURL(storageRef);
+      return downloadURL;
+    } catch (error) {
+      console.error(`Error uploading image ${index}:`, error);
+      return null;
+    }
+  });
+
+  const urls = await Promise.all(uploadPromises);
+  return urls.filter((url): url is string => url !== null);
+};
+
 // Create a new user post
 export const createPost = async (
   userId: string,
@@ -141,13 +162,22 @@ export const createPost = async (
   postData: CreatePostData
 ): Promise<string | null> => {
   try {
+    console.log('[createPost] Starting post creation with data:', {
+      userId,
+      userName,
+      userPhoto,
+      userSlug,
+      postData
+    });
+
+    // Images are already compressed base64 strings, use them directly
     const postsRef = collection(db, POSTS_COLLECTION);
     const newPost = {
       source: 'user',
       authorId: userId,
       authorName: userName,
-      authorPhoto: userPhoto,
-      authorSlug: userSlug,
+      authorPhoto: userPhoto || null, // Convert undefined to null
+      authorSlug: userSlug || null, // Convert undefined to null
       ...postData,
       likes: [],
       comments: [],
@@ -155,18 +185,29 @@ export const createPost = async (
       createdAt: serverTimestamp(),
     };
 
+    console.log('[createPost] New post object:', newPost);
+
     const docRef = await addDoc(postsRef, newPost);
-    console.log('Post created with ID:', docRef.id);
+    console.log('[createPost] Post created with ID:', docRef.id);
     
-    // Update user's last_action
-    const userRef = doc(db, 'profiles', userId);
-    await updateDoc(userRef, {
-      last_action: serverTimestamp(),
-    });
+    // Update user's last_action (don't fail post creation if this fails)
+    try {
+      const userRef = doc(db, 'profiles', userId);
+      await updateDoc(userRef, {
+        last_action: serverTimestamp(),
+      });
+      console.log('[createPost] Updated user last_action');
+    } catch (updateError) {
+      console.warn('[createPost] Failed to update user last_action:', updateError);
+    }
     
     return docRef.id;
   } catch (error) {
-    console.error('Error creating post:', error);
+    console.error('[createPost] Error creating post:', error);
+    if (error instanceof Error) {
+      console.error('[createPost] Error message:', error.message);
+      console.error('[createPost] Error stack:', error.stack);
+    }
     return null;
   }
 };
