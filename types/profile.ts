@@ -75,6 +75,9 @@ export interface UserProfile {
   // Visibility setting - whether user can be found by others
   isVisible?: boolean; // Default true if not set
   
+  // Last action timestamp - updated when user likes/passes or creates a post
+  last_action?: Date;
+  
   // List of user IDs that this user has liked
   likedUsers?: string[];
 

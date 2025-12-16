@@ -157,6 +157,13 @@ export const createPost = async (
 
     const docRef = await addDoc(postsRef, newPost);
     console.log('Post created with ID:', docRef.id);
+    
+    // Update user's last_action
+    const userRef = doc(db, 'profiles', userId);
+    await updateDoc(userRef, {
+      last_action: serverTimestamp(),
+    });
+    
     return docRef.id;
   } catch (error) {
     console.error('Error creating post:', error);

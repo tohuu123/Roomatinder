@@ -218,9 +218,32 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
   }
   
   const data = profileSnap.data();
+  const updates: any = {};
+  
+  // Initialize last_action to current date if it doesn't exist
+  if (!data.last_action) {
+    updates.last_action = serverTimestamp();
+  } else {
+    // Check if last_action was 7 days ago or more
+    const lastActionDate = data.last_action?.toDate ? data.last_action.toDate() : new Date(data.last_action);
+    const currentDate = new Date();
+    const daysDifference = Math.floor((currentDate.getTime() - lastActionDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // If inactive for 7+ days, set isVisible to false
+    if (daysDifference >= 7 && data.isVisible !== false) {
+      updates.isVisible = false;
+      console.log(`[ProfileService] User ${userId} inactive for ${daysDifference} days, setting isVisible to false`);
+    }
+  }
+  
+  // Apply updates if any
+  if (Object.keys(updates).length > 0) {
+    await updateDoc(profileRef, updates);
+  }
   
   return {
     ...data,
+    ...updates,
     userId,
   } as UserProfile;
 }
@@ -393,6 +416,7 @@ export async function likeUser(
         matches: [...(currentProfile.matches || []), likedUserId]
       }),
       updatedAt: serverTimestamp(),
+      last_action: serverTimestamp(),
     });
 
     console.log('[ProfileService] ✅ Updated current user:', currentUserId);
@@ -499,6 +523,7 @@ export async function passUser(
     await updateDoc(currentUserRef, {
       passedUsers: updatedPassedUsers,
       updatedAt: serverTimestamp(),
+      last_action: serverTimestamp(),
     });
     
     return true;
