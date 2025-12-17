@@ -1705,30 +1705,37 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="relative h-[750px] mb-6">
-            {/* Filter Button - positioned on the left */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowFilterPanel(!showFilterPanel);
-              }}
-              className="absolute -left-20 top-1/2 -translate-y-1/2 bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition z-20"
-            >
-              <Icon icon="mdi:filter-variant" className="w-6 h-6" />
-            </button>
+            {/* Filter Button */}
+            <div className="absolute -left-28 top-1/2 translate-y-20 z-20 flex flex-col items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowFilterPanel(!showFilterPanel);
+                }}
+                className="bg-white hover:bg-gray-50 text-gray-700
+                          shadow-lg p-3 rounded-full transition"
+              >
+                <Icon icon="mdi:filter-variant" className="w-6 h-6" />
+              </button>
+              <span className="text-xs text-gray-600 font-medium text-center whitespace-nowrap">
+                Filter
+              </span>
+            </div>
 
-            {/* Matching Info Button - positioned on the right */}
-            <div className="absolute -right-20 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1">
+            {/* Matching Info Button */}
+            <div className="absolute -right-28 top-1/2 translate-y-20 z-20 flex flex-col items-center gap-1">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowMatchingInfo(!showMatchingInfo);
                 }}
-                className="bg-white hover:bg-gray-50 text-gray-700 shadow-lg p-3 rounded-full transition"
+                className="bg-white hover:bg-gray-50 text-gray-700
+                          shadow-lg p-3 rounded-full transition"
               >
                 <Icon icon="mdi:information" className="w-6 h-6" />
               </button>
               <span className="text-xs text-gray-600 font-medium text-center whitespace-nowrap">
-                Try AI Preview
+                Preview
               </span>
             </div>
 
@@ -2078,32 +2085,47 @@ export default function HomePage() {
             {/* Swipe Indicators */}
             {isDragging && (
               <>
-                <div className={`absolute top-20 left-4 p-4 rounded-full ${currentX > 50 ? 'bg-green-500 opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
-                  <Icon icon="mdi:like" className="text-white text-2xl" />
-                </div>
-                <div className={`absolute top-20 right-4 p-4 rounded-full ${currentX < -50 ? 'bg-[#6b9b7f] opacity-100' : 'bg-gray-300 opacity-50'} transition-all`}>
-                  <Icon icon="mdi:close" className="text-white text-2xl" />
+                <div className="relative w-full h-full">
+                  <div
+                    className={`absolute top-20 left-24 p-4 rounded-full ${
+                      currentX > 50
+                        ? 'bg-green-500 opacity-100'
+                        : 'bg-gray-300 opacity-50'
+                    } transition-all`}
+                  >
+                    <Icon icon="mdi:like" className="text-white text-2xl" />
+                  </div>
+
+                  <div
+                    className={`absolute top-20 right-24 p-4 rounded-full ${
+                      currentX < -50
+                        ? 'bg-[#6b9b7f] opacity-100'
+                        : 'bg-gray-300 opacity-50'
+                    } transition-all`}
+                  >
+                    <Icon icon="mdi:close" className="text-white text-2xl" />
+                  </div>
                 </div>
               </>
             )}
 
-            {/* Action Buttons - Positioned on left and right sides of card */}
-            {/* Pass Button - Left Side */}
+            {/* Action Buttons - Positioned above filter/compare buttons */}
+            {/* Pass Button - Above Filter Button */}
             <button
               onClick={() => handleSwipe('left')}
               disabled={isAnimating}
-              className="absolute -left-20 top-1/2 -translate-y-1/2 bg-red-500 hover:bg-red-600 text-white shadow-lg p-4 rounded-full transition disabled:opacity-50 z-20"
+              className="absolute -left-28 top-1/2 -translate-y-24 bg-red-500 hover:bg-red-600 text-white shadow-lg p-5 rounded-full transition disabled:opacity-50 z-20"
             >
-              <Icon icon="mdi:close" className="w-6 h-6" />
+              <Icon icon="mdi:close" className="w-8 h-8" />
             </button>
             
-            {/* Like Button - Right Side */}
+            {/* Like Button - Above Matching Info Button */}
             <button
               onClick={() => handleSwipe('right')}
               disabled={isAnimating}
-              className="absolute -right-20 top-1/2 -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white shadow-lg p-4 rounded-full transition disabled:opacity-50 z-20"
+              className="absolute -right-28 top-1/2 -translate-y-24 bg-green-500 hover:bg-green-600 text-white shadow-lg p-5 rounded-full transition disabled:opacity-50 z-20"
             >
-              <Icon icon="mdi:like" className="w-6 h-6" />
+              <Icon icon="mdi:like" className="w-8 h-8" />
             </button>
           </div>
         )}
@@ -2446,7 +2468,8 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-            </div>        
+            </div>
+        
           </div>
         </div>
       )}
