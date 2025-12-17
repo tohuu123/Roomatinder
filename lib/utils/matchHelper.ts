@@ -13,30 +13,8 @@ export async function createChatFromMatch(
   matchedUserId: string
 ): Promise<string | null> {
   try {
-    // Fetch both user profiles to get participant details
-    const currentUserDoc = await getDoc(doc(db, 'profiles', currentUserId));
-    const matchedUserDoc = await getDoc(doc(db, 'profiles', matchedUserId));
-
-    if (!currentUserDoc.exists() || !matchedUserDoc.exists()) {
-      throw new Error('User profile not found');
-    }
-
-    const currentUserProfile = currentUserDoc.data() as UserProfile;
-    const matchedUserProfile = matchedUserDoc.data() as UserProfile;
-
-    // Create participant details
-    const participantDetails = {
-      [currentUserId]: {
-        name: currentUserProfile.displayName || 'User',
-        avatar: currentUserProfile.photoURL,
-      },
-      [matchedUserId]: {
-        name: matchedUserProfile.displayName || 'User',
-        avatar: matchedUserProfile.photoURL,
-      },
-    };
-
     // Create chat - createChat will handle checking for existing chat
+    // and will automatically fetch and store participant details
     const chatId = await createChat(currentUserId, {
       type: 'individual',
       participants: [currentUserId, matchedUserId],
@@ -45,12 +23,6 @@ export async function createChatFromMatch(
     if (!chatId) {
       throw new Error('Failed to create chat');
     }
-
-    // Update chat with participant details
-    const chatRef = doc(db, 'chats', chatId);
-    await updateDoc(chatRef, {
-      participantDetails,
-    });
 
     return chatId;
   } catch (error) {

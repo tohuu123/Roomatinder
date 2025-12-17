@@ -71,6 +71,39 @@ export async function createChat(
       chatData.admins = [currentUserId];
     }
 
+    // Fetch participant details for all participants
+    const participantDetails: { [userId: string]: { name: string; avatar?: string } } = {};
+    
+    for (const participantId of data.participants) {
+      try {
+        const profileRef = doc(db, 'profiles', participantId);
+        const profileDoc = await getDoc(profileRef);
+        
+        if (profileDoc.exists()) {
+          const profileData = profileDoc.data();
+          participantDetails[participantId] = {
+            name: profileData.displayName || profileData.email?.split('@')[0] || 'User',
+            avatar: profileData.photoURL,
+          };
+        } else {
+          // Fallback if profile doesn't exist yet
+          participantDetails[participantId] = {
+            name: 'User',
+            avatar: undefined,
+          };
+        }
+      } catch (err) {
+        console.error(`Error fetching profile for ${participantId}:`, err);
+        participantDetails[participantId] = {
+          name: 'User',
+          avatar: undefined,
+        };
+      }
+    }
+
+    // Add participant details to chat data
+    chatData.participantDetails = participantDetails;
+
     await setDoc(chatRef, chatData);
     return chatRef.id;
   } catch (error) {

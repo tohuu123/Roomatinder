@@ -2087,12 +2087,12 @@ export default function HomePage() {
               </>
             )}
 
-            {/* Action Buttons - Positioned below card */}
+            {/* Action Buttons - Positioned on left and right sides of card */}
             {/* Pass Button - Left Side */}
             <button
               onClick={() => handleSwipe('left')}
               disabled={isAnimating}
-              className="absolute -left-20 bottom-8 bg-red-500 hover:bg-red-600 text-white shadow-lg p-4 rounded-full transition disabled:opacity-50 z-20"
+              className="absolute -left-20 top-1/2 -translate-y-1/2 bg-red-500 hover:bg-red-600 text-white shadow-lg p-4 rounded-full transition disabled:opacity-50 z-20"
             >
               <Icon icon="mdi:close" className="w-6 h-6" />
             </button>
@@ -2101,7 +2101,7 @@ export default function HomePage() {
             <button
               onClick={() => handleSwipe('right')}
               disabled={isAnimating}
-              className="absolute -right-20 bottom-8 bg-green-500 hover:bg-green-600 text-white shadow-lg p-4 rounded-full transition disabled:opacity-50 z-20"
+              className="absolute -right-20 top-1/2 -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white shadow-lg p-4 rounded-full transition disabled:opacity-50 z-20"
             >
               <Icon icon="mdi:like" className="w-6 h-6" />
             </button>
