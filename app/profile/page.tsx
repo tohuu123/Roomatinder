@@ -7,6 +7,7 @@ import { auth } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getUserAvatar } from '@/lib/avatarHelper';
 import VerificationSection from './components/VerificationSection';
+import BioGenerator from './components/BioGenerator';
 import {
   UserProfile,
   SLEEP_SCHEDULE_OPTIONS,
@@ -830,6 +831,13 @@ export default function ProfilePage() {
                   </span>
                 </label>
 
+                <div className="mb-2">
+                  <BioGenerator 
+                    currentBio={profile.bio}
+                    onBioGenerated={(generatedBio) => handleInputChange('bio', generatedBio)}
+                  />
+                </div>
+
                 <textarea
                   className="textarea textarea-bordered h-32 text-gray-900"
                   placeholder="Describe your ideal weekend, things you like to do, or what's important to you when living with others..."
@@ -840,7 +848,7 @@ export default function ProfilePage() {
 
                 <label className="label">
                   <span className="label-text-alt text-gray-600">
-                    This information helps find more compatible roommates
+                    {profile.bio ? `${profile.bio.length}/255 ký tự` : 'This information helps find more compatible roommates'}
                   </span>
                 </label>
               </div>

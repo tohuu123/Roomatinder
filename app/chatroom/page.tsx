@@ -22,6 +22,7 @@ import { groupMessagesByDate, getDateSeparatorLabel } from '@/lib/utils/chatUtil
 import MessageBubble from './components/MessageBubble';
 import ChatListItemComponent from './components/ChatListItem';
 import MessageInput from './components/MessageInput';
+import IceBreakerWidget from './components/IceBreakerWidget';
 import { MessageType } from '@/types/chat';
 import { UserProfile } from '@/types/profile';
 import { GreenHomeBackground } from '@/components/magicui/green-home-background';
@@ -35,6 +36,7 @@ function ChatroomContent() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
+  const [otherUserProfile, setOtherUserProfile] = useState<UserProfile | null>(null);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -107,10 +109,27 @@ function ChatroomContent() {
   });
 
   // Select chat and mark as read
-  const handleChatSelect = (chatId: string) => {
+  const handleChatSelect = async (chatId: string) => {
     setSelectedChatId(chatId);
     if (currentUser?.uid) {
       markChatRead(chatId, currentUser.uid);
+      
+      // Fetch other user's profile for individual chats
+      const selectedChat = chats.find(c => c.id === chatId);
+      if (selectedChat && selectedChat.type === 'individual') {
+        const otherUserId = selectedChat.participants.find((id) => id !== currentUser.uid);
+        if (otherUserId) {
+          try {
+            const profileRef = doc(db, 'profiles', otherUserId);
+            const profileDoc = await getDoc(profileRef);
+            if (profileDoc.exists()) {
+              setOtherUserProfile(profileDoc.data() as UserProfile);
+            }
+          } catch (error) {
+            console.error('Error fetching other user profile:', error);
+          }
+        }
+      }
     }
     // Scroll to bottom immediately when chat is selected
     setTimeout(() => {
@@ -292,7 +311,16 @@ function ChatroomContent() {
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500">No messages yet</p>
+                    {currentUserProfile && otherUserProfile ? (
+                      <IceBreakerWidget
+                        currentUserProfile={currentUserProfile}
+                        otherUserProfile={otherUserProfile}
+                        onSendMessage={handleSendMessage}
+                        disabled={sending}
+                      />
+                    ) : (
+                      <p className="text-gray-500">No messages yet</p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-6 pb-4">
@@ -342,6 +370,8 @@ function ChatroomContent() {
                 onTyping={startTyping}
                 onStopTyping={stopTyping}
                 disabled={sending}
+                currentUserProfile={currentUserProfile || undefined}
+                otherUserProfile={otherUserProfile || undefined}
               />
             </>
           ) : (

@@ -6,13 +6,17 @@ import { useState, useRef, KeyboardEvent } from 'react';
 import Image from 'next/image';
 import { Icon } from '@iconify/react';
 import { MessageType } from '@/types/chat';
+import { UserProfile } from '@/types/profile';
 import { isSupportedFileType, getFileTypeCategory } from '@/lib/utils/chatUtils';
+import IceBreakerButton from './IceBreakerButton';
 
 interface MessageInputProps {
   onSendMessage: (content: string, type: MessageType, file?: File) => void;
   onTyping: () => void;
   onStopTyping: () => void;
   disabled?: boolean;
+  currentUserProfile?: UserProfile;
+  otherUserProfile?: UserProfile;
 }
 
 export default function MessageInput({
@@ -20,6 +24,8 @@ export default function MessageInput({
   onTyping,
   onStopTyping,
   disabled = false,
+  currentUserProfile,
+  otherUserProfile,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -177,7 +183,7 @@ export default function MessageInput({
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
           className="btn btn-ghost btn-sm btn-circle bg-gray-600 text-white hover:bg-gray-800 transition-colors duration-200"
-          title="Đính kèm tệp"
+          title="Attach file"
         >
           <Icon icon="mdi:paperclip" className="text-xl" />
         </button>
@@ -209,6 +215,18 @@ export default function MessageInput({
             <Icon icon="mdi:emoticon-happy-outline" className="text-xl" />
           </button>
         </div>
+
+        {/* AI Ice Breaker Button */}
+        {currentUserProfile && otherUserProfile && (
+          <IceBreakerButton
+            currentUserProfile={currentUserProfile}
+            otherUserProfile={otherUserProfile}
+            onSelectSuggestion={(text) => {
+              setMessage(text);
+            }}
+            disabled={disabled}
+          />
+        )}
 
         {/* Send Button */}
         <button
