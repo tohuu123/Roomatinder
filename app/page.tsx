@@ -14,8 +14,13 @@ import { useRouter } from "next/navigation";
 import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
 import { GreenHomeBackground } from "@/components/magicui/green-home-background";
-import MapEmbed from "@/app/components/MapEmbed";
+import dynamic from "next/dynamic";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const RadarMap = dynamic(
+  () => import('@/app/components/radar/RadarMap'),
+  { ssr: false }
+);
 
 
 // Helper function to format field labels in English
@@ -1708,6 +1713,27 @@ export default function HomePage() {
   return (
     <GreenHomeBackground>
       <div className="max-w-2xl mx-auto p-4">
+        {/* Area Radar Feature Card */}
+        <div className="mb-6 card bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-xl">
+          <div className="card-body p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-4xl">📡</div>
+                <div>
+                  <h3 className="card-title text-lg">Explore Area with AI Radar</h3>
+                  <p className="text-sm opacity-90">Discover amenities within 3km & get AI insights</p>
+                </div>
+              </div>
+              <a
+                href="/radar"
+                className="btn btn-sm bg-white text-blue-600 hover:bg-gray-100 border-none"
+              >
+                Try Now
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Card Container */}
         {fetchingProfile ? (
           <div className="flex flex-col items-center justify-center h-[750px]">
@@ -2943,28 +2969,26 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Map Modal */}
+      {/* Map Modal - Mapbox Radar */}
       {showMap && currentProfile.accommodationStatus == "have-room" && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={() => setShowMap(false)}
         >
           <div
-            className="bg-white p-4 rounded-xl shadow-xl max-w-5xl w-full relative"
+            className="bg-white rounded-xl shadow-xl max-w-7xl w-full h-[90vh] relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setShowMap(false)}
-              className="absolute top-3 right-3 text-gray-600 hover:text-black"
+              className="absolute top-4 right-4 z-50 bg-white hover:bg-gray-100 text-gray-700 shadow-lg p-2 rounded-full"
             >
-              <Icon icon="mdi:close" className="w-10 h-10" />
+              <Icon icon="mdi:close" className="w-6 h-6" />
             </button>
-            <MapEmbed
-              location={
-                Array.isArray(currentProfile.districts)
-                  ? currentProfile.districts.join(", ")
-                  : currentProfile.districts || "Ho Chi Minh"
-              }
+            <RadarMap
+              center={currentProfile.coordinates || [106.6297, 10.8231]}
+              propertyName={`${currentProfile.displayName}'s Room`}
+              university={currentProfile.university}
             />
           </div>
         </div>

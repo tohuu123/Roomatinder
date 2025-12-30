@@ -47,6 +47,7 @@ export interface UserProfile {
 
   // General Preferences
   districts?: string[]; // Preferred districts || accommodation districts
+  coordinates?: [number, number]; // [longitude, latitude] for property location (for have-room only)
   accommodationType?: string[]; // e.g., apartment, house, studio
   accommodationSize?: string[]; // e.g., 1-bedroom, 2-bedrooms
   numberOfRoomates?: number; // Preferred number of roommates

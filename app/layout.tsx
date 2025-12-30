@@ -351,6 +351,11 @@ function NavBar() {
                 People
               </Link>
             </li>
+            <li>
+              <Link href="/radar" className="text-base text-gray-900 font-semibold">
+                Radar
+              </Link>
+            </li>
             {user && (
               <li>
                 <button
@@ -425,6 +430,11 @@ function NavBar() {
           <li>
             <Link href="/people" className="text-base text-gray-900 font-semibold">
               People
+            </Link>
+          </li>
+          <li>
+            <Link href="/radar" className="text-base text-gray-900 font-semibold">
+              Radar
             </Link>
           </li>
           <li>
