@@ -223,7 +223,13 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
   // Initialize last_action to current date if it doesn't exist
   if (!data.last_action) {
     updates.last_action = serverTimestamp();
-  } else {
+  }
+  
+  // DISABLED: Auto-hiding inactive profiles
+  // This was causing all profiles to be hidden when fetched
+  // TODO: Implement this as a separate background job instead of on every fetch
+  /*
+  else {
     // Check if last_action was 7 days ago or more
     const lastActionDate = data.last_action?.toDate ? data.last_action.toDate() : new Date(data.last_action);
     const currentDate = new Date();
@@ -235,6 +241,7 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
       console.log(`[ProfileService] User ${userId} inactive for ${daysDifference} days, setting isVisible to false`);
     }
   }
+  */
   
   // Apply updates if any
   if (Object.keys(updates).length > 0) {
@@ -286,65 +293,26 @@ export async function updateProfile(
 
 /**
  * Check if user has completed required fields
+ * Relaxed version - only check truly essential fields for matching
  */
 export function hasCompletedRequiredFields(profile: Partial<UserProfile>): boolean {
-  const required = [
-    profile.displayName && profile.displayName.trim() !== '',
-    profile.gender,
-    profile.birthYear && profile.birthYear > 1900 && profile.birthYear <= new Date().getFullYear(),
-    profile.hometown && profile.hometown.trim() !== '',
-    profile.university && profile.university.trim() !== '',
-
-    profile.sleepSchedule,
-    profile.cleanlinessLevel,
-    profile.noiseLevel,
-    profile.cookingSkills,
-    profile.guestPolicy,
-    profile.smokingPolicy,
-    profile.petPolicy,
-    
-    profile.accommodationStatus,    
-
-    (profile.accommodationStatus === 'have-room' && (
-      profile.districts && profile.districts.length > 0 &&
-      profile.accommodationFee !== undefined && profile.accommodationFee !== null && profile.accommodationFee >= 0 &&
-      profile.accommodationElectricityFee !== undefined && profile.accommodationElectricityFee !== null && profile.accommodationElectricityFee >= 0 &&
-      profile.accommodationWaterFee !== undefined && profile.accommodationWaterFee !== null && profile.accommodationWaterFee >= 0 &&
-      profile.accommodationSize && profile.accommodationSize.length > 0 &&
-      profile.accommodationType && profile.accommodationType.length > 0 &&
-      profile.numberOfRoomates && profile.numberOfRoomates > 0 &&
-      profile.liveWithLandlord !== undefined && profile.liveWithLandlord !== null
-    )) ||
-
-    (profile.accommodationStatus === 'looking' && (
-      profile.districts && profile.districts.length > 0) &&
-      profile.budgetMin !== undefined && profile.budgetMin !== null &&
-      profile.budgetMax !== undefined && profile.budgetMax !== null &&
-      profile.budgetMin! <= profile.budgetMax! &&
-      profile.accommodationType && profile.accommodationType.length > 0 &&
-      profile.accommodationSize && profile.accommodationSize.length > 0 &&
-      profile.numberOfRoomates && profile.numberOfRoomates > 0 &&
-      profile.liveWithLandlord !== undefined && profile.liveWithLandlord !== null
-    )
-  ];
+  // Check essential fields
+  if (!profile.displayName || profile.displayName.trim() === '') return false;
+  if (!profile.gender) return false;
+  if (!profile.accommodationStatus) return false;
   
-  // Additional required fields for users who are looking for accommodation
-  if (profile.accommodationStatus === 'looking') {
-    required.push(
-      profile.districts && profile.districts.length > 0
-    );
-  }
+  // Must have at least one lifestyle preference for matching
+  if (!profile.cleanlinessLevel && !profile.sleepSchedule && !profile.noiseLevel) return false;
   
-  // Additional required fields for users who have accommodation
+  // Must have districts for location-based matching
+  if (!profile.districts || profile.districts.length === 0) return false;
+  
+  // If have-room, must have accommodation fee
   if (profile.accommodationStatus === 'have-room') {
-    required.push(
-      !!(profile.districts && profile.districts.length > 0),
-      !!profile.accommodationSize,
-      !!(profile.accommodationFee !== undefined && profile.accommodationFee !== null)
-    );
+    if (profile.accommodationFee === undefined || profile.accommodationFee === null) return false;
   }
   
-  return required.every(field => !!field);
+  return true;
 }
 
 /**

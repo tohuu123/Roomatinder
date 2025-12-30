@@ -7,6 +7,7 @@ const nextConfig = {
       '@huggingface/transformers',
       '@chroma-core/default-embed',
     ],
+    instrumentationHook: true,
   },
 };
 

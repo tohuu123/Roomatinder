@@ -93,23 +93,34 @@ function profileToDocument(profile: UserProfile): string {
   if (profile.smokingPolicy) parts.push(`Smoking: ${profile.smokingPolicy}`);
   if (profile.noiseLevel) parts.push(`Noise Level: ${profile.noiseLevel}`);
   if (profile.guestPolicy) parts.push(`Guest Policy: ${profile.guestPolicy}`);
+  if (profile.cookingSkills) parts.push(`Cooking Skills: ${profile.cookingSkills}`);
+  if (profile.sleepSchedule) parts.push(`Sleep Schedule: ${profile.sleepSchedule}`);
   
   // Accommodation details
   if (profile.accommodationStatus === 'have-room') {
     if (profile.districts && profile.districts.length > 0) {
       parts.push(`Accommodation Districts: ${profile.districts.join(', ')}`);
     }
-    if (profile.accommodationType && profile.accommodationType.length > 0) {
-      parts.push(`Accommodation Type: ${profile.accommodationType.join(', ')}`);
+    if (profile.accommodationType) {
+      const typeStr = Array.isArray(profile.accommodationType) 
+        ? profile.accommodationType.join(', ') 
+        : profile.accommodationType;
+      parts.push(`Accommodation Type: ${typeStr}`);
     }
-    if (profile.accommodationSize && profile.accommodationSize.length > 0) {
-      parts.push(`Accommodation Size: ${profile.accommodationSize.join(', ')}`);
+    if (profile.accommodationSize) {
+      const sizeStr = Array.isArray(profile.accommodationSize) 
+        ? profile.accommodationSize.join(', ') 
+        : profile.accommodationSize;
+      parts.push(`Accommodation Size: ${sizeStr}`);
     }
-    if (profile.liveWithLandlord) {
+    if (profile.liveWithLandlord !== undefined) {
       parts.push(`Live With Landlord: ${profile.liveWithLandlord}`);
     }
     if (profile.accommodationServices && profile.accommodationServices.length > 0) {
       parts.push(`Accommodation Services: ${profile.accommodationServices.join(', ')}`);
+    }
+    if (profile.accommodationFee) {
+      parts.push(`Monthly Fee: ${profile.accommodationFee} Million VND`);
     }
   }
   

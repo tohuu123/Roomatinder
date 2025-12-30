@@ -420,11 +420,17 @@ export default function HomePage() {
         continue;
       }
 
-      // Skip invisible profiles (users who don't want to be found)
+      // TEMPORARILY DISABLED: isVisible check
+      // The auto-hide logic was marking all profiles as invisible
+      // TODO: Re-enable after migrating profiles and implementing proper visibility toggle
+      /*
+      // Skip invisible profiles (users who explicitly set themselves as invisible)
+      // Default to visible if isVisible is undefined
       if (prof.isVisible === false) {
-        console.log("[Fetch] ❌ Skipping invisible profile:", matchedId);
+        console.log("[Fetch] ❌ Skipping explicitly invisible profile:", matchedId);
         continue;
       }
+      */
 
       // Skip profiles that haven't completed required fields
       const isComplete = hasCompletedRequiredFields(prof);
@@ -869,10 +875,10 @@ export default function HomePage() {
     return () => unsubscribe();
   }, []);
 
-  // Load initial profile when userId is available
+  // Load initial profile when userId AND currentUserProfile are available
   useEffect(() => {
-    if (!currentUserId || initialBatchLoaded) {
-      console.log("[Init] Skipping init - currentUserId:", !!currentUserId, "initialBatchLoaded:", initialBatchLoaded);
+    if (!currentUserId || !currentUserProfile || initialBatchLoaded) {
+      console.log("[Init] Skipping init - currentUserId:", !!currentUserId, "currentUserProfile:", !!currentUserProfile, "initialBatchLoaded:", initialBatchLoaded);
       return;
     }
 
@@ -881,6 +887,11 @@ export default function HomePage() {
       const init = async () => {
         try {
           console.log("[Init] Fetching initial batch of profiles...");
+          console.log("[Init] Current user profile:", {
+            userId: currentUserProfile.userId,
+            gender: currentUserProfile.gender,
+            accommodationStatus: currentUserProfile.accommodationStatus
+          });
 
           const result = await fetchProfileBatch(currentUserId, [], 3);
 
@@ -930,7 +941,7 @@ export default function HomePage() {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId, initialBatchLoaded]);
+  }, [currentUserId, currentUserProfile, initialBatchLoaded]);
 
   // Apply filters function
   const applyFilters = () => {

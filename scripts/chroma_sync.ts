@@ -99,7 +99,13 @@ function profileToDocument(profile: Record<string, unknown>): string {
   // Basic info
   if (profile.gender) parts.push(`Gender: ${profile.gender}`);
   if (profile.university) parts.push(`University: ${profile.university}`);
-  if (profile.district) parts.push(`District: ${profile.district}`);
+  // Fix: Use 'districts' (plural) instead of 'district' (singular)
+  if (profile.districts) {
+    const districtsStr = Array.isArray(profile.districts) 
+      ? profile.districts.join(', ') 
+      : String(profile.districts);
+    parts.push(`Districts: ${districtsStr}`);
+  }
   
   // Budget
   if (profile.budgetMin || profile.budgetMax) {
@@ -109,18 +115,34 @@ function profileToDocument(profile: Record<string, unknown>): string {
   // Living preferences
   if (profile.cleanlinessLevel) parts.push(`Cleanliness: ${profile.cleanlinessLevel}`);
   if (profile.smokingPolicy) parts.push(`Smoking: ${profile.smokingPolicy}`);
-  
-  // Optional preferences
-  if (profile.noiseLevelPreference) parts.push(`Noise Level: ${profile.noiseLevelPreference}`);
-  if (profile.cookingSkills) parts.push(`Cooking: ${profile.cookingSkills}`);
+  if (profile.noiseLevel) parts.push(`Noise Level: ${profile.noiseLevel}`);
+  if (profile.cookingSkills) parts.push(`Cooking Skills: ${profile.cookingSkills}`);
   if (profile.guestPolicy) parts.push(`Guest Policy: ${profile.guestPolicy}`);
-  if (profile.sharedSpaceCleaning) parts.push(`Cleaning: ${profile.sharedSpaceCleaning}`);
+  if (profile.sleepSchedule) parts.push(`Sleep Schedule: ${profile.sleepSchedule}`);
   
   // Accommodation details
-  if (profile.hasAccommodation === 'have-room') {
-    if (profile.accommodationLocation) parts.push(`Accommodation Location: ${profile.accommodationLocation}`);
-  } else {
-    if (profile.location) parts.push(`Desired Location: ${profile.location}`);
+  if (profile.accommodationStatus === 'have-room') {
+    if (profile.districts) {
+      const districtsStr = Array.isArray(profile.districts) 
+        ? profile.districts.join(', ') 
+        : String(profile.districts);
+      parts.push(`Accommodation Districts: ${districtsStr}`);
+    }
+    if (profile.accommodationType) {
+      const typeStr = Array.isArray(profile.accommodationType) 
+        ? profile.accommodationType.join(', ') 
+        : String(profile.accommodationType);
+      parts.push(`Accommodation Type: ${typeStr}`);
+    }
+    if (profile.accommodationSize) {
+      const sizeStr = Array.isArray(profile.accommodationSize) 
+        ? profile.accommodationSize.join(', ') 
+        : String(profile.accommodationSize);
+      parts.push(`Accommodation Size: ${sizeStr}`);
+    }
+    if (profile.accommodationFee) {
+      parts.push(`Monthly Fee: ${profile.accommodationFee} Million VND`);
+    }
   }
   
   return parts.join('. ');

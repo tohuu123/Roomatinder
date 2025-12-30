@@ -13,13 +13,17 @@
     "launch-chroma": "cd chromadb && . chroma-env/bin/activate && chroma run --path ../chroma-data --port 8000",
     "launch-chroma:win": "cd chromadb && chroma-env\\Scripts\\activate && chroma run --path ../chroma-data --port 8000",
     "chroma-install": "mkdir -p chromadb && cd chromadb && test -d chroma-env || python3 -m venv chroma-env && ./chroma-env/bin/pip install -q chromadb",
-    "chroma-install:win": "if not exist chromadb mkdir chromadb && cd chromadb && if not exist chroma-env python -m venv chroma-env && chroma-env\\Scripts\\pip install -q chromadb"
+    "chroma-install:win": "if not exist chromadb mkdir chromadb && cd chromadb && if not exist chroma-env python -m venv chroma-env && chroma-env\\Scripts\\pip install -q chromadb",
+    "test-email": "npx ts-node scripts/test-email.ts",
+    "test-match-email": "npx ts-node scripts/test-match-email.ts"
   },
   "dependencies": {
     "@chroma-core/default-embed": "^0.1.9",
     "@firebase/firestore": "^4.6.5",
     "@google/generative-ai": "^0.24.1",
     "@iconify/react": "^5.0.2",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^7.0.4",
     "chromadb": "^3.1.6",
     "diff": "^6.0.0-beta",
     "dotenv": "^17.2.3",
@@ -27,6 +31,8 @@
     "firebase-admin": "^13.6.0",
     "next": "14.2.5",
     "next-firebase-auth-edge": "^1.7.0-canary.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.12",
     "openai": "^4.57.0",
     "persona": "^5.4.0",
     "react": "^18",
