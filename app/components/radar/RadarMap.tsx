@@ -8,7 +8,6 @@ import { MapboxService } from '@/lib/mapboxService';
 import { GeminiRadarService } from '@/lib/geminiRadarService';
 import FilterChips from './FilterChips';
 import POIInfoCard from './POIInfoCard';
-import GeminiAnalysisPanel from './GeminiAnalysisPanel';
 import SchoolDistancePanel from './SchoolDistancePanel';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
@@ -30,10 +29,11 @@ const DEFAULT_FILTERS: RadarFilter[] = [
 interface RadarMapProps {
   center: [number, number]; // [lng, lat]
   propertyName?: string;
+  propertyAddress?: string;
   university?: string; // University name from profile
 }
 
-export default function RadarMap({ center, propertyName = 'This Property', university }: RadarMapProps) {
+export default function RadarMap({ center, propertyName = 'This Property', propertyAddress = '', university }: RadarMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -43,11 +43,10 @@ export default function RadarMap({ center, propertyName = 'This Property', unive
   const [pois, setPois] = useState<POI[]>([]);
   const [selectedPOI, setSelectedPOI] = useState<POI | null>(null);
   const [loading, setLoading] = useState(false);
-  const [geminiAnalysis, setGeminiAnalysis] = useState<GeminiAreaAnalysis | null>(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
   const [school, setSchool] = useState<SchoolLocation | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [radius, setRadius] = useState<number>(3); // Default 3km
 
   // Initialize map
   useEffect(() => {
@@ -69,14 +68,30 @@ export default function RadarMap({ center, propertyName = 'This Property', unive
       .setPopup(new mapboxgl.Popup().setHTML(`<strong>${propertyName}</strong>`))
       .addTo(map.current);
 
-    // Draw 3km radius circle
+    // Draw radius circle
     map.current.on('load', () => {
       if (!map.current) return;
 
-      const radiusInKm = 3;
-      const radiusInMeters = radiusInKm * 1000;
-      const circle = createGeoJSONCircle(center, radiusInMeters);
+      updateRadiusCircle(radius);
+    });
 
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, [center, propertyName]);
+
+  // Update radius circle when radius changes
+  const updateRadiusCircle = (radiusInKm: number) => {
+    if (!map.current) return;
+
+    const radiusInMeters = radiusInKm * 1000;
+    const circle = createGeoJSONCircle(center, radiusInMeters);
+
+    const source = map.current.getSource('radar-circle') as mapboxgl.GeoJSONSource;
+    if (source) {
+      source.setData(circle);
+    } else {
       map.current.addSource('radar-circle', {
         type: 'geojson',
         data: circle,
@@ -102,14 +117,20 @@ export default function RadarMap({ center, propertyName = 'This Property', unive
           'line-dasharray': [2, 2],
         },
       });
-    });
+    }
+  };
 
-    return () => {
-      map.current?.remove();
-      map.current = null;
-    };
-  }, [center, propertyName]);
-
+  // Handle radius change
+  const handleRadiusChange = (newRadius: number) => {
+    setRadius(newRadius);
+    updateRadiusCircle(newRadius);
+    
+    // Clear all filters and POIs
+    setFilters(filters.map(f => ({ ...f, active: false })));
+    setPois([]);
+    setSelectedPOI(null);
+    clearMarkers();
+  };
   // Handle filter toggle
   const handleFilterToggle = async (filterId: string) => {
     const updatedFilters = filters.map(f =>
@@ -119,9 +140,11 @@ export default function RadarMap({ center, propertyName = 'This Property', unive
 
     const activeFilters = updatedFilters.filter(f => f.active);
     
+    // Always clear markers first
+    clearMarkers();
+    
     if (activeFilters.length === 0) {
       // Clear all POIs
-      clearMarkers();
       setPois([]);
       setSelectedPOI(null);
       return;
@@ -138,7 +161,7 @@ export default function RadarMap({ center, propertyName = 'This Property', unive
             center[0],
             center[1],
             category,
-            3000
+            radius * 1000 // Convert km to meters
           );
           allPOIs.push(...categoryPOIs);
         }
@@ -201,27 +224,6 @@ export default function RadarMap({ center, propertyName = 'This Property', unive
     window.open(url, '_blank');
   };
 
-  // Handle Gemini analysis
-  const handleAnalyzeArea = async () => {
-    if (pois.length === 0) {
-      alert('Please select at least one filter to discover nearby amenities first.');
-      return;
-    }
-
-    setAnalysisLoading(true);
-    try {
-      console.log('[RadarMap] Starting AI analysis with', pois.length, 'POIs');
-      const analysis = await GeminiRadarService.analyzeArea(pois);
-      setGeminiAnalysis(analysis);
-      console.log('[RadarMap] Analysis completed successfully');
-    } catch (error) {
-      console.error('[RadarMap] Error analyzing area:', error);
-      alert('Failed to analyze area. Please check your Gemini API key in .env file and try again.');
-    } finally {
-      setAnalysisLoading(false);
-    }
-  };
-
   // Handle school route calculation
   const handleCalculateRoute = async () => {
     if (!school) return;
@@ -260,19 +262,34 @@ export default function RadarMap({ center, propertyName = 'This Property', unive
       {/* Filter chips */}
       <FilterChips filters={filters} onFilterToggle={handleFilterToggle} />
 
+      {/* Radius selector - below filter chips */}
+      <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="card bg-base-100 shadow-xl">
+          <div className="card-body p-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">Radius:</span>
+              <div className="join">
+                {[1, 2, 3, 5].map((km) => (
+                  <button
+                    key={km}
+                    onClick={() => handleRadiusChange(km)}
+                    className={`btn btn-sm join-item ${radius === km ? 'btn-primary' : 'btn-ghost'}`}
+                  >
+                    {km}km
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* POI info card */}
       <POIInfoCard
         poi={selectedPOI}
         userLocation={center}
         onClose={() => setSelectedPOI(null)}
         onGetDirections={handleGetDirections}
-      />
-
-      {/* Gemini analysis panel */}
-      <GeminiAnalysisPanel
-        analysis={geminiAnalysis}
-        loading={analysisLoading}
-        onAnalyze={handleAnalyzeArea}
       />
 
       {/* School distance panel */}
@@ -288,9 +305,9 @@ export default function RadarMap({ center, propertyName = 'This Property', unive
 
       {/* POI count badge */}
       {pois.length > 0 && (
-        <div className="absolute top-4 left-4 z-10">
+        <div className="absolute bottom-4 left-4 z-10">
           <div className="badge badge-primary badge-lg">
-            {pois.length} places found
+            {pois.length} places found within {radius}km
           </div>
         </div>
       )}

@@ -1713,27 +1713,6 @@ export default function HomePage() {
   return (
     <GreenHomeBackground>
       <div className="max-w-2xl mx-auto p-4">
-        {/* Area Radar Feature Card */}
-        <div className="mb-6 card bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-xl">
-          <div className="card-body p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-4xl">📡</div>
-                <div>
-                  <h3 className="card-title text-lg">Explore Area with AI Radar</h3>
-                  <p className="text-sm opacity-90">Discover amenities within 3km & get AI insights</p>
-                </div>
-              </div>
-              <a
-                href="/radar"
-                className="btn btn-sm bg-white text-blue-600 hover:bg-gray-100 border-none"
-              >
-                Try Now
-              </a>
-            </div>
-          </div>
-        </div>
-
         {/* Card Container */}
         {fetchingProfile ? (
           <div className="flex flex-col items-center justify-center h-[750px]">

@@ -11,6 +11,88 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export class GeminiRadarService {
   /**
+   * Analyze a specific location by name and address
+   */
+  static async analyzeSpecificLocation(locationName: string, address: string): Promise<GeminiAreaAnalysis> {
+    try {
+      console.log('[GeminiRadar] Analyzing specific location:', locationName);
+      
+      if (!GEMINI_API_KEY) {
+        throw new Error('Gemini API key is not configured. Please add NEXT_PUBLIC_GEMINI_API_KEY to your .env file');
+      }
+      
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+
+      const prompt = `Bạn là "Gemini Thổ Địa" - một trợ lý AI chuyên sâu về bất động sản và đời sống đô thị tích hợp trong ứng dụng tìm trọ "Roomatinder".
+
+NHIỆM VỤ CỦA BẠN:
+Người dùng đã chọn một địa điểm cụ thể. Bạn phải phân tích xem việc thuê trọ GẦN địa điểm đó (bán kính < 1km) sẽ như thế nào đối với một sinh viên/người mới đi làm.
+
+Địa điểm: ${locationName}
+Địa chỉ: ${address}
+
+NGUYÊN TẮC PHÂN TÍCH:
+1. Tiện ích (Convenience): Gần đó có dễ đi chợ, mua sắm, ăn uống giá rẻ không?
+2. Môi trường (Vibe & Noise): Khu vực này yên tĩnh để học bài hay ồn ào, xô bồ?
+3. Giao thông (Traffic): Có hay kẹt xe, ngập nước không?
+4. An ninh (Safety): Đánh giá sơ bộ dựa trên loại hình địa điểm.
+
+ĐỊNH DẠNG OUTPUT (Bắt buộc trả về JSON):
+{
+  "summary": "Một câu slogan ngắn gọn, bắt trend mô tả khu này (tối đa 15 từ).",
+  "score": Đánh giá thang điểm 10 về độ đáng sống (Number),
+  "pros": ["Điểm cộng 1", "Điểm cộng 2", "Điểm cộng 3"],
+  "cons": ["Điểm trừ 1", "Điểm trừ 2"],
+  "tags": ["Tag1", "Tag2", "Tag3"],
+  "recommendation": "Lời khuyên chân thành: Có nên thuê ở đây không và phù hợp với ai?"
+}
+
+LƯU Ý QUAN TRỌNG:
+- Tone giọng: Trẻ trung, khách quan, thẳng thắn (giống review của Gen Z), dùng tiếng Việt tự nhiên.
+- Nếu địa điểm là TTTM (như Aeon, Vincom): Nhấn mạnh tiện lợi nhưng cảnh báo kẹt xe/ồn ào.
+- Nếu địa điểm là Trường ĐH: Nhấn mạnh giá rẻ, nhiều đồ ăn nhưng phòng trọ có thể cũ.
+- Nếu địa điểm lạ hoặc không rõ: Hãy đưa ra nhận định chung dựa trên tên đường/quận (nếu có).`;
+
+      console.log('[GeminiRadar] Sending request to Gemini...');
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      console.log('[GeminiRadar] Response received:', text.substring(0, 200));
+
+      // Try to parse JSON response
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          console.log('[GeminiRadar] Successfully parsed JSON');
+          return {
+            summary: parsed.summary || 'Chưa có phân tích',
+            score: parsed.score || 5,
+            pros: parsed.pros || [],
+            cons: parsed.cons || [],
+            tags: parsed.tags || [],
+            recommendation: parsed.recommendation || 'Chưa có đề xuất'
+          };
+        }
+      } catch (parseError) {
+        console.error('[GeminiRadar] Error parsing JSON:', parseError);
+      }
+
+      return this.parseTextResponse(text);
+    } catch (error) {
+      console.error('[GeminiRadar] Error analyzing location:', error);
+      return {
+        summary: 'Không thể phân tích lúc này',
+        score: 5,
+        pros: [],
+        cons: [],
+        tags: [],
+        recommendation: 'Dịch vụ phân tích tạm thời không khả dụng. Vui lòng thử lại sau.'
+      };
+    }
+  }
+
+  /**
    * Analyze area based on nearby POIs
    */
   static async analyzeArea(pois: POI[]): Promise<GeminiAreaAnalysis> {
@@ -47,18 +129,35 @@ export class GeminiRadarService {
 
       console.log('[GeminiRadar] POI Summary:', poiSummary);
 
-      const prompt = `Based on the following list of places around a rental property, please provide an analysis in English:
+      const prompt = `Bạn là "Gemini Thổ Địa" - một trợ lý AI chuyên sâu về bất động sản và đời sống đô thị tích hợp trong ứng dụng tìm trọ "Roomatinder".
 
-POI Summary (within 3km radius):
+NHIỆM VỤ CỦA BẠN:
+Người dùng sẽ gửi cho bạn danh sách các địa điểm (POI) trong bán kính 3km. Bạn phải phân tích xem việc thuê trọ GẦN khu vực này (bán kính < 3km) sẽ như thế nào đối với một sinh viên/người mới đi làm.
+
+Danh sách địa điểm:
 ${poiSummary}
 
-Please analyze and provide:
-1. Living Convenience Level: Rate how convenient daily life would be (1-10) and explain why
-2. Potential Noise Level: Assess potential noise (Low/Medium/High) based on nearby establishments
-3. Suitable For: Determine if this area is more suitable for Students or Working Professionals, and explain why
-4. Overall Summary: Provide a brief 2-3 sentence summary of living in this area
+NGUYÊN TẮC PHÂN TÍCH:
+1. Tiện ích (Convenience): Gần đó có dễ đi chợ, mua sắm, ăn uống giá rẻ không?
+2. Môi trường (Vibe & Noise): Khu vực này yên tĩnh để học bài hay ồn ào, xô bồ?
+3. Giao thông (Traffic): Có hay kẹt xe, ngập nước không?
+4. An ninh (Safety): Đánh giá sơ bộ dựa trên loại hình địa điểm.
 
-Format your response as JSON with these keys: convenience, noiseLevel, suitableFor, summary`;
+ĐỊNH DẠNG OUTPUT (Bắt buộc trả về JSON):
+{
+  "summary": "Một câu slogan ngắn gọn, bắt trend mô tả khu này (tối đa 15 từ).",
+  "score": Đánh giá thang điểm 10 về độ đáng sống (Number),
+  "pros": ["Điểm cộng 1", "Điểm cộng 2", "Điểm cộng 3"],
+  "cons": ["Điểm trừ 1", "Điểm trừ 2"],
+  "tags": ["Tag1", "Tag2", "Tag3"],
+  "recommendation": "Lời khuyên chân thành: Có nên thuê ở đây không và phù hợp với ai?"
+}
+
+LƯU Ý QUAN TRỌNG:
+- Tone giọng: Trẻ trung, khách quan, thẳng thắn (giống review của Gen Z), dùng tiếng Việt tự nhiên.
+- Nếu địa điểm là TTTM (như Aeon, Vincom): Nhấn mạnh tiện lợi nhưng cảnh báo kẹt xe/ồn ào.
+- Nếu địa điểm là Trường ĐH: Nhấn mạnh giá rẻ, nhiều đồ ăn nhưng phòng trọ có thể cũ.
+- Nếu địa điểm lạ hoặc không rõ: Hãy đưa ra nhận định chung dựa trên tên đường/quận (nếu có).`;
 
       console.log('[GeminiRadar] Sending request to Gemini...');
       const result = await model.generateContent(prompt);
@@ -73,10 +172,12 @@ Format your response as JSON with these keys: convenience, noiseLevel, suitableF
           const parsed = JSON.parse(jsonMatch[0]);
           console.log('[GeminiRadar] Successfully parsed JSON');
           return {
-            convenience: parsed.convenience || 'Analysis not available',
-            noiseLevel: parsed.noiseLevel || 'Unknown',
-            suitableFor: parsed.suitableFor || 'Both students and professionals',
-            summary: parsed.summary || 'No summary available'
+            summary: parsed.summary || 'Chưa có phân tích',
+            score: parsed.score || 5,
+            pros: parsed.pros || [],
+            cons: parsed.cons || [],
+            tags: parsed.tags || [],
+            recommendation: parsed.recommendation || 'Chưa có đề xuất'
           };
         }
       } catch (parseError) {
@@ -89,10 +190,12 @@ Format your response as JSON with these keys: convenience, noiseLevel, suitableF
     } catch (error) {
       console.error('[GeminiRadar] Error analyzing area:', error);
       return {
-        convenience: 'Unable to analyze at this time',
-        noiseLevel: 'Unknown',
-        suitableFor: 'N/A',
-        summary: 'Analysis service is temporarily unavailable. Please try again later.'
+        summary: 'Không thể phân tích lúc này',
+        score: 5,
+        pros: [],
+        cons: [],
+        tags: [],
+        recommendation: 'Dịch vụ phân tích tạm thời không khả dụng. Vui lòng thử lại sau.'
       };
     }
   }
@@ -104,14 +207,12 @@ Format your response as JSON with these keys: convenience, noiseLevel, suitableF
     const lines = text.split('\n').filter(line => line.trim());
     
     return {
-      convenience: lines.find(l => l.toLowerCase().includes('convenience'))?.trim() || 
-                   'Moderate convenience based on available amenities',
-      noiseLevel: lines.find(l => l.toLowerCase().includes('noise'))?.trim() || 
-                  'Medium',
-      suitableFor: lines.find(l => l.toLowerCase().includes('suitable'))?.trim() || 
-                   'Both students and professionals',
-      summary: lines.slice(-3).join(' ') || 
-               'This area offers a balanced living environment with access to various amenities.'
+      summary: 'Khu vực có tiện ích đa dạng',
+      score: 7,
+      pros: ['Có nhiều tiện ích xung quanh', 'Dễ dàng đi lại'],
+      cons: ['Cần thêm thông tin để đánh giá chính xác'],
+      tags: ['#ĐaTiện', '#TiềmNăng'],
+      recommendation: 'Nên tham khảo thêm thông tin về khu vực trước khi quyết định thuê.'
     };
   }
 

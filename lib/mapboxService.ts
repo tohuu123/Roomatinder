@@ -13,10 +13,23 @@ export class MapboxService {
     radius: number = 3000 // 3km in meters
   ): Promise<POI[]> {
     try {
+      // Calculate bounding box based on radius
+      const radiusInKm = radius / 1000;
+      const latDelta = radiusInKm / 110.574; // 1 degree latitude ≈ 110.574 km
+      const lonDelta = radiusInKm / (111.32 * Math.cos((latitude * Math.PI) / 180)); // 1 degree longitude varies by latitude
+      
+      const bbox = [
+        longitude - lonDelta, // min longitude
+        latitude - latDelta,  // min latitude
+        longitude + lonDelta, // max longitude
+        latitude + latDelta   // max latitude
+      ].join(',');
+
       const response = await fetch(
         `https://api.mapbox.com/search/searchbox/v1/category/${category}?` +
         `proximity=${longitude},${latitude}&` +
-        `limit=20&` +
+        `bbox=${bbox}&` +
+        `limit=50&` +
         `access_token=${MAPBOX_TOKEN}`
       );
 

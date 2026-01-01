@@ -7,19 +7,22 @@ interface GeminiAnalysisPanelProps {
   analysis: GeminiAreaAnalysis | null;
   loading: boolean;
   onAnalyze: () => void;
+  onAnalyzeLocation?: () => void;
+  hasLocationData?: boolean;
 }
 
 export default function GeminiAnalysisPanel({
   analysis,
   loading,
-  onAnalyze
+  onAnalyze,
+  onAnalyzeLocation,
+  hasLocationData = false
 }: GeminiAnalysisPanelProps) {
   return (
     <div className="absolute top-20 right-4 z-10 w-80 max-h-[70vh] overflow-y-auto">
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
           <h2 className="card-title text-lg">
-            <span className="mr-2">🤖</span>
             AI Area Analysis
           </h2>
 
@@ -28,12 +31,22 @@ export default function GeminiAnalysisPanel({
               <p className="text-sm text-base-content/70 mb-4">
                 Select filters to discover nearby amenities, then get AI insights about living in this area
               </p>
-              <button
-                onClick={onAnalyze}
-                className="btn btn-primary btn-sm"
-              >
-                Analyze Area
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={onAnalyze}
+                  className="btn btn-primary btn-sm"
+                >
+                  Analyze Area
+                </button>
+                {hasLocationData && onAnalyzeLocation && (
+                  <button
+                    onClick={onAnalyzeLocation}
+                    className="btn btn-outline btn-sm"
+                  >
+                    Analyze This Location
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -49,48 +62,60 @@ export default function GeminiAnalysisPanel({
           {analysis && !loading && (
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <span>🏪</span>
-                  Living Convenience
-                </h3>
-                <p className="text-sm text-base-content/80 mt-1">
-                  {analysis.convenience}
-                </p>
-              </div>
-
-              <div className="divider my-2"></div>
-
-              <div>
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <span>🔊</span>
-                  Noise Level
-                </h3>
-                <p className="text-sm text-base-content/80 mt-1">
-                  {analysis.noiseLevel}
-                </p>
-              </div>
-
-              <div className="divider my-2"></div>
-
-              <div>
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <span>👥</span>
-                  Suitable For
-                </h3>
-                <p className="text-sm text-base-content/80 mt-1">
-                  {analysis.suitableFor}
-                </p>
-              </div>
-
-              <div className="divider my-2"></div>
-
-              <div>
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <span>📝</span>
-                  Summary
-                </h3>
-                <p className="text-sm text-base-content/80 mt-1">
+                <h3 className="font-semibold text-sm">Summary</h3>
+                <p className="text-sm text-base-content/80 mt-1 italic">
                   {analysis.summary}
+                </p>
+              </div>
+
+              <div className="divider my-2"></div>
+
+              <div>
+                <h3 className="font-semibold text-sm">Score</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="badge badge-primary badge-lg">{analysis.score}/10</div>
+                </div>
+              </div>
+
+              <div className="divider my-2"></div>
+
+              <div>
+                <h3 className="font-semibold text-sm text-success">Pros</h3>
+                <ul className="text-sm text-base-content/80 mt-1 list-disc list-inside space-y-1">
+                  {analysis.pros?.map((pro: string, idx: number) => (
+                    <li key={idx}>{pro}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="divider my-2"></div>
+
+              <div>
+                <h3 className="font-semibold text-sm text-error">Cons</h3>
+                <ul className="text-sm text-base-content/80 mt-1 list-disc list-inside space-y-1">
+                  {analysis.cons?.map((con: string, idx: number) => (
+                    <li key={idx}>{con}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="divider my-2"></div>
+
+              <div>
+                <h3 className="font-semibold text-sm">Tags</h3>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {analysis.tags?.map((tag: string, idx: number) => (
+                    <span key={idx} className="badge badge-outline badge-sm">{tag}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="divider my-2"></div>
+
+              <div>
+                <h3 className="font-semibold text-sm">Recommendation</h3>
+                <p className="text-sm text-base-content/80 mt-1">
+                  {analysis.recommendation}
                 </p>
               </div>
 

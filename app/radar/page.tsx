@@ -39,6 +39,7 @@ const DISTRICT_COORDS: { [key: string]: [number, number] } = {
 export default function RadarPage() {
   const [center, setCenter] = useState<[number, number]>([106.6297, 10.8231]);
   const [propertyName, setPropertyName] = useState('My Location');
+  const [propertyAddress, setPropertyAddress] = useState('');
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +55,8 @@ export default function RadarPage() {
       const response = await fetch(
         `https://api.mapbox.com/search/searchbox/v1/suggest?` +
         `q=${encodeURIComponent(addressInput)}&` +
-        `language=en&` +
+        `language=vi&` +
+        `country=vn&` +
         `proximity=106.6297,10.8231&` + // Bias towards HCMC
         `session_token=${Date.now()}&` +
         `access_token=${token}`
@@ -80,8 +82,10 @@ export default function RadarPage() {
           const feature = retrieveData.features[0];
           const [lng, lat] = feature.geometry.coordinates;
           const placeName = feature.properties.name || feature.properties.full_address || addressInput;
+          const placeAddress = feature.properties.full_address || feature.properties.place_formatted || '';
           setCenter([lng, lat]);
           setPropertyName(placeName);
+          setPropertyAddress(placeAddress);
           setShowLocationInput(false);
         }
       } else {
@@ -303,6 +307,7 @@ export default function RadarPage() {
         <RadarMap 
           center={center} 
           propertyName={propertyName}
+          propertyAddress={propertyAddress}
           university={userProfile?.university}
         />
       )}

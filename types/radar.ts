@@ -16,10 +16,12 @@ export interface RadarFilter {
 }
 
 export interface GeminiAreaAnalysis {
-  convenience: string;
-  noiseLevel: string;
-  suitableFor: string;
   summary: string;
+  score: number;
+  pros: string[];
+  cons: string[];
+  tags: string[];
+  recommendation: string;
 }
 
 export interface SchoolLocation {
