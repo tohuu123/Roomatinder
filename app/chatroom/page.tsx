@@ -300,6 +300,27 @@ function ChatroomContent() {
                       )}
                     </div>
                   </div>
+                  
+                  {/* Shared Board Button - Only for individual chats */}
+                  {selectedChat.type === 'individual' && (
+                    <button
+                      className="btn btn-sm btn-primary gap-2"
+                      onClick={() => {
+                        const otherUserId = selectedChat.participants.find(
+                          (id) => id !== currentUser?.uid
+                        );
+                        if (otherUserId) {
+                          router.push(
+                            `/shared-board?chatRoomId=${selectedChatId}&otherUserId=${otherUserId}`
+                          );
+                        }
+                      }}
+                      title="Shared Board - Nơi cả 2 cùng lên kế hoạch"
+                    >
+                      <Icon icon="mdi:bulletin-board" className="text-lg" />
+                      <span className="hidden lg:inline">Shared Board</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
