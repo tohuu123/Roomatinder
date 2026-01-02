@@ -1,21 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { getAuth } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { SharedBoard, BoardItem, CreateBoardItemInput, UserReaction, BoardItemStatus } from '@/types/sharedBoard';
 import BoardItemCard from './components/BoardItemCard';
 import AddItemModal from './components/AddItemModal';
 
-export default function SharedBoardPage() {
+function SharedBoardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const auth = getAuth();
-  const user = auth.currentUser;
   
   const chatRoomId = searchParams.get('chatRoomId');
   const otherUserId = searchParams.get('otherUserId');
 
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [board, setBoard] = useState<SharedBoard | null>(null);
   const [items, setItems] = useState<BoardItem[]>([]); 
   const [loading, setLoading] = useState(true);
@@ -24,20 +25,38 @@ export default function SharedBoardPage() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [boardName, setBoardName] = useState('');
 
+  // Listen to auth state changes
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+      
+      if (!currentUser) {
+        router.push('/login');
+      }
+    });
 
+    return () => unsubscribe();
+  }, [auth, router]);
+
+  // Load board when user is authenticated
+  useEffect(() => {
+    if (authLoading) return;
+    
     if (user && chatRoomId && otherUserId) {
       loadBoard();
     }
-  }, [user, chatRoomId, otherUserId]);
+  }, [user, authLoading, chatRoomId, otherUserId]);
 
   const loadBoard = async () => {
+    if (!user) {
+      console.log('Cannot load board: user is null');
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('Loading board for chatRoomId:', chatRoomId, 'otherUserId:', otherUserId);
 
       // Get or create board
       const boardRes = await fetch('/api/shared-board', {
@@ -45,15 +64,18 @@ export default function SharedBoardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chatRoomId,
-          userIds: [user!.uid, otherUserId],
+          userIds: [user.uid, otherUserId],
         }),
       });
 
       if (!boardRes.ok) {
+        const errorText = await boardRes.text();
+        console.error('Failed to load board:', errorText);
         throw new Error('Failed to load board');
       }
 
       const boardData: SharedBoard = await boardRes.json();
+      console.log('Board loaded:', boardData);
       setBoard(boardData);
       setBoardName(boardData.name);
 
@@ -61,14 +83,19 @@ export default function SharedBoardPage() {
       const itemsRes = await fetch(`/api/shared-board/items?boardId=${boardData.id}`);
       
       if (!itemsRes.ok) {
+        const errorText = await itemsRes.text();
+        console.error('Failed to load items:', errorText);
         throw new Error('Failed to load items');
       }
 
       const itemsData: BoardItem[] = await itemsRes.json();
+      console.log('Items loaded:', itemsData.length, 'items');
       setItems(itemsData);
     } catch (error) {
       console.error('Error loading board:', error);
-      // Don't show alert - just log error and let UI handle it
+      // Set loading to false and board to empty state so UI can show error
+      setBoard(null);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -265,19 +292,42 @@ export default function SharedBoardPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg"></span>
+        <div className="text-center">
+          <span className="loading loading-spinner loading-lg"></span>
+          <p className="mt-4 text-sm text-base-content/60">
+            {authLoading ? 'Authenticating...' : 'Loading board...'}
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (!loading && (!board || !user)) {
+  if (!user) {
+    console.log('Rendering: No user');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg">Please log in</p>
+          <button className="btn btn-primary mt-4" onClick={() => router.push('/login')}>
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!board) {
+    console.log('Rendering: No board');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-lg">Board not found</p>
+          <p className="text-sm text-base-content/60 mt-2">
+            chatRoomId: {chatRoomId || 'missing'}, otherUserId: {otherUserId || 'missing'}
+          </p>
           <button className="btn btn-primary mt-4" onClick={() => router.back()}>
             Go Back
           </button>
@@ -285,6 +335,8 @@ export default function SharedBoardPage() {
       </div>
     );
   }
+
+  console.log('Rendering board with', items.length, 'items');
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -355,7 +407,7 @@ export default function SharedBoardPage() {
                 <h1
                   className="text-2xl font-bold cursor-pointer hover:text-primary"
                   onClick={() => setIsEditingName(true)}
-                >
+                >   
                   {board.name} ✏️
                 </h1>
               )}
@@ -436,5 +488,17 @@ export default function SharedBoardPage() {
         editItem={editingItem}
       />
     </div>
+  );
+}
+
+export default function SharedBoardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    }>
+      <SharedBoardContent />
+    </Suspense>
   );
 }

@@ -136,12 +136,11 @@ export async function getBoardItems(boardId: string): Promise<BoardItem[]> {
     const itemsRef = collection(db, ITEMS_COLLECTION);
     const q = query(
       itemsRef,
-      where('boardId', '==', boardId),
-      orderBy('createdAt', 'desc')
+      where('boardId', '==', boardId)
     );
     const querySnapshot = await getDocs(q);
 
-    return querySnapshot.docs.map((doc) => {
+    const items = querySnapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -157,6 +156,11 @@ export async function getBoardItems(boardId: string): Promise<BoardItem[]> {
         }, {} as any),
       } as BoardItem;
     });
+
+    // Sort by createdAt in memory (newest first)
+    items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    return items;
   } catch (error) {
     console.error('Error getting board items:', error);
     throw error;
