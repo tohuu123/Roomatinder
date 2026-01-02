@@ -21,6 +21,7 @@ export default function FilterChips({ filters, onFilterToggle }: FilterChipsProp
                 filter.active ? 'btn-primary' : 'btn-ghost'
               }`}
             >
+              {filter.icon && <span className="mr-1">{filter.icon}</span>}
               {filter.label}
             </button>
           ))}

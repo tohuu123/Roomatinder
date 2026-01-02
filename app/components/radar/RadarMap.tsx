@@ -13,17 +13,20 @@ import SchoolDistancePanel from './SchoolDistancePanel';
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
 // Default filters with various amenity categories
+// Using Mapbox Search Box API canonical category IDs
+// See: https://docs.mapbox.com/api/search/search-box/#category-search
+// To get full list: https://api.mapbox.com/search/searchbox/v1/list/category?access_token=YOUR_TOKEN
 const DEFAULT_FILTERS: RadarFilter[] = [
-  { id: 'park', label: 'Parks', icon: '', categories: ['park', 'garden', 'playground'], active: false },
-  { id: 'gym', label: 'Fitness', icon: '', categories: ['gym', 'fitness_center', 'sports'], active: false },
-  { id: 'hospital', label: 'Hospital', icon: '', categories: ['hospital', 'clinic', 'pharmacy'], active: false },
-  { id: 'convenience', label: 'Convenience Store', icon: '', categories: ['convenience_store', 'mini_mart'], active: false },
-  { id: 'supermarket', label: 'Supermarket', icon: '', categories: ['supermarket', 'grocery'], active: false },
-  { id: 'gas', label: 'Gas Station', icon: '', categories: ['gas_station', 'fuel'], active: false },
-  { id: 'cinema', label: 'Cinema', icon: '', categories: ['movie_theater', 'cinema'], active: false },
-  { id: 'restaurant', label: 'Restaurant', icon: '', categories: ['restaurant', 'cafe', 'fast_food'], active: false },
-  { id: 'shopping', label: 'Shopping', icon: '', categories: ['shopping_mall', 'department_store'], active: false },
-  { id: 'bank', label: 'Bank/ATM', icon: '', categories: ['bank', 'atm'], active: false },
+  { id: 'parks', label: 'Parks', icon: '🌳', categories: ['park'], active: false },
+  { id: 'fitness', label: 'Fitness', icon: '💪', categories: ['gym', 'fitness'], active: false },
+  { id: 'healthcare', label: 'Healthcare', icon: '🏥', categories: ['hospital', 'clinic', 'pharmacy'], active: false },
+  { id: 'convenience', label: 'Convenience', icon: '🏪', categories: ['convenience'], active: false },
+  { id: 'supermarket', label: 'Supermarket', icon: '🛒', categories: ['supermarket'], active: false },
+  { id: 'fuel', label: 'Gas Station', icon: '⛽', categories: ['gas_station'], active: false },
+  { id: 'entertainment', label: 'Entertainment', icon: '🎬', categories: ['theater', 'cinema'], active: false },
+  { id: 'food', label: 'Restaurant', icon: '🍽️', categories: ['restaurant', 'cafe', 'food'], active: false },
+  { id: 'shopping', label: 'Shopping', icon: '🛍️', categories: ['shopping_mall', 'shopping'], active: false },
+  { id: 'financial', label: 'Bank/ATM', icon: '🏦', categories: ['bank', 'atm'], active: false },
 ];
 
 interface RadarMapProps {
@@ -133,18 +136,20 @@ export default function RadarMap({ center, propertyName = 'This Property', prope
   };
   // Handle filter toggle
   const handleFilterToggle = async (filterId: string) => {
+    console.log('🔄 Filter toggle clicked:', filterId);
+    
     const updatedFilters = filters.map(f =>
       f.id === filterId ? { ...f, active: !f.active } : f
     );
     setFilters(updatedFilters);
 
     const activeFilters = updatedFilters.filter(f => f.active);
-    
-    // Always clear markers first
-    clearMarkers();
+    console.log('✅ Active filters:', activeFilters.map(f => f.label));
     
     if (activeFilters.length === 0) {
-      // Clear all POIs
+      // Clear all POIs and markers
+      console.log('🧹 No active filters - clearing all');
+      clearMarkers();
       setPois([]);
       setSelectedPOI(null);
       return;
@@ -152,17 +157,21 @@ export default function RadarMap({ center, propertyName = 'This Property', prope
 
     setLoading(true);
     try {
+      console.log(`🔍 Fetching POIs within ${radius}km radius...`);
+      
       // Fetch POIs for all active filters
       const allPOIs: POI[] = [];
       
       for (const filter of activeFilters) {
         for (const category of filter.categories) {
+          console.log(`  - Searching for category: ${category}`);
           const categoryPOIs = await MapboxService.searchPOIs(
             center[0],
             center[1],
             category,
             radius * 1000 // Convert km to meters
           );
+          console.log(`    Found ${categoryPOIs.length} POIs for ${category}`);
           allPOIs.push(...categoryPOIs);
         }
       }
@@ -175,10 +184,26 @@ export default function RadarMap({ center, propertyName = 'This Property', prope
         )
       );
 
+      console.log(`📍 Total unique POIs found: ${uniquePOIs.length}`);
+      
+      // Update state first
       setPois(uniquePOIs);
-      displayPOIsOnMap(uniquePOIs);
+      
+      // Clear old markers
+      clearMarkers();
+      
+      // Then display new markers
+      if (uniquePOIs.length > 0) {
+        displayPOIsOnMap(uniquePOIs);
+        console.log('✨ Markers displayed on map');
+      } else {
+        console.warn('⚠️ No POIs found to display');
+      }
     } catch (error) {
-      console.error('Error fetching POIs:', error);
+      console.error('❌ Error fetching POIs:', error);
+      // Clear on error
+      clearMarkers();
+      setPois([]);
     } finally {
       setLoading(false);
     }

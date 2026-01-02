@@ -13,6 +13,18 @@ export class MapboxService {
     radius: number = 3000 // 3km in meters
   ): Promise<POI[]> {
     try {
+      console.log(`🔍 MapboxService.searchPOIs called:`, {
+        category,
+        center: [longitude, latitude],
+        radius: `${radius}m (${radius/1000}km)`,
+        token: MAPBOX_TOKEN ? `${MAPBOX_TOKEN.substring(0, 10)}...` : 'MISSING'
+      });
+
+      if (!MAPBOX_TOKEN) {
+        console.error('❌ MAPBOX_TOKEN is not set!');
+        return [];
+      }
+
       // Calculate bounding box based on radius
       const radiusInKm = radius / 1000;
       const latDelta = radiusInKm / 110.574; // 1 degree latitude ≈ 110.574 km
@@ -25,19 +37,30 @@ export class MapboxService {
         latitude + latDelta   // max latitude
       ].join(',');
 
-      const response = await fetch(
-        `https://api.mapbox.com/search/searchbox/v1/category/${category}?` +
+      const url = `https://api.mapbox.com/search/searchbox/v1/category/${category}?` +
         `proximity=${longitude},${latitude}&` +
         `bbox=${bbox}&` +
-        `limit=50&` +
-        `access_token=${MAPBOX_TOKEN}`
-      );
+        `limit=25&` + // Maximum allowed for category search
+        `access_token=${MAPBOX_TOKEN}`;
+      
+      console.log(`📡 Fetching from Mapbox API...`);
+      const response = await fetch(url);
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Mapbox API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
         throw new Error(`Mapbox API error: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log(`📦 Mapbox API response:`, {
+        category,
+        featuresCount: data.features?.length || 0
+      });
       
       const pois: POI[] = data.features?.map((feature: any) => {
         const coords = feature.geometry.coordinates;
@@ -61,9 +84,10 @@ export class MapboxService {
         };
       }).filter((poi: POI | null) => poi !== null) || [];
 
+      console.log(`✅ Filtered POIs for ${category}:`, pois.length);
       return pois;
     } catch (error) {
-      console.error('Error searching POIs:', error);
+      console.error('❌ Error searching POIs:', error);
       return [];
     }
   }
