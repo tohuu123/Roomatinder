@@ -13,7 +13,6 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { Notification } from "@/types/notification";
-import { sendMatchNotificationEmail } from "./emailNotificationService";
 
 const NOTIFICATIONS_COLLECTION = "notifications";
 
@@ -50,15 +49,6 @@ export async function createNotification(
       createdAt: Timestamp.now(),
     });
     console.log("[NotificationService] ✅ Notification created with ID:", notificationRef.id);
-    
-    // Send email notification for matches
-    if (type === 'match') {
-      console.log('[NotificationService] 📧 Triggering match email notification...');
-      // Send email asynchronously (don't wait for it)
-      sendMatchNotificationEmail(userId, fromUserId).catch(error => {
-        console.error('[NotificationService] Failed to send match email:', error);
-      });
-    }
     
     return notificationRef.id;
   } catch (error) {

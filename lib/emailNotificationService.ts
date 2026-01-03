@@ -72,12 +72,26 @@ async function getUserEmailSettings(userId: string): Promise<{
   lastEmailSent?: Date;
 }> {
   try {
-    const userDoc = await getDoc(doc(db, 'users', userId));
+    // Try profiles collection first (main storage)
+    let userDoc = await getDoc(doc(db, 'profiles', userId));
+    
+    // Fallback to users collection if not found
     if (!userDoc.exists()) {
+      userDoc = await getDoc(doc(db, 'users', userId));
+    }
+    
+    if (!userDoc.exists()) {
+      console.log(`[EmailNotification] No profile found for user ${userId}`);
       return { email: null, emailNotificationsEnabled: false };
     }
 
     const userData = userDoc.data();
+    
+    console.log(`[EmailNotification] User email settings for ${userId}:`, {
+      email: userData.email || null,
+      emailNotificationsEnabled: userData.emailNotificationsEnabled !== false
+    });
+    
     return {
       email: userData.email || null,
       emailNotificationsEnabled: userData.emailNotificationsEnabled !== false, // Default true
@@ -214,16 +228,22 @@ export async function sendMatchNotificationEmail(
       return false;
     }
 
-    // Get both user profiles
+    // Get both user profiles from profiles collection
     const [userDoc, matchDoc] = await Promise.all([
-      getDoc(doc(db, 'users', userId)),
-      getDoc(doc(db, 'users', matchUserId)),
+      getDoc(doc(db, 'profiles', userId)),
+      getDoc(doc(db, 'profiles', matchUserId)),
     ]);
 
-    if (!userDoc.exists() || !matchDoc.exists()) return false;
+    if (!userDoc.exists() || !matchDoc.exists()) {
+      console.log(`[EmailNotification] Profile not found for userId: ${userId} or matchUserId: ${matchUserId}`);
+      return false;
+    }
 
     const userData = userDoc.data();
     const matchData = matchDoc.data();
+    
+    console.log(`[EmailNotification] Sending match email to ${userSettings.email}`);
+    console.log(`[EmailNotification] Match: ${matchData.displayName || 'Someone'}`);
 
     // Generate ice breaker using Gemini
     const iceBreaker = await generateIceBreakerSuggestion(
@@ -254,7 +274,10 @@ export async function sendMatchNotificationEmail(
     });
 
     if (success) {
+      console.log(`[EmailNotification] ✅ Match email sent successfully to ${userSettings.email}`);
       await updateLastEmailSent(userId);
+    } else {
+      console.error(`[EmailNotification] ❌ Failed to send match email to ${userSettings.email}`);
     }
 
     return success;

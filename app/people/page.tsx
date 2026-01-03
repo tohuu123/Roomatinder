@@ -6,8 +6,7 @@ import Image from "next/image";
 import { Icon } from "@iconify/react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase";
-import { getLikedProfiles, getMatches, unlikeUser, likeUser, getPassedProfiles, removeAllPassedUsers } from "@/lib/profileService";
-import { createNotification } from "@/lib/notificationService";
+import { getLikedProfiles, getMatches, getPassedProfiles, removeAllPassedUsers } from "@/lib/profileService";
 import { UserProfile } from "@/types/profile";
 import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
@@ -73,10 +72,21 @@ export default function LikedPage() {
 
     setProcessingUnlike(prev => ({ ...prev, [profileId]: true }));
     
-    const success = await unlikeUser(currentUserId, profileId);
-    if (success) {
-      setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
-      setMatches(prev => prev.filter(p => p.userId !== profileId));
+    try {
+      const response = await fetch('/api/profile/unlike', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentUserId, unlikedUserId: profileId })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
+        setMatches(prev => prev.filter(p => p.userId !== profileId));
+      }
+    } catch (error) {
+      console.error('Error unliking user:', error);
     }
 
     setProcessingUnlike(prev => {
@@ -99,7 +109,14 @@ export default function LikedPage() {
 
     const profileToMove = passedProfiles.find(p => p.userId === profileId);
 
-    const result = await likeUser(currentUserId, profileId);
+    try {
+      const response = await fetch('/api/profile/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentUserId, likedUserId: profileId })
+      });
+      
+      const result = await response.json();
 
     if (result.success) {
       setPassedProfiles(prev => prev.filter(p => p.userId !== profileId));
@@ -116,35 +133,12 @@ export default function LikedPage() {
         setMatches(prev => [...prev, profileToMove]);
         setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
 
-        // Create notifications for both users (triggers email)
-        try {
-          await Promise.all([
-            createNotification(
-              profileId,
-              currentUserId,
-              userProfile?.displayName || 'Someone',
-              'match',
-              `You matched with ${userProfile?.displayName || 'someone'}!`,
-              userProfile?.photoURL,
-              userProfile?.slug
-            ),
-            createNotification(
-              currentUserId,
-              profileId,
-              profileToMove.displayName || 'Someone',
-              'match',
-              `You matched with ${profileToMove.displayName || 'someone'}!`,
-              profileToMove.photoURL,
-              profileToMove.slug
-            )
-          ]);
-          console.log('[People] ✅ Match notifications sent (emails triggered)');
-        } catch (error) {
-          console.error('[People] Error creating match notifications:', error);
-        }
+        // Note: Email notifications are now sent automatically from profileService.ts
+        // when the match is created, so we don't need to call createNotification here
       }
+    }    } catch (error) {
+      console.error('Error liking user:', error);
     }
-
     setProcessingLike(prev => {
       const copy = { ...prev };
       delete copy[profileId];

@@ -223,13 +223,7 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
   // Initialize last_action to current date if it doesn't exist
   if (!data.last_action) {
     updates.last_action = serverTimestamp();
-  }
-  
-  // DISABLED: Auto-hiding inactive profiles
-  // This was causing all profiles to be hidden when fetched
-  // TODO: Implement this as a separate background job instead of on every fetch
-  /*
-  else {
+  } else {
     // Check if last_action was 7 days ago or more
     const lastActionDate = data.last_action?.toDate ? data.last_action.toDate() : new Date(data.last_action);
     const currentDate = new Date();
@@ -241,7 +235,6 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
       console.log(`[ProfileService] User ${userId} inactive for ${daysDifference} days, setting isVisible to false`);
     }
   }
-  */
   
   // Apply updates if any
   if (Object.keys(updates).length > 0) {
@@ -405,6 +398,32 @@ export async function likeUser(
     if (isMatch) {
       console.log('[ProfileService] ✅ Added', currentUserId, 'to liked user\'s matches');
       console.log('[ProfileService] 🎉 MATCH COMPLETE! Both users\' profiles updated');
+      
+      // Send email notifications to both users (server-side only)
+      if (typeof window === 'undefined') {
+        console.log('[ProfileService] 📧 Initiating match notification emails...');
+        console.log(`[ProfileService] Email recipients: ${currentUserId}, ${likedUserId}`);
+        import('./emailNotificationService').then(({ sendMatchNotificationEmail }) => {
+          console.log('[ProfileService] Email service module loaded successfully');
+          // Send email to both users
+          Promise.all([
+            sendMatchNotificationEmail(currentUserId, likedUserId).then(result => {
+              console.log(`[ProfileService] Email to ${currentUserId}: ${result ? 'Success ✅' : 'Failed ❌'}`);
+              return result;
+            }),
+            sendMatchNotificationEmail(likedUserId, currentUserId).then(result => {
+              console.log(`[ProfileService] Email to ${likedUserId}: ${result ? 'Success ✅' : 'Failed ❌'}`);
+              return result;
+            })
+          ]).catch(error => {
+            console.error('[ProfileService] ❌ Failed to send match emails:', error);
+          });
+        }).catch(error => {
+          console.error('[ProfileService] ❌ Failed to load email service module:', error);
+        });
+      } else {
+        console.log('[ProfileService] ⚠️ Skipping email (client-side context)');
+      }
     }
 
     return { success: true, isMatch };

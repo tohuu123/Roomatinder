@@ -28,14 +28,7 @@ async function checkVisibility() {
   console.log('Checking isVisible field for profiles...\n');
   
   const usersCollection = collection(db, 'users');
-  console.log('Fetching users collection...');
   const snapshot = await getDocs(usersCollection);
-  console.log(`Found ${snapshot.size} documents\n`);
-  
-  if (snapshot.empty) {
-    console.log('❌ No documents found in users collection!');
-    return;
-  }
   
   let visibleCount = 0;
   let invisibleCount = 0;

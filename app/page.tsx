@@ -3,10 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Icon } from "@iconify/react";
-import { getProfile, likeUser, passUser, hasCompletedRequiredFields } from "@/lib/profileService";
+import { getProfile, passUser, hasCompletedRequiredFields } from "@/lib/profileService";
 import { queryMatchingProfile } from "@/lib/chromaService";
 import { createChat } from "@/lib/chatService";
-import { createNotification } from "@/lib/notificationService";
 import { UserProfile, HCMC_DISTRICTS } from "@/types/profile";
 import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -1141,7 +1140,11 @@ export default function HomePage() {
     // Background: Save interaction (non-blocking)
     if (direction === 'right') {
       console.log('[Swipe] ❤️ Liking:', swipedUserId);
-      likeUser(currentUserId, swipedUserId).then(async result => {
+      fetch('/api/profile/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentUserId, likedUserId: swipedUserId })
+      }).then(res => res.json()).then(async result => {
         if (result?.success && result?.isMatch) {
           console.log('[Swipe] 🎉 Match!');
           setMatchedProfile(currentProfile);
@@ -1158,32 +1161,8 @@ export default function HomePage() {
             console.error('[Swipe] Error creating chat:', error);
           }
 
-          // Create notifications for both users (triggers email)
-          try {
-            await Promise.all([
-              createNotification(
-                swipedUserId,
-                currentUserId,
-                userProfile?.displayName || 'Someone',
-                'match',
-                `You matched with ${userProfile?.displayName || 'someone'}!`,
-                userProfile?.photoURL,
-                userProfile?.slug
-              ),
-              createNotification(
-                currentUserId,
-                swipedUserId,
-                currentProfile.displayName || 'Someone',
-                'match',
-                `You matched with ${currentProfile.displayName || 'someone'}!`,
-                currentProfile.photoURL,
-                currentProfile.slug
-              )
-            ]);
-            console.log('[Swipe] ✅ Match notifications sent (emails triggered)');
-          } catch (error) {
-            console.error('[Swipe] Error creating match notifications:', error);
-          }
+          // Note: Email notifications are now sent automatically from profileService.ts
+          // when the match is created, so we don't need to call createNotification here
         }
       }).catch(error => {
         console.error('[Swipe] Error in likeUser:', error);
