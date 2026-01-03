@@ -108,7 +108,7 @@ async function getUserEmailSettings(userId: string): Promise<{
  */
 async function updateLastEmailSent(userId: string) {
   try {
-    await updateDoc(doc(db, 'users', userId), {
+    await updateDoc(doc(db, 'profiles', userId), {
       lastEmailSent: serverTimestamp(),
     });
   } catch (error) {
@@ -128,7 +128,7 @@ export async function sendDailyDigestEmail(userId: string): Promise<boolean> {
     }
 
     // Get user info
-    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userDoc = await getDoc(doc(db, 'profiles', userId));
     if (!userDoc.exists()) return false;
     const userData = userDoc.data();
 
@@ -170,7 +170,7 @@ export async function sendDailyDigestEmail(userId: string): Promise<boolean> {
       for (const notif of likeNotifications) {
         const notifData = notif.data();
         if (notifData.fromUserId) {
-          const fromUserDoc = await getDoc(doc(db, 'users', notifData.fromUserId));
+          const fromUserDoc = await getDoc(doc(db, 'profiles', notifData.fromUserId));
           if (fromUserDoc.exists()) {
             const fromUserData = fromUserDoc.data();
             profiles.push({
@@ -298,12 +298,12 @@ export async function sendInactivityCheckEmail(userId: string): Promise<boolean>
       return false;
     }
 
-    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userDoc = await getDoc(doc(db, 'profiles', userId));
     if (!userDoc.exists()) return false;
     const userData = userDoc.data();
 
-    const lastActiveDate = userData.lastActive?.toDate() 
-      ? new Date(userData.lastActive.toDate()).toLocaleDateString('en-US', {
+    const lastActiveDate = userData.last_action?.toDate() 
+      ? new Date(userData.last_action.toDate()).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
@@ -328,7 +328,7 @@ export async function sendInactivityCheckEmail(userId: string): Promise<boolean>
     if (success) {
       await updateLastEmailSent(userId);
       // Mark that inactivity email was sent
-      await updateDoc(doc(db, 'users', userId), {
+      await updateDoc(doc(db, 'profiles', userId), {
         inactivityEmailSent: serverTimestamp(),
       });
     }
@@ -351,7 +351,7 @@ export async function sendWeeklyReportEmail(userId: string): Promise<boolean> {
       return false;
     }
 
-    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userDoc = await getDoc(doc(db, 'profiles', userId));
     if (!userDoc.exists()) return false;
     const userData = userDoc.data();
 
@@ -409,7 +409,7 @@ export async function sendWeeklyReportEmail(userId: string): Promise<boolean> {
       .slice(0, 3);
 
     for (const [fromUserId, count] of sortedUsers) {
-      const fromUserDoc = await getDoc(doc(db, 'users', fromUserId));
+      const fromUserDoc = await getDoc(doc(db, 'profiles', fromUserId));
       if (fromUserDoc.exists()) {
         topInteractions.push({
           name: fromUserDoc.data().displayName || 'Someone',
@@ -445,7 +445,7 @@ export async function sendWeeklyReportEmail(userId: string): Promise<boolean> {
     if (success) {
       await updateLastEmailSent(userId);
       // Reset weekly profile views
-      await updateDoc(doc(db, 'users', userId), {
+      await updateDoc(doc(db, 'profiles', userId), {
         weeklyProfileViews: 0,
         lastWeeklyReportSent: serverTimestamp(),
       });
@@ -463,7 +463,7 @@ export async function sendWeeklyReportEmail(userId: string): Promise<boolean> {
  */
 export async function deactivateUserProfile(userId: string): Promise<boolean> {
   try {
-    await updateDoc(doc(db, 'users', userId), {
+    await updateDoc(doc(db, 'profiles', userId), {
       isVisible: false,
       deactivatedAt: serverTimestamp(),
       deactivationReason: 'inactivity',
@@ -471,7 +471,7 @@ export async function deactivateUserProfile(userId: string): Promise<boolean> {
 
     const userSettings = await getUserEmailSettings(userId);
     if (userSettings.email) {
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userDoc = await getDoc(doc(db, 'profiles', userId));
       const userData = userDoc.data();
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -504,8 +504,8 @@ export async function checkInactiveUsers(): Promise<number> {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const usersQuery = query(
-      collection(db, 'users'),
-      where('lastActive', '<', Timestamp.fromDate(sevenDaysAgo)),
+      collection(db, 'profiles'),
+      where('last_action', '<', Timestamp.fromDate(sevenDaysAgo)),
       where('isVisible', '==', true),
       where('inactivityEmailSent', '==', null)
     );

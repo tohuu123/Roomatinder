@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Update user's last active timestamp
-    await updateDoc(doc(db, 'users', userId), {
-      lastActive: serverTimestamp(),
+    await updateDoc(doc(db, 'profiles', userId), {
+      last_action: serverTimestamp(),
       inactivityEmailSent: null, // Reset the flag
     });
 
