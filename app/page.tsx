@@ -6,6 +6,7 @@ import { Icon } from "@iconify/react";
 import { getProfile, likeUser, passUser, hasCompletedRequiredFields } from "@/lib/profileService";
 import { queryMatchingProfile } from "@/lib/chromaService";
 import { createChat } from "@/lib/chatService";
+import { createNotification } from "@/lib/notificationService";
 import { UserProfile, HCMC_DISTRICTS } from "@/types/profile";
 import { auth } from "@/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -1155,6 +1156,33 @@ export default function HomePage() {
             console.log('[Swipe] ✅ Chat created automatically:', chatId);
           } catch (error) {
             console.error('[Swipe] Error creating chat:', error);
+          }
+
+          // Create notifications for both users (triggers email)
+          try {
+            await Promise.all([
+              createNotification(
+                swipedUserId,
+                currentUserId,
+                userProfile?.displayName || 'Someone',
+                'match',
+                `You matched with ${userProfile?.displayName || 'someone'}!`,
+                userProfile?.photoURL,
+                userProfile?.slug
+              ),
+              createNotification(
+                currentUserId,
+                swipedUserId,
+                currentProfile.displayName || 'Someone',
+                'match',
+                `You matched with ${currentProfile.displayName || 'someone'}!`,
+                currentProfile.photoURL,
+                currentProfile.slug
+              )
+            ]);
+            console.log('[Swipe] ✅ Match notifications sent (emails triggered)');
+          } catch (error) {
+            console.error('[Swipe] Error creating match notifications:', error);
           }
         }
       }).catch(error => {

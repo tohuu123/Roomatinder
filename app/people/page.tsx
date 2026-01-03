@@ -7,6 +7,7 @@ import { Icon } from "@iconify/react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase";
 import { getLikedProfiles, getMatches, unlikeUser, likeUser, getPassedProfiles, removeAllPassedUsers } from "@/lib/profileService";
+import { createNotification } from "@/lib/notificationService";
 import { UserProfile } from "@/types/profile";
 import { createChatFromMatch, checkChatExists } from "@/lib/utils/matchHelper";
 import { useUserChats } from "@/lib/hooks/useChat";
@@ -114,6 +115,33 @@ export default function LikedPage() {
       if (result.isMatch && profileToMove) {
         setMatches(prev => [...prev, profileToMove]);
         setLikedProfiles(prev => prev.filter(p => p.userId !== profileId));
+
+        // Create notifications for both users (triggers email)
+        try {
+          await Promise.all([
+            createNotification(
+              profileId,
+              currentUserId,
+              userProfile?.displayName || 'Someone',
+              'match',
+              `You matched with ${userProfile?.displayName || 'someone'}!`,
+              userProfile?.photoURL,
+              userProfile?.slug
+            ),
+            createNotification(
+              currentUserId,
+              profileId,
+              profileToMove.displayName || 'Someone',
+              'match',
+              `You matched with ${profileToMove.displayName || 'someone'}!`,
+              profileToMove.photoURL,
+              profileToMove.slug
+            )
+          ]);
+          console.log('[People] ✅ Match notifications sent (emails triggered)');
+        } catch (error) {
+          console.error('[People] Error creating match notifications:', error);
+        }
       }
     }
 
