@@ -18,9 +18,7 @@ mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 // To get full list: https://api.mapbox.com/search/searchbox/v1/list/category?access_token=YOUR_TOKEN
 const DEFAULT_FILTERS: RadarFilter[] = [
   { id: 'parks', label: 'Parks', icon: '🌳', categories: ['park'], active: false },
-  { id: 'fitness', label: 'Fitness', icon: '💪', categories: ['gym', 'fitness'], active: false },
   { id: 'healthcare', label: 'Healthcare', icon: '🏥', categories: ['hospital', 'clinic', 'pharmacy'], active: false },
-  { id: 'convenience', label: 'Convenience', icon: '🏪', categories: ['convenience'], active: false },
   { id: 'supermarket', label: 'Supermarket', icon: '🛒', categories: ['supermarket'], active: false },
   { id: 'fuel', label: 'Gas Station', icon: '⛽', categories: ['gas_station'], active: false },
   { id: 'entertainment', label: 'Entertainment', icon: '🎬', categories: ['theater', 'cinema'], active: false },
@@ -288,7 +286,7 @@ export default function RadarMap({ center, propertyName = 'This Property', prope
       <FilterChips filters={filters} onFilterToggle={handleFilterToggle} />
 
       {/* Radius selector - below filter chips */}
-      <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-10">
+      <div className="absolute top-32 left-1/2 transform -translate-x-1/2 z-10">
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body p-3">
             <div className="flex items-center gap-2">

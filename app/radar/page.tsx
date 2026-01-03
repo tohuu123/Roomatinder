@@ -6,6 +6,7 @@ import { auth } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getProfile } from '@/lib/profileService';
 import { UserProfile } from '@/types/profile';
+import LocationReviewModal from '@/app/components/radar/LocationReviewModal';
 
 // Dynamically import RadarMap to avoid SSR issues with mapbox
 const RadarMap = dynamic(
@@ -44,6 +45,45 @@ export default function RadarPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [addressInput, setAddressInput] = useState('');
+  const [reviewData, setReviewData] = useState<any>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isLoadingReview, setIsLoadingReview] = useState(false);
+  const [radiusKm, setRadiusKm] = useState(1);
+
+  // Handle AI Area Review
+  const handleAIReview = async () => {
+    try {
+      setIsLoadingReview(true);
+      
+      const response = await fetch('/api/location-review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          locationName: propertyName,
+          address: propertyAddress,
+          longitude: center[0],
+          latitude: center[1],
+          radius: radiusKm,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get AI review');
+      }
+
+      const data = await response.json();
+      setReviewData(data);
+      setShowReviewModal(true);
+    } catch (error) {
+      console.error('Error getting AI review:', error);
+      alert('Failed to get AI area analysis. Please try again.');
+    } finally {
+      setIsLoadingReview(false);
+    }
+  };
 
   // Search address using Mapbox Search Box API
   const handleGeocodeAddress = async () => {
@@ -156,7 +196,24 @@ export default function RadarPage() {
           <div className="navbar-center">
             <h1 className="text-lg font-bold">Radar</h1>
           </div>
-          <div className="navbar-end">
+          <div className="navbar-end gap-2">
+            <button
+              onClick={handleAIReview}
+              disabled={isLoadingReview}
+              className="btn btn-primary btn-sm"
+              title="Get AI analysis of this area"
+            >
+              {isLoadingReview ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  AI Review
+                </>
+              )}
+            </button>
             <button
               onClick={() => setShowLocationInput(!showLocationInput)}
               className="btn btn-ghost btn-sm"
@@ -176,6 +233,25 @@ export default function RadarPage() {
                     ? 'Update Property Location' 
                     : 'Set Location to Explore'}
                 </h3>
+
+                {/* Radius Selector for AI Review */}
+                <div className="mb-3">
+                  <label className="label">
+                    <span className="label-text text-xs">AI Review Radius (for area analysis)</span>
+                  </label>
+                  <select
+                    className="select select-sm w-full"
+                    value={radiusKm}
+                    onChange={(e) => setRadiusKm(Number(e.target.value))}
+                  >
+                    <option value={0.5}>500m</option>
+                    <option value={1}>1km</option>
+                    <option value={2}>2km</option>
+                    <option value={3}>3km</option>
+                  </select>
+                </div>
+
+                <div className="divider text-xs">LOCATION</div>
                 
                 {/* District Quick Select */}
                 <div className="mb-3">
@@ -311,6 +387,13 @@ export default function RadarPage() {
           university={userProfile?.university}
         />
       )}
+
+      {/* Location Review Modal */}
+      <LocationReviewModal
+        review={reviewData}
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+      />
     </div>
   );
 }

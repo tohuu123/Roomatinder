@@ -25,17 +25,10 @@ export class MapboxService {
         return [];
       }
 
-      // Calculate bounding box based on radius
-      const radiusInKm = radius / 1000;
-      const latDelta = radiusInKm / 110.574; // 1 degree latitude ≈ 110.574 km
-      const lonDelta = radiusInKm / (111.32 * Math.cos((latitude * Math.PI) / 180)); // 1 degree longitude varies by latitude
+      // Ho Chi Minh City bounding box to limit search area
+      const HCMC_BBOX = [106.35, 10.35, 107.02, 11.16];
       
-      const bbox = [
-        longitude - lonDelta, // min longitude
-        latitude - latDelta,  // min latitude
-        longitude + lonDelta, // max longitude
-        latitude + latDelta   // max latitude
-      ].join(',');
+      const bbox = HCMC_BBOX.join(',');
 
       const url = `https://api.mapbox.com/search/searchbox/v1/category/${category}?` +
         `proximity=${longitude},${latitude}&` +
