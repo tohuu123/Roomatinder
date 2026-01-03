@@ -55,7 +55,7 @@ npm run dev
 **SAU:**
 - Click vào icon map trên profile card → Mở Mapbox Radar full-screen
 - Có thể:
-  - ✅ Xem 3km radius xung quanh nhà trọ
+  - ✅ Xem radius xung quanh nhà trọ (1/2/3/5km)
   - ✅ Lọc các POI (bệnh viện, siêu thị, v.v.)
   - ✅ Xem khoảng cách đến trường
   - ✅ Phân tích AI về khu vực

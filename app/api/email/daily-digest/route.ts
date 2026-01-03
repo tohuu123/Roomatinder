@@ -18,27 +18,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all active users who have email notifications enabled
-    const usersQuery = query(
-      collection(db, 'users'),
+    // Query from profiles collection (main storage)
+    const profilesQuery = query(
+      collection(db, 'profiles'),
       where('emailNotificationsEnabled', '!=', false),
       where('isVisible', '==', true)
     );
     
-    const usersSnapshot = await getDocs(usersQuery);
+    const profilesSnapshot = await getDocs(profilesQuery);
     let successCount = 0;
     let failCount = 0;
 
     // Send digest to each user
-    const promises = usersSnapshot.docs.map(async (userDoc) => {
+    const promises = profilesSnapshot.docs.map(async (profileDoc) => {
       try {
-        const success = await sendDailyDigestEmail(userDoc.id);
+        const success = await sendDailyDigestEmail(profileDoc.id);
         if (success) {
           successCount++;
         } else {
           failCount++;
         }
       } catch (error) {
-        console.error(`Failed to send digest to user ${userDoc.id}:`, error);
+        console.error(`Failed to send digest to user ${profileDoc.id}:`, error);
         failCount++;
       }
     });
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       message: `Daily digests sent`,
       successCount,
       failCount,
-      totalUsers: usersSnapshot.size,
+      totalUsers: profilesSnapshot.size,
     });
   } catch (error) {
     console.error('Error in daily digest cron:', error);

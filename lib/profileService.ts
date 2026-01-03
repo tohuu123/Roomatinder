@@ -395,9 +395,70 @@ export async function likeUser(
     });
 
     console.log('[ProfileService] ✅ Updated liked user:', likedUserId);
+    
+    // Create notification for the liked user (they received a like)
+    // Only create if not a match yet (match notifications created separately)
+    if (!isMatch && typeof window === 'undefined') {
+      console.log('[ProfileService] 📝 Creating like notification...');
+      import('./notificationService').then(async ({ createNotification }) => {
+        try {
+          await createNotification(
+            likedUserId,
+            currentUserId,
+            currentProfile.displayName || 'Someone',
+            'like',
+            `${currentProfile.displayName || 'Someone'} liked you!`,
+            currentProfile.photoURL,
+            currentProfile.slug
+          );
+          console.log('[ProfileService] ✅ Like notification created');
+        } catch (error) {
+          console.error('[ProfileService] ❌ Failed to create like notification:', error);
+        }
+      }).catch(error => {
+        console.error('[ProfileService] ❌ Failed to load notification service:', error);
+      });
+    }
+    
     if (isMatch) {
       console.log('[ProfileService] ✅ Added', currentUserId, 'to liked user\'s matches');
       console.log('[ProfileService] 🎉 MATCH COMPLETE! Both users\' profiles updated');
+      
+      // Create notification records for both users (for daily/weekly digest)
+      if (typeof window === 'undefined') {
+        console.log('[ProfileService] 📝 Creating notification records for match...');
+        import('./notificationService').then(async ({ createNotification }) => {
+          try {
+            // Create notification for current user
+            await createNotification(
+              currentUserId,
+              likedUserId,
+              likedProfile.displayName || 'Someone',
+              'match',
+              `You matched with ${likedProfile.displayName || 'Someone'}!`,
+              likedProfile.photoURL,
+              likedProfile.slug
+            );
+            
+            // Create notification for liked user
+            await createNotification(
+              likedUserId,
+              currentUserId,
+              currentProfile.displayName || 'Someone',
+              'match',
+              `You matched with ${currentProfile.displayName || 'Someone'}!`,
+              currentProfile.photoURL,
+              currentProfile.slug
+            );
+            
+            console.log('[ProfileService] ✅ Notification records created successfully');
+          } catch (error) {
+            console.error('[ProfileService] ❌ Failed to create notification records:', error);
+          }
+        }).catch(error => {
+          console.error('[ProfileService] ❌ Failed to load notification service:', error);
+        });
+      }
       
       // Send email notifications to both users (server-side only)
       if (typeof window === 'undefined') {

@@ -18,7 +18,10 @@ http://localhost:3000/radar
 ```env
 # .env file - ADD YOUR TOKEN HERE
 NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
-NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyCfRgoxcg1b-8D5l3Zx4_NPTMbq1qKR9po
+# Gemini (recommended server-side)
+GEMINI_API_KEY=your_gemini_api_key_here
+# Fallback (works, but exposes key to client bundle)
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 Get Mapbox token: https://www.mapbox.com/
@@ -39,8 +42,8 @@ Get Mapbox token: https://www.mapbox.com/
 |-----------|----------|-------------|
 | FilterChips | Top center | Category filter buttons |
 | POIInfoCard | Bottom center | POI details on click |
-| GeminiAnalysisPanel | Top right | AI area insights |
-| SchoolDistancePanel | Bottom right | School distance calculator |
+| AI Review Modal | Top right button | AI area review (opens modal) |
+| SchoolDistancePanel | Bottom right | Distance to school (auto-search from profile) |
 
 ## 🔧 Customization
 
@@ -56,7 +59,15 @@ const [center, setCenter] = useState<[number, number]>([
 ### Change Radius
 ```typescript
 // app/components/radar/RadarMap.tsx
-const radiusInKm = 3; // Change to 1, 2, 5, etc.
+// Radius is user-selectable via UI (1/2/3/5km)
+const [radius, setRadius] = useState<number>(3);
+```
+
+### AI Review Radius
+```typescript
+// app/radar/page.tsx
+// AI Review scans nearby POIs within 0.5/1/2/3km
+const [radiusKm, setRadiusKm] = useState(1);
 ```
 
 ### Add Filter Category
@@ -71,37 +82,37 @@ const radiusInKm = 3; // Change to 1, 2, 5, etc.
 }
 ```
 
-## 🎯 Filter Categories
+## 🎯 Filter Categories (current)
 
 | Icon | Label | Mapbox Categories |
 |------|-------|-------------------|
+| 🌳 | Parks | park |
 | 🏥 | Healthcare | hospital, clinic, pharmacy |
-| 🏪 | Convenience | convenience_store, supermarket, grocery |
-| 🎬 | Entertainment | cinema, theater, entertainment |
-| 🛒 | Market | market, shopping_mall, shopping |
-| 🍴 | Dining | restaurant, cafe, food |
-| 🚌 | Transport | bus_station, train_station, subway |
-| 🌳 | Parks | park, garden, playground |
-| 💪 | Fitness | gym, fitness_center, sports |
+| 🛒 | Supermarket | supermarket |
+| ⛽ | Gas Station | gas_station |
+| 🎬 | Entertainment | theater, cinema |
+| 🍽️ | Restaurant | restaurant, cafe, food |
+| 🛍️ | Shopping | shopping_mall, shopping |
+| 🏦 | Bank/ATM | bank, atm |
 
 ## 📊 API Calls
 
 | Action | API | Limit |
 |--------|-----|-------|
-| Filter click | Mapbox Search | 20 POIs/category |
-| Get Directions | Google Maps | Unlimited |
-| Calculate Route | Mapbox Directions | 100k/month free |
-| Analyze Area | Gemini AI | 1500/day free |
+| Filter click | Mapbox Search Box (category) | Up to 25 results/category (then filtered by radius) |
+| Search address/place | Mapbox Search Box (suggest/retrieve) | Suggest + retrieve flow |
+| Get Directions | Google Maps | Opens external navigation |
+| Calculate Route | Mapbox Directions | 1 request per calculation |
+| AI Review | /api/location-review (Gemini) | 1 request per review (+ POI fetches server-side) |
 
 ## 🚀 Features
 
-✅ 3km radius visualization
+✅ Radius visualization (default 3km, selectable 1/2/3/5km)
 ✅ 8 filter categories
 ✅ Interactive map pins
 ✅ POI info cards
-✅ AI area analysis
-✅ School distance calculator
-✅ Multiple transport modes
+✅ AI Review (modal)
+✅ School distance calculator (route uses driving-traffic)
 ✅ Responsive design
 ✅ Real-time search
 ✅ Distance calculation
@@ -111,7 +122,7 @@ const radiusInKm = 3; // Change to 1, 2, 5, etc.
 1. **Explore POIs**: Click filter chips → See pins on map
 2. **View Details**: Click pin → See info card
 3. **Get Directions**: Click "Get Directions" → Opens Google Maps
-4. **AI Analysis**: Click "Analyze Area" → Get insights
+4. **AI Review**: Click "AI Review" → Get area review in a modal
 5. **School Distance**: Add school → Calculate route
 
 ## 🐛 Troubleshooting
@@ -140,7 +151,7 @@ const radiusInKm = 3; // Change to 1, 2, 5, etc.
 ## 💡 Pro Tips
 
 1. **Multiple Filters**: Activate multiple categories for comprehensive view
-2. **Refresh Analysis**: Click "Refresh Analysis" for updated insights
+2. **AI Review**: Use "AI Review" in the header for area insights
 3. **Mobile Friendly**: Works great on phones and tablets
 4. **Share Location**: Copy URL with coordinates to share specific locations
 5. **Custom Radius**: Easily modify radius in RadarMap.tsx
@@ -153,7 +164,7 @@ const radiusInKm = 3; // Change to 1, 2, 5, etc.
 3. Watch pins appear on map
 4. Click a restaurant pin
 5. Click "Get Directions"
-6. Click "Analyze Area" in right panel
+6. Click "AI Review" in the header
 7. Add school in bottom-right
 8. Click "Calculate Route"
 ```

@@ -5,23 +5,19 @@ A powerful location intelligence feature that combines Mapbox mapping capabiliti
 ## 🌟 Features
 
 ### Core Functionality
-- **3km Radius Visualization**: Interactive map with a translucent circle showing a 3km radius around the property
+- **Radius Visualization**: Interactive map with a translucent circle around the property (default 3km; selectable 1/2/3/5km)
 - **POI Discovery**: Search and display Points of Interest (POIs) within the radius using Mapbox Search API
-- **Interactive Filter Chips**: Quick filters for different categories (Healthcare, Convenience, Entertainment, Markets, Dining, Transport, Parks, Fitness)
+- **Interactive Filter Chips**: Quick filters mapped to Mapbox Search Box canonical categories
 - **POI Information Cards**: Detailed cards showing name, distance, address, and directions button when clicking on map pins
 
 ### Distance Calculator
 - **School Distance**: Calculate distance and travel time to school/university
-- **Multiple Transport Modes**: Support for walking, driving, and cycling routes
-- **Real-time Route Calculation**: Uses Mapbox Directions API for accurate routing
+- **Auto-search from Profile**: If the user profile includes a university name, the app attempts to find it automatically
+- **Real-time Route Calculation**: Uses Mapbox Directions API for routing (current UI uses `driving-traffic`)
 
 ### AI-Powered Analysis
-- **Gemini Integration**: AI analyzes the area based on discovered POIs
-- **Living Insights**: Provides analysis on:
-  - Living convenience level (with rating 1-10)
-  - Potential noise level assessment
-  - Suitability for students vs working professionals
-  - Overall area summary
+- **AI Review (Gemini)**: Server-side endpoint `/api/location-review` fetches nearby POIs + asks Gemini to generate an area review
+- **Review Output** (modal): summary slogan, vibe score (1–10), details (amenities/environment/traffic/security), highlight tags, and a warning (if any)
 
 ## 🚀 Getting Started
 
@@ -36,7 +32,8 @@ A powerful location intelligence feature that combines Mapbox mapping capabiliti
      ```
 
 2. **Gemini API Key** (Already configured)
-   - The project already has `NEXT_PUBLIC_GEMINI_API_KEY` in `.env`
+   - Recommended: set `GEMINI_API_KEY` in `.env` (server-side)
+   - Fallback: `NEXT_PUBLIC_GEMINI_API_KEY` also works but exposes key to the client bundle
 
 ### Installation
 
@@ -51,7 +48,7 @@ Dependencies are already installed:
 3. Use the "Change Location" button to set a custom property location
 4. Click on filter chips to discover nearby amenities
 5. Click on map pins to view POI details
-6. Use "Analyze Area" to get AI insights
+6. Use "AI Review" (header button) to get an AI review in a modal
 7. Add school location to calculate travel time
 
 ## 📁 Project Structure
@@ -63,14 +60,14 @@ app/
 │       ├── RadarMap.tsx              # Main map component
 │       ├── FilterChips.tsx           # Filter buttons UI
 │       ├── POIInfoCard.tsx           # POI detail card
-│       ├── GeminiAnalysisPanel.tsx   # AI analysis panel
+│       ├── LocationReviewModal.tsx   # AI review modal
 │       └── SchoolDistancePanel.tsx   # School distance calculator
 └── radar/
     └── page.tsx                      # Radar page
 
 lib/
 ├── mapboxService.ts                  # Mapbox API integration
-└── geminiRadarService.ts             # Gemini AI integration
+└── geminiLocationReviewService.ts    # Gemini AI (server-side) location review
 
 types/
 └── radar.ts                          # TypeScript type definitions
@@ -90,29 +87,28 @@ All components follow daisyUI design patterns:
 - Shows POI name, category, address, and distance
 - "Get Directions" button opens Google Maps
 
-### GeminiAnalysisPanel
-- Right-side panel with AI insights
-- Loading states with spinner
-- Collapsible sections for different analysis aspects
+### AI Review (Header button + Modal)
+- "AI Review" button in the header triggers a server-side review
+- Modal displays: score, tags, category breakdown, and warning
 
 ### SchoolDistancePanel
 - Bottom-right panel
-- Editable school information
-- Shows distance, duration, and transport mode
+- School lookup by name using Mapbox Search Box suggest/retrieve
+- Shows distance and duration (route calculated via Mapbox Directions)
 
 ## 🔧 Configuration
 
 ### Default Filters
 
-The app includes 8 default filter categories:
-- 🏥 Healthcare (hospitals, clinics, pharmacies)
-- 🏪 Convenience (stores, supermarkets, groceries)
-- 🎬 Entertainment (cinemas, theaters)
-- 🛒 Market (markets, shopping malls)
-- 🍴 Dining (restaurants, cafes)
-- 🚌 Transport (bus, train, subway stations)
-- 🌳 Parks (parks, gardens, playgrounds)
-- 💪 Fitness (gyms, fitness centers, sports facilities)
+The app includes these default filter categories (current):
+- 🌳 Parks (park)
+- 🏥 Healthcare (hospital, clinic, pharmacy)
+- 🛒 Supermarket (supermarket)
+- ⛽ Gas Station (gas_station)
+- 🎬 Entertainment (theater, cinema)
+- 🍽️ Restaurant (restaurant, cafe, food)
+- 🛍️ Shopping (shopping_mall, shopping)
+- 🏦 Bank/ATM (bank, atm)
 
 You can customize these in `RadarMap.tsx` by modifying the `DEFAULT_FILTERS` array.
 
@@ -121,7 +117,7 @@ You can customize these in `RadarMap.tsx` by modifying the `DEFAULT_FILTERS` arr
 Default settings in `RadarMap.tsx`:
 - **Center**: `[106.6297, 10.8231]` (Ho Chi Minh City)
 - **Zoom**: 14
-- **Radius**: 3km (3000 meters)
+- **Radius**: Default 3km, selectable 1/2/3/5km
 - **Style**: `mapbox://styles/mapbox/streets-v12`
 
 ## 📊 API Integration
@@ -134,6 +130,10 @@ MapboxService.searchPOIs(longitude, latitude, category, radius)
 - Filters by category
 - Includes distance calculation
 
+Notes:
+- Uses Mapbox Search Box **category endpoint**.
+- Current implementation applies a Ho Chi Minh City bounding box and then filters results by radius.
+
 ### Mapbox Directions API
 ```typescript
 MapboxService.getRoute(startLng, startLat, endLng, endLat, mode)
@@ -142,36 +142,32 @@ MapboxService.getRoute(startLng, startLat, endLng, endLat, mode)
 - Supports walking, driving, cycling
 - Returns distance and duration
 
-### Gemini AI Analysis
+### AI Review Endpoint (server)
 ```typescript
-GeminiRadarService.analyzeArea(pois)
+POST /api/location-review
 ```
-- Analyzes list of POIs
-- Returns structured insights
-- Provides recommendations
+- Input: locationName, address, longitude, latitude, radius (km)
+- Server: fetches nearby POIs, calls Gemini, returns structured JSON for the modal
 
 ## 🎯 Features in Detail
 
 ### POI Search
 1. User clicks filter chip
-2. App queries Mapbox Search API for each category
+2. App queries Mapbox Search Box category API for each category
 3. Results are deduplicated by coordinates
-4. Pins are displayed on map within 3km radius
+4. Pins are displayed on map within selected radius (1/2/3/5km)
 
-### Gemini Analysis Flow
-1. User selects filters to discover POIs
-2. Clicks "Analyze Area" button
-3. App sends POI list to Gemini with structured prompt
-4. Gemini returns JSON analysis
-5. Results displayed in side panel with sections for:
-   - Living convenience rating
-   - Noise level assessment
-   - Suitability recommendation
-   - Overall summary
+### AI Review Flow
+1. User sets a location (district / address search / coordinates)
+2. Clicks "AI Review" in the header
+3. Frontend calls `POST /api/location-review` with location + selected radius
+4. Server fetches nearby POIs via Mapbox
+5. Server calls Gemini and returns structured JSON
+6. Frontend displays results in a modal
 
-### Distance Calculation
+### Distance Calculation (School)
 1. User adds school location
-2. App geocodes address (manual coordinates for now)
+2. App searches school by name (Mapbox Search Box suggest/retrieve)
 3. Mapbox Directions API calculates route
 4. Shows distance, duration, and transport mode
 
@@ -186,8 +182,10 @@ Required in `.env`:
 # Mapbox (YOU NEED TO ADD YOUR TOKEN)
 NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
 
-# Gemini AI (Already configured)
-NEXT_PUBLIC_GEMINI_API_KEY=AIzaSyCfRgoxcg1b-8D5l3Zx4_NPTMbq1qKR9po
+# Gemini AI (recommended server-side)
+GEMINI_API_KEY=your_gemini_api_key_here
+# Fallback (works, but exposes key to client bundle)
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ## 🐛 Troubleshooting

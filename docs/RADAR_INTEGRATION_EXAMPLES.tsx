@@ -96,7 +96,7 @@ export default function PropertyDetailWithRadar() {
                 <li>Find nearby hospitals, shops, and restaurants</li>
                 <li>Calculate distance to your school</li>
                 <li>Get AI-powered area analysis</li>
-                <li>See all amenities within 3km radius</li>
+                <li>See all amenities within a selectable radius (1/2/3/5km)</li>
               </ul>
             </div>
           )}

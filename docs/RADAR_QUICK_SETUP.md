@@ -14,6 +14,11 @@ Open `.env` file and replace `your_mapbox_token_here` with your actual token:
 
 ```env
 NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImNscXh5ejEyMzB4eHkyam81NnM0Ym5vZGwifQ.example_token_here
+
+# Gemini (recommended server-side)
+GEMINI_API_KEY=your_gemini_api_key_here
+# Fallback (works, but exposes key to client bundle)
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 **Important**: Make sure your Mapbox token has access to:
@@ -38,22 +43,27 @@ http://localhost:3000/radar
 
 1. **Change Location** (optional)
    - Click "Change Location" in the top-right
-   - Enter longitude and latitude coordinates
-   - Or keep the default Ho Chi Minh City location
+   - Quick select a district (HCMC)
+   - Or search by address/place (Mapbox Search Box suggest/retrieve)
+   - Or manually enter longitude/latitude
 
 2. **Explore Nearby Places**
    - Click on any filter chip (Healthcare, Convenience, etc.)
    - Wait for pins to appear on the map
    - Click on pins to see details
 
-3. **Get AI Analysis**
-   - After selecting filters and loading POIs
-   - Click "Analyze Area" in the right panel
-   - Wait for Gemini AI to analyze the area
+3. **Adjust Radar Radius (POI search radius)**
+   - Use the Radius buttons (1km / 2km / 3km / 5km)
+   - Changing radius clears existing filters and POIs
 
-4. **Calculate School Distance**
-   - Click "Add School" in the bottom-right panel
-   - Enter school name and address
+4. **Get AI Review**
+   - Click "AI Review" in the header
+   - Choose the AI review radius (500m / 1km / 2km / 3km)
+   - Wait for the modal to show the review
+
+5. **Calculate School Distance**
+   - The app can auto-search your university from profile (if available)
+   - Or click "Add School" and search by school name
    - Click "Calculate Route" to see distance and time
 
 ## ✅ Verification Checklist
@@ -79,9 +89,9 @@ http://localhost:3000/radar
 
 ### "Unable to analyze" message
 **Solution**: 
-- Make sure you loaded POIs first by clicking filters
-- Check if Gemini API key is valid in `.env`
-- Check browser console for errors
+- Check if Gemini API key is valid in `.env` (prefer `GEMINI_API_KEY`)
+- Check server logs for `/api/location-review` errors
+- Ensure Mapbox token is valid (AI Review fetches nearby POIs server-side)
 
 ## 📱 Mobile Testing
 

@@ -18,27 +18,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all active users who have email notifications enabled
-    const usersQuery = query(
-      collection(db, 'users'),
+    // Query from profiles collection (main storage)
+    const profilesQuery = query(
+      collection(db, 'profiles'),
       where('emailNotificationsEnabled', '!=', false),
       where('isVisible', '==', true)
     );
     
-    const usersSnapshot = await getDocs(usersQuery);
+    const profilesSnapshot = await getDocs(profilesQuery);
     let successCount = 0;
     let failCount = 0;
 
     // Send weekly report to each user
-    const promises = usersSnapshot.docs.map(async (userDoc) => {
+    const promises = profilesSnapshot.docs.map(async (profileDoc) => {
       try {
-        const success = await sendWeeklyReportEmail(userDoc.id);
+        const success = await sendWeeklyReportEmail(profileDoc.id);
         if (success) {
           successCount++;
         } else {
           failCount++;
         }
       } catch (error) {
-        console.error(`Failed to send weekly report to user ${userDoc.id}:`, error);
+        console.error(`Failed to send weekly report to user ${profileDoc.id}:`, error);
         failCount++;
       }
     });
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       message: `Weekly reports sent`,
       successCount,
       failCount,
-      totalUsers: usersSnapshot.size,
+      totalUsers: profilesSnapshot.size,
     });
   } catch (error) {
     console.error('Error in weekly report cron:', error);

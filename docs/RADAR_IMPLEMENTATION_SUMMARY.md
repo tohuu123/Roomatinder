@@ -3,14 +3,14 @@
 ## ✅ What Has Been Implemented
 
 ### 1. Core Map Functionality ✅
-- **Mapbox GL JS Integration**: Interactive map with 3km translucent radius circle
+- **Mapbox GL JS Integration**: Interactive map with translucent radius circle (default 3km; selectable 1/2/3/5km)
 - **Property Marker**: Red marker showing the rental property location
 - **Navigation Controls**: Zoom and rotation controls on the map
 - **Dynamic Location**: Ability to change property location via UI
 
 ### 2. POI Discovery System ✅
-- **8 Filter Categories**: Healthcare, Convenience, Entertainment, Market, Dining, Transport, Parks, Fitness
-- **Mapbox Search API Integration**: Real-time POI search within 3km radius
+- **8 Filter Categories (current)**: Parks, Healthcare, Supermarket, Gas Station, Entertainment, Restaurant, Shopping, Bank/ATM
+- **Mapbox Search Box Integration**: Category search via Search Box API, then filtered to selected radius
 - **Interactive Map Pins**: Clickable pins (📍) for each discovered POI
 - **Distance Calculation**: Haversine formula for accurate distance measurement
 - **Deduplication**: Smart filtering to avoid duplicate POIs
@@ -27,12 +27,10 @@
   - Distance from property
   - "Get Directions" button (opens Google Maps)
 
-- **Gemini Analysis Panel**: Right-side AI insights panel
-  - Living convenience rating
-  - Noise level assessment
-  - Suitability recommendation (Students vs Professionals)
-  - Overall summary
-  - Refresh button
+- **AI Review Modal**: Header button triggers a modal-based AI review
+   - Summary slogan + vibe score (1–10)
+   - 4 dimensions: amenities, environment, traffic, security
+   - Highlight tags + warning
 
 - **School Distance Panel**: Bottom-right calculator
   - Editable school information
@@ -41,18 +39,14 @@
   - Transport mode selector
 
 ### 4. AI Integration ✅
-- **Gemini 2.0 Flash**: Uses existing API key from .env
-- **Intelligent Analysis**: Processes POI data to provide:
-  - Convenience level (1-10 rating with explanation)
-  - Noise level prediction (Low/Medium/High)
-  - Lifestyle suitability analysis
-  - 2-3 sentence area summary
-- **JSON Response Parsing**: Structured data extraction
-- **Fallback Handling**: Graceful degradation if analysis fails
+- **Server-side AI Review**: `POST /api/location-review`
+- **Gemini model**: Uses Gemini 2.5 Flash Lite in the current implementation
+- **POI-assisted prompt**: Server fetches nearby POIs and provides them to Gemini
+- **Strict JSON output**: The API returns a structured JSON object for the modal
 
 ### 5. Distance Calculator ✅
 - **Mapbox Directions API**: Accurate route calculation
-- **Multiple Modes**: Walking, driving, cycling support
+- **Current Mode**: Uses `driving-traffic` for route calculation (UI does not expose a mode selector yet)
 - **Time Estimation**: Realistic travel duration
 - **Distance Formatting**: Meters/kilometers display
 - **Duration Formatting**: Seconds/minutes/hours display
@@ -64,13 +58,13 @@
 
 ### Services
 - `lib/mapboxService.ts` - Mapbox API integration (Search & Directions)
-- `lib/geminiRadarService.ts` - Gemini AI analysis service
+- `lib/geminiLocationReviewService.ts` - Gemini AI location review service (server-side)
 
 ### Components
 - `app/components/radar/RadarMap.tsx` - Main map component with all logic
 - `app/components/radar/FilterChips.tsx` - Category filter buttons
 - `app/components/radar/POIInfoCard.tsx` - POI detail card
-- `app/components/radar/GeminiAnalysisPanel.tsx` - AI analysis panel
+- `app/components/radar/LocationReviewModal.tsx` - AI review modal
 - `app/components/radar/SchoolDistancePanel.tsx` - School distance calculator
 
 ### Pages
@@ -143,21 +137,17 @@ http://localhost:3000/radar
 - Smart deduplication by coordinates
 
 ### Gemini Analysis
-- Triggered manually by user
-- Requires POIs to be loaded first
-- Structured prompt engineering
-- JSON response parsing with fallback
-- 4 analysis dimensions:
-  1. Living convenience
-  2. Noise level
-  3. Suitability
-  4. Summary
+
+AI Review (current):
+- Triggered manually by user via "AI Review" button
+- Calls `POST /api/location-review`
+- Server fetches nearby POIs and requests a strict JSON review from Gemini
 
 ### School Distance
-- Manual school input (future: geocoding)
+- School is searched by name using Mapbox Search Box (suggest/retrieve)
 - Mapbox Directions API integration
 - Real-time route calculation
-- Multiple transport modes
+- Current UI calculates route using `driving-traffic`
 - Formatted distance/duration display
 
 ## 🔄 User Flow
@@ -168,17 +158,17 @@ http://localhost:3000/radar
    ↓
 2. Map loads with default location (HCMC)
    ↓
-3. User changes location (optional)
+3. User changes location (district / address search / coordinates)
    ↓
-4. User clicks filter chips (e.g., Healthcare, Dining)
+4. User clicks filter chips to load nearby POIs
    ↓
 5. POIs appear as pins on map
    ↓
 6. User clicks pin to see details
    ↓
-7. User clicks "Analyze Area"
+7. User clicks "AI Review"
    ↓
-8. Gemini provides AI insights
+8. Modal shows Gemini area review
    ↓
 9. User adds school location
    ↓
@@ -203,9 +193,9 @@ http://localhost:3000/radar
 
 ## ⚠️ Known Limitations
 
-1. **School Geocoding**: Currently requires manual coordinates (future enhancement)
-2. **POI Limit**: Maximum 20 POIs per category per search
-3. **Radius Fixed**: 3km radius is hardcoded (easily configurable)
+1. **School Search**: School is searched by name; results depend on Mapbox Search Box quality
+2. **POI Limit**: Mapbox category search returns up to 25 results per category (then filtered by radius)
+3. **Radius**: Radar radius is user-selectable (1/2/3/5km)
 4. **Offline Mode**: Requires internet connection
 5. **API Quotas**: Subject to Mapbox and Gemini free tier limits
 
@@ -323,9 +313,9 @@ http://localhost:3000/radar
 ## 🎉 Summary
 
 The Area Radar feature is **fully implemented and ready to use**! It provides users with:
-- Interactive 3km radius map visualization
-- Real-time POI discovery across 8 categories
-- AI-powered area analysis
+- Interactive radius map visualization (default 3km; selectable 1/2/3/5km)
+- Real-time POI discovery across 8 categories (current filter set)
+- AI Review via `/api/location-review` (modal)
 - School distance calculation
 - Beautiful, responsive UI with daisyUI
 - Comprehensive documentation
